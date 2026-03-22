@@ -1,0 +1,107 @@
+.tab-bar {
+  display: flex;
+  background-color: var(--bg-surface);
+  height: 36px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-bottom: 1px solid var(--border-default);
+}
+.tab-bar::-webkit-scrollbar {
+  height: 2px;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  min-width: 140px;
+  max-width: 240px;
+  height: 100%;
+  border-right: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: background-color var(--duration-fast);
+}
+.tab:hover {
+  background-color: var(--bg-overlay);
+}
+.tab.active {
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+}
+.tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--accent-primary);
+}
+.tab-title {
+  flex: 1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tab-close {
+  opacity: 0;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  transition: all var(--duration-fast);
+}
+.tab:hover .tab-close {
+  opacity: 1;
+}
+.tab-close:hover {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+}
+.tab-dirty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent-primary);
+  margin-right: 4px;
+}
+.method-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+}
+.method-get { color: var(--method-get); }
+.method-post { color: var(--method-post); }
+.method-put { color: var(--method-put); }
+.method-delete { color: var(--method-delete); }
+.method-patch { color: var(--method-patch); }
+
+.tab-actions {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+.new-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  transition: all var(--duration-fast);
+  font-size: 16px;
+}
+.new-tab-btn:hover {
+  background-color: var(--bg-overlay);
+  color: var(--text-primary);
+}

@@ -1,0 +1,132 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+/* TitleBar */
+.title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
+  padding: 0 var(--space-3);
+  user-select: none;
+}
+.title-bar-brand {
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.brand-icon {
+  color: var(--accent-primary);
+}
+.env-selector {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+/* AppBody */
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar-container {
+  display: flex;
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-default);
+  position: relative;
+  flex-shrink: 0;
+}
+.sidebar-nav {
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid var(--border-subtle);
+  padding-top: var(--space-2);
+  gap: var(--space-2);
+}
+.sidebar-nav-item {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+.sidebar-nav-item:hover {
+  background-color: var(--bg-overlay);
+  color: var(--text-primary);
+}
+.sidebar-nav-item.active {
+  background-color: var(--accent-subtle);
+  color: var(--accent-primary);
+}
+.sidebar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-resizer {
+  width: 4px;
+  cursor: col-resize;
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  background: transparent;
+  transition: background var(--duration-fast);
+}
+.sidebar-resizer:hover, .sidebar-resizer.dragging {
+  background: var(--accent-primary);
+}
+
+/* AppMain */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--bg-deep);
+}
+
+/* StatusBar */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  background-color: var(--accent-primary);
+  color: white;
+  padding: 0 var(--space-3);
+  font-size: 11px;
+  font-weight: 500;
+}
+.status-bar.idle {
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-default);
+  color: var(--text-secondary);
+}
+.status-bar-left, .status-bar-right {
+  display: flex;
+  gap: var(--space-4);
+}
