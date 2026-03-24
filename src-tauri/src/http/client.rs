@@ -1,27 +1,49 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Instant;
 
+use reqwest::Client;
+use once_cell::sync::Lazy;
+
 use crate::http::error::HttpError;
-use crate::http::types::{Header, HttpMethod, HttpResponse};
+use crate::http::types::{Header, HttpResponse};
 
 pub async fn send_request(
     method: String,
     url: String,
     headers: HashMap<String, String>,
-    body: Option<String>,
+    body: crate::RequestBody,
+    timeout_secs: u64,
+    follow_redirects: bool,
+    verify_ssl: bool,
 ) -> Result<HttpResponse, HttpError> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()?;
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(timeout_secs))
+        .danger_accept_invalid_certs(!verify_ssl)
+        .redirect(if follow_redirects { 
+            reqwest::redirect::Policy::default() 
+        } else { 
+            reqwest::redirect::Policy::none() 
+        })
+        .build()
+        .map_err(|e| HttpError::InvalidUrl(format!("Failed to create client: {}", e)))?;
+    
+    
+    if url.is_empty() {
+        return Err(HttpError::InvalidUrl("URL cannot be empty".to_string()));
+    }
+    
+    let parsed_url = reqwest::Url::parse(&url)
+        .map_err(|_| HttpError::InvalidUrl(url.clone()))?;
 
     let mut request = match method.to_uppercase().as_str() {
-        "GET" => client.get(&url),
-        "POST" => client.post(&url),
-        "PUT" => client.put(&url),
-        "DELETE" => client.delete(&url),
-        "PATCH" => client.patch(&url),
-        "HEAD" => client.head(&url),
-        "OPTIONS" => client.request(reqwest::Method::OPTIONS, &url),
+        "GET" => client.get(parsed_url),
+        "POST" => client.post(parsed_url),
+        "PUT" => client.put(parsed_url),
+        "DELETE" => client.delete(parsed_url),
+        "PATCH" => client.patch(parsed_url),
+        "HEAD" => client.head(parsed_url),
+        "OPTIONS" => client.request(reqwest::Method::OPTIONS, parsed_url),
         _ => return Err(HttpError::InvalidUrl(format!("Unknown method: {}", method))),
     };
 
@@ -29,8 +51,8 @@ pub async fn send_request(
         request = request.header(&key, &value);
     }
 
-    if let Some(body) = body {
-        request = request.body(body);
+    if body.r#type != "none" {
+        request = request.body(body.content);
     }
 
     let start = Instant::now();
@@ -43,9 +65,11 @@ pub async fn send_request(
     let header_vec: Vec<Header> = response
         .headers()
         .iter()
-        .map(|(k, v)| Header {
-            key: k.to_string(),
-            value: v.to_str().unwrap_or("").to_string(),
+        .filter_map(|(k, v)| {
+            v.to_str().ok().map(|value_str| Header {
+                key: k.to_string(),
+                value: value_str.to_string(),
+            })
         })
         .collect();
 
