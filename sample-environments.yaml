@@ -1,0 +1,32 @@
+- id: env-001
+  name: Development
+  variables:
+    - key: base_url
+      value: https://jsonplaceholder.typicode.com
+      enabled: true
+    - key: api_key
+      value: test-api-key-12345
+      enabled: true
+    - key: user_id
+      value: "1"
+      enabled: true
+
+- id: env-002
+  name: Staging
+  variables:
+    - key: base_url
+      value: https://staging.api.example.com
+      enabled: true
+    - key: api_key
+      value: staging-key-67890
+      enabled: true
+
+- id: env-003
+  name: Production
+  variables:
+    - key: base_url
+      value: https://api.example.com
+      enabled: false
+    - key: api_key
+      value: prod-key-secure
+      enabled: false

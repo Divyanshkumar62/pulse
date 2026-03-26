@@ -1,0 +1,141 @@
+id: jsonplaceholder-tests
+name: JSONPlaceholder API Tests
+description: Test collection for Pulse API Client using JSONPlaceholder
+requests:
+  - id: jp-001
+    name: GET All Posts
+    method: GET
+    url: https://jsonplaceholder.typicode.com/posts
+    headers:
+      - key: Accept
+        value: application/json
+    body: null
+  - id: jp-002
+    name: GET Single Post
+    method: GET
+    url: https://jsonplaceholder.typicode.com/posts/1
+    headers:
+      - key: Accept
+        value: application/json
+    body: null
+  - id: jp-003
+    name: GET Post Comments
+    method: GET
+    url: https://jsonplaceholder.typicode.com/posts/1/comments
+    headers:
+      - key: Accept
+        value: application/json
+    body: null
+  - id: jp-004
+    name: GET All Users
+    method: GET
+    url: https://jsonplaceholder.typicode.com/users
+    headers:
+      - key: Accept
+        value: application/json
+    body: null
+  - id: jp-005
+    name: GET User Todos
+    method: GET
+    url: https://jsonplaceholder.typicode.com/users/1/todos
+    headers:
+      - key: Accept
+        value: application/json
+    body: null
+  - id: jp-006
+    name: POST Create Post
+    method: POST
+    url: https://jsonplaceholder.typicode.com/posts
+    headers:
+      - key: Content-Type
+        value: application/json
+      - key: Accept
+        value: application/json
+    body: '{"title": "Pulse Test Post", "body": "Testing from Pulse API Client", "userId": 1}'
+  - id: jp-007
+    name: PUT Update Post
+    method: PUT
+    url: https://jsonplaceholder.typicode.com/posts/1
+    headers:
+      - key: Content-Type
+        value: application/json
+    body: '{"id": 1, "title": "Updated via Pulse", "body": "Body updated from Pulse", "userId": 1}'
+  - id: jp-008
+    name: DELETE Post
+    method: DELETE
+    url: https://jsonplaceholder.typicode.com/posts/1
+    headers: []
+    body: null
+  - id: jp-009
+    name: GET Photos
+    method: GET
+    url: https://jsonplaceholder.typicode.com/photos
+    headers:
+      - key: Accept
+        value: application/json
+    body: null
+  - id: jp-010
+    name: GET Albums
+    method: GET
+    url: https://jsonplaceholder.typicode.com/albums
+    headers:
+      - key: Accept
+        value: application/json
+    body: null
+folders:
+  - id: jp-folder-users
+    name: User Endpoints
+    requests:
+      - id: jp-011
+        name: GET Single User
+        method: GET
+        url: https://jsonplaceholder.typicode.com/users/1
+        headers:
+          - key: Accept
+            value: application/json
+        body: null
+  - id: jp-folder-teams
+    name: Team Management
+    requests:
+      - id: jp-012
+        name: GET All Teams
+        method: GET
+        url: https://jsonplaceholder.typicode.com/users
+        headers:
+          - key: Accept
+            value: application/json
+        body: null
+      - id: jp-013
+        name: POST Send Team Invite
+        method: POST
+        url: https://jsonplaceholder.typicode.com/posts
+        headers:
+          - key: Content-Type
+            value: application/json
+          - key: Accept
+            value: application/json
+        body: '{"email": "player@example.com", "teamCode": "MI", "role": "player", "invitedBy": "captain@team.com"}'
+      - id: jp-014
+        name: POST Bulk Team Invite
+        method: POST
+        url: https://jsonplaceholder.typicode.com/posts
+        headers:
+          - key: Content-Type
+            value: application/json
+        body: '{"teamCode": "MI", "invites": [{"email": "player1@example.com", "role": "player"}, {"email": "player2@example.com", "role": "coach"}]}'
+      - id: jp-015
+        name: GET Pending Invites
+        method: GET
+        url: https://jsonplaceholder.typicode.com/users/1/todos
+        headers:
+          - key: Accept
+            value: application/json
+        body: null
+      - id: jp-016
+        name: DELETE Cancel Invite
+        method: DELETE
+        url: https://jsonplaceholder.typicode.com/posts/1
+        headers:
+          - key: Accept
+            value: application/json
+        body: null
