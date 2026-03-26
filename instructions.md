@@ -1,47 +1,223 @@
-Step 1: Set up the Folders
-Open your project in your AI IDE and create this exact folder structure inside src-tauri/src/. Rust is very strict about file paths!
+# Pulse - API Client
 
-In src-tauri/src/, create a folder named http.
+A Postman alternative built with Tauri, Rust, and React.
 
-In src-tauri/src/, create a folder named collections.
+## Tech Stack
 
-Inside those, create these empty files:
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18 + TypeScript + Vite |
+| Backend | Rust |
+| Desktop Shell | Tauri 2 |
+| Data Format | YAML, JSON |
 
-src-tauri/src/http/mod.rs (We'll add this to "register" the folder)
+## Project Structure
 
-src-tauri/src/http/types.rs
+```
+pulse-code/
+├── src/                    # React frontend
+│   ├── App.tsx            # Main application
+│   ├── components/       # React components
+│   │   └── TeamPanel.tsx # Team management UI
+│   ├── hooks/            # Custom hooks
+│   │   └── useTauri.ts  # Tauri command wrappers
+│   └── types/            # TypeScript types
+├── src-tauri/             # Rust backend
+│   ├── src/
+│   │   ├── lib.rs        # Tauri commands
+│   │   ├── http/         # HTTP client
+│   │   │   ├── client.rs # reqwest with connection pooling
+│   │   │   ├── error.rs # Error types
+│   │   │   └── types.rs  # HTTP structs
+│   │   └── collections/  # Collections & teams
+│   │       ├── loader.rs # YAML/JSON file I/O
+│   │       ├── postman.rs # Postman import
+│   │       ├── team.rs   # Team & Invitation types
+│   │       ├── team_loader.rs # Team management
+│   │       ├── email.rs  # Email sending (Resend/SendGrid)
+│   │       └── types.rs  # Collection data structures
+│   ├── Cargo.toml        # Rust dependencies
+│   └── tauri.conf.json   # Tauri configuration
+├── package.json
+├── .env.example          # Environment template
+└── README.md
+```
 
-src-tauri/src/http/error.rs
+## Features
 
-src-tauri/src/http/client.rs
+### 1. HTTP Requests
+- GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS
+- Custom headers
+- Request body (JSON)
+- Response viewer with timing
+- URL validation
+- Connection pooling (reuses HTTP client)
 
-src-tauri/src/collections/mod.rs
+### 2. Collections
+- Save requests to YAML collections
+- Import Postman collections (JSON)
+- Auto-persisted to `~/.pulse/`
 
-src-tauri/src/collections/types.rs
+### 3. Environment Variables
+- Multiple environments
+- Variable syntax: `{{variable_name}}`
+- Toggle variables on/off
+- Auto-replacement in URL, headers, body
+- Persisted automatically
 
-src-tauri/src/collections/loader.rs
+### 4. Request History
+- Automatic history tracking
+- Last 100 requests
+- Click to reload
+- Persisted to `~/.pulse/history.json`
 
+### 5. Team Collaboration
+- Create teams with Owner/Admin/Member roles
+- Send invitations via email
+- Accept/Decline workflow
+- Stored in `~/.pulse/teams.yaml`
 
-Step 2: The "Copy-Paste" Sprint
-Now, drop the code Claude gave you into those files. Here is the order that makes the most sense:
+### 6. User Settings
+- Configurable name and email
+- Request timeout settings
+- SSL verification toggle
+- Auto-saved to `~/.pulse/settings.json`
 
-Dependencies: Open src-tauri/Cargo.toml. Replace your [dependencies] section with the one Claude provided. Important: Run cargo build in your terminal afterward to let Rust download everything.
+## Data Storage
 
-The Types: Paste the code for http/types.rs and collections/types.rs.
+All data stored in `~/.pulse/`:
+```
+~/.pulse/
+├── settings.json      # User settings
+├── environments.yaml  # Environment variables
+├── history.json       # Request history
+├── teams.yaml         # Team data
+└── invitations.json   # Invitations
+```
 
-The Logic: Paste http/error.rs, http/client.rs, and collections/loader.rs.
+## Email Setup
 
-The "Glue" Files:
+### Mock Mode (Default)
+```bash
+# No setup needed - emails print to console
+```
 
-In src-tauri/src/http/mod.rs, paste:
+### Resend (Production)
+```bash
+cp .env.example .env
+# Edit .env:
+EMAIL_PROVIDER=resend
+EMAIL_API_KEY=re_xxxxx
+EMAIL_FROM=you@email.com
+```
 
-Rust
-pub mod client;
-pub mod error;
-pub mod types;
-In src-tauri/src/collections/mod.rs, paste:
+## Getting Started
 
-Rust
-pub mod loader;
-pub mod types;
-The Main Entry: Replace your src-tauri/src/main.rs with Claude's version.
+### Prerequisites
+- Node.js 18+
+- Rust 1.70+
+- npm or yarn
+
+### Installation
+
+```bash
+# Install frontend
+npm install
+
+# Build Rust
+cd src-tauri
+cargo build
+cd ..
+```
+
+### Development
+
+```bash
+npm run tauri dev
+```
+
+### Build
+
+```bash
+npm run tauri build
+```
+
+## Key Concepts
+
+### Rust Modules
+- `mod.rs` registers a folder as a module
+- `pub` makes items accessible
+- `use` imports from modules
+
+### Tauri Commands
+- `#[tauri::command]` exposes Rust to JavaScript
+- `invoke()` calls from frontend
+```rust
+#[tauri::command]
+fn my_command(arg: String) -> Result<String, String> {
+    Ok(arg.to_uppercase())
+}
+```
+
+### Serde Serialization
+- `#[derive(Serialize, Deserialize)]` auto-generates conversion
+- Works with structs and enums
+
+### Async Rust
+- `async` functions return Futures
+- `.await` waits for result
+- Used with `tokio` runtime
+
+## Performance Optimizations
+
+### Rust
+- **HTTP Client Pooling**: Single `reqwest::Client` reused via `once_cell::Lazy`
+- **Connection Pooling**: `pool_max_idle_per_host(10)`
+- **Minimal Dependencies**: Only required tokio features
+- **OnceLock**: Data directory computed once
+
+### React
+- **React.memo()**: Memoized components
+- **useCallback**: Stable handler references
+- **useMemo**: Computed values cached
+- **crypto.randomUUID**: Secure ID generation
+
+## API Commands
+
+| Command | Description |
+|---------|-------------|
+| `send_http_request` | Send HTTP request |
+| `load_collection` | Load YAML collection |
+| `save_collection` | Save collection to YAML |
+| `import_postman_collection` | Import Postman JSON |
+| `load_environments` | Load environments |
+| `save_environments` | Save environments |
+| `load_history` | Load request history |
+| `save_history` | Save request history |
+| `get_user_settings` | Get user settings |
+| `save_user_settings` | Save user settings |
+| `create_team` | Create a new team |
+| `get_teams` | Get all teams |
+| `invite_to_team` | Send team invitation |
+| `get_pending_invitations` | Get pending invites |
+| `accept_invitation` | Accept invitation |
+| `decline_invitation` | Decline invitation |
+
+## Sample Files
+
+| File | Purpose |
+|------|---------|
+| `sample-collection.yaml` | JSONPlaceholder test collection |
+| `pulse-test-collection.json` | Postman-style tests |
+| `sample-environments.yaml` | Dev/Staging/Prod environments |
+| `sample-teams.yaml` | Sample team data |
+| `league.postman_collection.json` | League API collection |
+| `.env.example` | Email configuration template |
+
+## Learning Resources
+
+- [Rust Book](https://doc.rust-lang.org/book/)
+- [Tauri 2.0 Docs](https://tauri.app/)
+- [React Docs](https://react.dev/)
+- [serde](https://serde.rs/)
+- [Resend](https://resend.com/docs)
