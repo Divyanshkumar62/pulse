@@ -4,9 +4,6 @@
   "version": "0.1.0",
   "identifier": "com.pulse.app",
   "build": {
-    "beforeDevCommand": "",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "",
     "frontendDist": "../dist"
   },
   "app": {
@@ -15,23 +12,28 @@
         "title": "Pulse - API Client",
         "width": 1200,
         "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "center": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' https: http:; script-src 'self'; style-src 'self' 'unsafe-inline'"
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
+    "targets": ["nsis", "msi"],
+    "icon": ["icons/icon.ico", "icons/128x128.png"],
+    "category": "DeveloperTool",
+    "shortDescription": "A fast, lightweight API client",
+    "longDescription": "Pulse is a fast, lightweight Postman alternative built with Tauri, Rust, and React.",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
   }
 }
