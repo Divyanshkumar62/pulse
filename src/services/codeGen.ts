@@ -11,11 +11,11 @@ export function generateCurl(request: Request): string {
     });
   }
   
-  if (request.body) {
-    // Escape single quotes safely for bash
-    const escapedBody = request.body.replace(/'/g, "'\\''");
-    cmd += ` \\\n  -d '${escapedBody}'`;
-  }
+if (request.body && request.body.content) {
+     // Escape single quotes safely for bash
+     const escapedBody = request.body.content.replace(/'/g, "'\\''");
+     cmd += ` \\\n  -d '${escapedBody}'`;
+   }
   
   return cmd;
 }
@@ -35,20 +35,20 @@ export function generateFetch(request: Request): string {
   }
   
   if (request.body && request.method !== 'GET' && request.method !== 'HEAD') {
-    // Determine if it looks like raw json so we can parse it beautifully, or pass as string
-    let isJson = false;
-    try {
-      JSON.parse(request.body);
-      isJson = true;
-    } catch (e) {
-      isJson = false;
-    }
-    
-    if (isJson) {
-      code += `,\n  body: JSON.stringify(${request.body})`;
-    } else {
-      code += `,\n  body: ${JSON.stringify(request.body)}`;
-    }
+// Determine if it looks like raw json so we can parse it beautifully, or pass as string
+     let isJson = false;
+     try {
+       JSON.parse(request.body.content);
+       isJson = true;
+     } catch (e) {
+       isJson = false;
+     }
+     
+     if (isJson) {
+       code += `,\n  body: JSON.stringify(${JSON.stringify(request.body.content)})`;
+     } else {
+       code += `,\n  body: ${JSON.stringify(request.body.content)}`;
+     }
   }
   
   code += `\n};\n\nfetch('${request.url}', options)\n  .then(response => response.json())\n  .then(response => console.log(response))\n  .catch(err => console.error(err));`;

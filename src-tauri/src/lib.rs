@@ -10,7 +10,7 @@ async fn start_oauth_flow(
     let (server, redirect_uri) = oauth::start_callback_server()?;
     
     // Construct Auth URL
-    let mut url = Url::parse(&auth_url).map_err(|e| e.to_string())?;
+    let mut url = Url::parse(&auth_url).map_err(|e: url::ParseError| e.to_string())?;
     {
         let mut query = url.query_pairs_mut();
         query.append_pair("response_type", "code");
@@ -24,7 +24,7 @@ async fn start_oauth_flow(
     }
 
     // Open browser
-    open::that(url.as_str()).map_err(|e| e.to_string())?;
+    open::that(url.as_str()).map_err(|e: Box<dyn std::error::Error>| e.to_string())?;
 
     // Wait for code
     let code = oauth::wait_for_code(server).await?;
@@ -66,9 +66,9 @@ async fn exchange_oauth_token(
         .form(&params)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: Box<dyn std::error::Error>| e.to_string())?;
 
-    let text = response.text().await.map_err(|e| e.to_string())?;
+    let text = response.text().await.map_err(|e: Box<dyn std::error::Error>| e.to_string())?;
     Ok(text)
 }
 
@@ -142,24 +142,24 @@ async fn send_http_request(
         settings.verify_ssl
     )
     .await
-    .map_err(|e| e.to_string())
+    .map_err(|e: Box<dyn std::error::Error>| e.to_string())
 }
 
 #[tauri::command]
 fn load_collection(path: String) -> Result<collections::types::Collection, String> {
-    loader::load_from_file(&path).map_err(|e| e.to_string())
+    loader::load_from_file(&path).map_err(|e: Box<dyn std::error::Error>| e.to_string())
 }
 
 #[tauri::command]
 fn save_collection(collection: collections::types::Collection, path: String) -> Result<(), String> {
-    loader::save_to_file(&collection, &path).map_err(|e| e.to_string())
+    loader::save_to_file(&collection, &path).map_err(|e: Box<dyn std::error::Error>| e.to_string())
 }
 
 #[tauri::command]
 fn load_environments() -> Result<Vec<Environment>, String> {
     let path = get_data_dir().join("environments.yaml");
     if path.exists() {
-        loader::load_environments(path).map_err(|e| e.to_string())
+        loader::load_environments(path).map_err(|e: Box<dyn std::error::Error>| e.to_string())
     } else {
         Ok(default_environments())
     }
@@ -211,14 +211,14 @@ fn default_environments() -> Vec<Environment> {
 #[tauri::command]
 fn save_environments(environments: Vec<Environment>) -> Result<(), String> {
     let path = get_data_dir().join("environments.yaml");
-    loader::save_environments(&environments, &path).map_err(|e| e.to_string())
+    loader::save_environments(&environments, &path).map_err(|e: Box<dyn std::error::Error>| e.to_string())
 }
 
 #[tauri::command]
 fn load_history() -> Result<Vec<HistoryEntry>, String> {
     let path = get_data_dir().join("history.json");
     if path.exists() {
-        loader::load_history(&path).map_err(|e| e.to_string())
+        loader::load_history(&path).map_err(|e: Box<dyn std::error::Error>| e.to_string())
     } else {
         Ok(vec![])
     }
@@ -232,7 +232,7 @@ fn save_history(history: Vec<HistoryEntry>) -> Result<(), String> {
 
 #[tauri::command]
 fn import_postman_collection(path: String) -> Result<collections::types::Collection, String> {
-    loader::import_postman(&path).map_err(|e| e.to_string())
+    loader::import_postman(&path).map_err(|e: Box<dyn std::error::Error>| e.to_string())
 }
 
 #[tauri::command]
@@ -283,7 +283,7 @@ fn create_team(name: String, owner_email: String, owner_name: String) -> Result<
 fn get_teams() -> Result<Vec<Team>, String> {
     let teams_path = get_data_dir().join("teams.yaml");
     team_loader::load_teams(teams_path.to_str().unwrap_or("teams.yaml"))
-        .map_err(|e| e.to_string())
+        .map_err(|e: Box<dyn std::error::Error>| e.to_string())
 }
 
 #[tauri::command]
@@ -332,7 +332,7 @@ fn get_pending_invitations() -> Result<Vec<Invitation>, String> {
 #[tauri::command]
 fn get_all_invitations() -> Result<Vec<Invitation>, String> {
     let invitations_path = get_data_dir().join("invitations.json");
-    team_loader::load_invitations(invitations_path).map_err(|e| e.to_string())
+    team_loader::load_invitations(invitations_path).map_err(|e: Box<dyn std::error::Error>| e.to_string())
 }
 
 #[tauri::command]

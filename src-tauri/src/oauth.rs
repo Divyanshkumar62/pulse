@@ -1,8 +1,10 @@
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{thread_rng, Rng};
+use rand::distributions::Alphanumeric;
 use sha2::{Digest, Sha256};
 use std::net::TcpListener;
 use tiny_http::{Response, Server};
 use url::Url;
+use base64::Engine;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct OAuthResult {
