@@ -1,4 +1,4 @@
-use crate::collections::types::{Collection, Folder, Header, Request};
+use crate::collections::types::{Collection, Folder, Header, Request, RequestBody};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -101,7 +101,21 @@ fn request_from_postman(req: PostmanRequest) -> Request {
                 value: h.value,
             })
             .collect(),
-        body: req.request.body.and_then(|b| b.raw),
+        body: match req.request.body {
+            Some(body) => RequestBody {
+                r#type: "raw".to_string(),
+                content: body.raw.unwrap_or_default(),
+                graphql: None,
+            },
+            None => RequestBody {
+                r#type: "none".to_string(),
+                content: "".to_string(),
+                graphql: None,
+            },
+        },
+        auth: None,
+        pre_request_script: None,
+        protocol: None,
     }
 }
 

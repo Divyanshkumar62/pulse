@@ -1,5 +1,5 @@
+use crate::collections::types::{Collection, Folder, Header, Request};
 use serde_json::{json, Value};
-use crate::collections::types::{Collection, Folder, Request, Header};
 
 pub fn to_postman_v21(collection: &Collection) -> Value {
     let mut items = Vec::new();
@@ -32,7 +32,7 @@ fn folder_to_postman_item(folder: &Folder) -> Value {
         items.push(request_to_postman_item(req));
     }
 
-    // Note: If our Folder struct supports nested folders in the future, 
+    // Note: If our Folder struct supports nested folders in the future,
     // we would handle recursion here.
 
     json!({
@@ -42,13 +42,17 @@ fn folder_to_postman_item(folder: &Folder) -> Value {
 }
 
 fn request_to_postman_item(req: &Request) -> Value {
-    let headers: Vec<Value> = req.headers.iter().map(|h| {
-        json!({
-            "key": h.key,
-            "value": h.value,
-            "type": "text"
+    let headers: Vec<Value> = req
+        .headers
+        .iter()
+        .map(|h| {
+            json!({
+                "key": h.key,
+                "value": h.value,
+                "type": "text"
+            })
         })
-    }).collect();
+        .collect();
 
     let mut url_parsed = json!({
         "raw": req.url
@@ -58,13 +62,16 @@ fn request_to_postman_item(req: &Request) -> Value {
     if let Ok(url) = url::Url::parse(&req.url) {
         let host: Vec<&str> = url.host_str().unwrap_or("").split('.').collect();
         let path: Vec<&str> = url.path().trim_start_matches('/').split('/').collect();
-        
-        let query: Vec<Value> = url.query_pairs().map(|(k, v)| {
-            json!({
-                "key": k,
-                "value": v
+
+        let query: Vec<Value> = url
+            .query_pairs()
+            .map(|(k, v)| {
+                json!({
+                    "key": k,
+                    "value": v
+                })
             })
-        }).collect();
+            .collect();
 
         url_parsed = json!({
             "raw": req.url,
@@ -105,7 +112,7 @@ fn request_to_postman_item(req: &Request) -> Value {
                         ]
                     });
                 }
-            },
+            }
             _ => {}
         }
     }
@@ -125,7 +132,7 @@ fn request_to_postman_item(req: &Request) -> Value {
 
 pub fn to_openapi_v3(collection: &Collection) -> Value {
     let mut paths = json!({});
-    
+
     // Process all requests in the collection
     for req in &collection.requests {
         add_request_to_openapi_paths(&mut paths, req);
@@ -151,7 +158,10 @@ pub fn to_openapi_v3(collection: &Collection) -> Value {
 
 fn add_request_to_openapi_paths(paths: &mut Value, req: &Request) {
     let url_obj = url::Url::parse(&req.url).ok();
-    let path_str = url_obj.map(|u| u.path().to_string()).unwrap_or_else(|| "/".to_string());
+    let path_str = url_obj
+        .as_ref()
+        .map(|u| u.path().to_string())
+        .unwrap_or_else(|| "/".to_string());
     let method = req.method.to_lowercase();
 
     if paths.get(&path_str).is_none() {
