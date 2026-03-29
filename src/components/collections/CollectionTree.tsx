@@ -131,9 +131,23 @@ export default function CollectionTree() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ padding: '12px', borderBottom: '1px solid var(--border-default)' }}>
+      <div style={{ padding: 'var(--space-4) var(--space-3)', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.1)' }}>
         <select 
-          style={{ width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', padding: '6px 8px', borderRadius: '4px', outline: 'none', fontSize: '13px' }}
+          style={{ 
+            width: '100%', 
+            background: 'var(--bg-elevated)', 
+            border: '1px solid var(--border-subtle)', 
+            color: 'var(--text-primary)', 
+            padding: '10px 12px', 
+            borderRadius: 'var(--radius-md)', 
+            outline: 'none', 
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all var(--transition-base)',
+            appearance: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          }}
           value={activeWorkspaceId || ''}
           onChange={(e) => setActiveWorkspace(e.target.value)}
         >
@@ -143,18 +157,27 @@ export default function CollectionTree() {
         </select>
       </div>
       
-      <div style={{ flex: 1, padding: '8px 4px' }}>
+      <div style={{ flex: 1, padding: 'var(--space-2) 0' }}>
         {flattenedItems.length > 0 ? (
           <VirtualList
             items={flattenedItems}
             height={containerHeight}
-            itemHeight={32}
-            renderItem={renderTreeItem}
+            itemHeight={34}
+            renderItem={(item) => (
+              <div 
+                style={{ height: '34px' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                {renderTreeItem(item)}
+              </div>
+            )}
             overscan={10}
           />
         ) : (
-          <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', marginTop: '40px', fontSize: '12px' }}>
-            {activeWorkspace ? 'No collections found.' : 'Loading workspace...'}
+          <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', marginTop: '60px', fontSize: '13px', fontWeight: 500 }}>
+            {activeWorkspace ? 'No collections found.' : 'Initialising environment...'}
+            {!activeWorkspace && <div className="loading-spinner" style={{ margin: '20px auto' }}></div>}
           </div>
         )}
       </div>

@@ -29,29 +29,42 @@ export default function TeamPanel({
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<TeamRole>('member');
   const [activeTab, setActiveTab] = useState<'teams' | 'invitations'>('teams');
+  const [isCreating, setIsCreating] = useState(false);
 
   const pendingInvitations = invitations.filter(i => i.status === 'pending');
-  const userTeams = teams.filter(team => 
-    team.members.some(m => m.email === currentUserEmail)
-  );
+  // Show all teams (including owned teams)
+  const userTeams = teams;
 
-  const handleCreateTeam = () => {
-    if (newTeamName.trim()) {
-      onCreateTeam(newTeamName.trim());
-      setNewTeamName('');
-      setShowCreateModal(false);
+  const handleCreateTeam = async () => {
+    if (newTeamName.trim() && !isCreating) {
+      setIsCreating(true);
+      try {
+        console.log('Creating team:', newTeamName.trim());
+        await onCreateTeam(newTeamName.trim());
+        console.log('Team created successfully');
+        setNewTeamName('');
+        setShowCreateModal(false);
+      } catch (error) {
+        console.error('Failed to create team:', error);
+      } finally {
+        setIsCreating(false);
+      }
     }
   };
 
-  const handleInvite = () => {
+  const handleInvite = async () => {
     if (showInviteModal && inviteEmail.trim()) {
       const team = teams.find(t => t.id === showInviteModal);
       if (team) {
-        onInvite(showInviteModal, team.name, inviteEmail.trim(), inviteRole);
+        try {
+          await onInvite(showInviteModal, team.name, inviteEmail.trim(), inviteRole);
+          setInviteEmail('');
+          setInviteRole('member');
+          setShowInviteModal(null);
+        } catch (error) {
+          console.error('Failed to invite:', error);
+        }
       }
-      setInviteEmail('');
-      setInviteRole('member');
-      setShowInviteModal(null);
     }
   };
 
@@ -64,143 +77,215 @@ export default function TeamPanel({
   };
 
   return (
-    <div className="team-panel">
-      <div className="team-tabs">
+    <div className="team-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <div className="sidebar-tabs">
         <button 
-          className={`team-tab ${activeTab === 'teams' ? 'active' : ''}`}
+          className={`sidebar-tab ${activeTab === 'teams' ? 'active' : ''}`}
           onClick={() => setActiveTab('teams')}
         >
           Teams ({userTeams.length})
         </button>
         <button 
-          className={`team-tab ${activeTab === 'invitations' ? 'active' : ''}`}
+          className={`sidebar-tab ${activeTab === 'invitations' ? 'active' : ''}`}
           onClick={() => setActiveTab('invitations')}
         >
           Invites ({pendingInvitations.length})
         </button>
       </div>
 
-      {activeTab === 'teams' && (
-        <div className="teams-content">
-          {userTeams.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>
-              <p style={{ fontSize: '13px', marginBottom: '16px' }}>You're not part of any team yet.</p>
-              <button className="btn-primary-sm" onClick={() => setShowCreateModal(true)}>
-                Create a Team
-              </button>
-            </div>
-          ) : (
-            <>
-              {userTeams.map(team => (
-                <div key={team.id} className="team-card">
-                  <div className="team-header">
-                    <h3 className="team-name">{team.name}</h3>
-                    <button className="btn-secondary-sm" onClick={() => setShowInviteModal(team.id)}>
-                      + Invite
-                    </button>
-                  </div>
-                  <div className="team-members">
-                    {team.members.map(member => (
-                      <div key={member.user_id} className="member-row">
-                        <div className="member-avatar">
-                          {member.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="member-info">
-                          <span className="member-name">
+      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+        {activeTab === 'teams' && (
+          <div className="teams-content" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            {userTeams.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '48px 24px', 
+                background: 'rgba(255,255,255,0.03)', 
+                borderRadius: 'var(--radius-xl)', 
+                border: '1px dashed var(--border-default)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center'
+              }}>
+                <div style={{ fontSize: '40px', marginBottom: '20px', filter: 'drop-shadow(0 0 10px var(--accent-subtle))' }}>👥</div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>No Teams Found</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6, maxWidth: '200px' }}>
+                  Collaborate and sync collections with your colleagues.
+                </p>
+                <button className="btn-primary" style={{ width: '100%' }} onClick={() => setShowCreateModal(true)}>
+                  Create Team
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                {userTeams.map(team => (
+                  <div key={team.id} style={{ 
+                    background: 'var(--bg-elevated)', 
+                    borderRadius: 'var(--radius-xl)', 
+                    border: '1px solid var(--border-subtle)',
+                    padding: '16px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    transition: 'all var(--transition-base)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{team.name}</h3>
+                      <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '11px', borderRadius: 'var(--radius-md)' }} onClick={() => setShowInviteModal(team.id)}>
+                        Invite
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {team.members.map(member => (
+                        <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ 
+                            width: '28px', 
+                            height: '28px', 
+                            borderRadius: '50%', 
+                            background: member.role === 'owner' ? 'var(--accent-primary)' : 'var(--bg-surface)', 
+                            color: member.role === 'owner' ? '#FFF' : 'var(--accent-primary)',
+                            fontSize: '11px', 
+                            fontWeight: 800, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            border: '1px solid var(--accent-subtle)',
+                            boxShadow: member.role === 'owner' ? '0 0 10px var(--accent-subtle)' : 'none'
+                          }}>
+                            {member.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
                             {member.name}
-                            {member.email === currentUserEmail && ' (you)'}
+                            {member.email === currentUserEmail && <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, marginLeft: '6px' }}>(you)</span>}
+                          </div>
+                          <span style={{ 
+                            fontSize: '9px', 
+                            textTransform: 'uppercase', 
+                            fontWeight: 800, 
+                            padding: '3px 8px', 
+                            background: 'rgba(255,255,255,0.05)', 
+                            borderRadius: 'var(--radius-sm)', 
+                            border: '1px solid var(--border-subtle)',
+                            color: member.role === 'owner' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                            letterSpacing: '0.04em'
+                          }}>
+                            {member.role}
                           </span>
                         </div>
-                        <span className={`role-badge ${getRoleBadgeClass(member.role)}`}>
-                          {member.role}
-                        </span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-              <button 
-                className="btn-secondary-sm" 
-                style={{ width: '100%', padding: '8px' }}
-                onClick={() => setShowCreateModal(true)}
-              >
-                + Create New Team
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'invitations' && (
-        <div className="invitations-content">
-          {pendingInvitations.map(invitation => (
-            <div key={invitation.id} className="invitation-card">
-              <div className="invitation-header">
-                <span style={{ fontSize: '13px', fontWeight: 600 }}>{invitation.team_name}</span>
-                <span className={`role-badge ${getRoleBadgeClass(invitation.role)}`}>{invitation.role}</span>
+                ))}
+                <button 
+                  className="btn-secondary" 
+                  style={{ width: '100%', padding: '12px', borderStyle: 'dashed', background: 'transparent' }}
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  <span style={{ fontSize: '18px', fontWeight: 400 }}>+</span> Create New Team
+                </button>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                Invited by {invitation.invited_by}
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn-primary-sm" style={{ flex: 1 }} onClick={() => onAcceptInvitation(invitation.id)}>Accept</button>
-                <button className="btn-secondary-sm" style={{ flex: 1 }} onClick={() => onDeclineInvitation(invitation.id)}>Decline</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ width: '400px' }}>
-            <h2 className="text-h2">Create New Team</h2>
-            <input
-              type="text"
-              className="text-input"
-              style={{ width: '100%', padding: '8px 12px', margin: '16px 0' }}
-              placeholder="Team name"
-              value={newTeamName}
-              onChange={e => setNewTeamName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleCreateTeam()}
-              autoFocus
-            />
-            <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
-              <button className="btn-primary" onClick={handleCreateTeam} disabled={!newTeamName.trim()}>Create</button>
-            </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
 
-      {showInviteModal && (
-        <div className="modal-overlay" onClick={() => setShowInviteModal(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ width: '400px' }}>
-            <h2 className="text-h2">Invite to Team</h2>
-            <input
-              type="email"
-              className="text-input"
-              style={{ width: '100%', padding: '8px 12px', margin: '16px 0' }}
-              placeholder="Email address"
-              value={inviteEmail}
-              onChange={e => setInviteEmail(e.target.value)}
-              autoFocus
-            />
-             <div style={{ marginBottom: '16px' }}>
-              <label className="text-label" style={{ display: 'block', marginBottom: '4px' }}>Role</label>
-              <select 
-                value={inviteRole} 
-                onChange={e => setInviteRole(e.target.value as TeamRole)}
-                style={{ width: '100%', padding: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', borderRadius: '4px' }}
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setShowInviteModal(null)}>Cancel</button>
-              <button className="btn-primary" onClick={handleInvite} disabled={!inviteEmail.trim()}>Send Invite</button>
-            </div>
+        {activeTab === 'invitations' && (
+          <div className="invitations-content" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            {pendingInvitations.length === 0 ? (
+               <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-tertiary)', fontSize: '13px', fontWeight: 500 }}>
+                  No pending invitations.
+               </div>
+            ) : pendingInvitations.map(invitation => (
+              <div key={invitation.id} style={{ 
+                background: 'var(--bg-elevated)', 
+                borderRadius: 'var(--radius-xl)', 
+                border: '1px solid var(--accent-border)',
+                padding: '16px',
+                boxShadow: '0 4px 20px var(--accent-subtle)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>{invitation.team_name}</span>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{invitation.role}</span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                  Invited by <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{invitation.invited_by}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="btn-primary" style={{ flex: 1, padding: '8px' }} onClick={() => onAcceptInvitation(invitation.id)}>Accept</button>
+                  <button className="btn-secondary" style={{ flex: 1, padding: '8px' }} onClick={() => onDeclineInvitation(invitation.id)}>Decline</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {(showCreateModal || showInviteModal) && (
+        <div className="modal-overlay" onClick={() => { setShowCreateModal(false); setShowInviteModal(null); }}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            {showCreateModal && (
+              <>
+                <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Create Team</h2>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
+                  Set up a shared space for your projects and collaborate in real-time.
+                </p>
+                <div style={{ marginBottom: '32px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Team Name</label>
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder="e.g., Engineering Team, Side Project"
+                    value={newTeamName}
+                    onChange={e => setNewTeamName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleCreateTeam()}
+                    autoFocus
+                  />
+                </div>
+                <div className="modal-actions">
+                  <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
+                  <button 
+                    className="btn-primary" 
+                    onClick={handleCreateTeam} 
+                    disabled={!newTeamName.trim() || isCreating}
+                  >
+                    {isCreating ? 'Creating...' : 'Create Team'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {showInviteModal && (
+              <>
+                <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Invite Member</h2>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
+                  Add a colleague to <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{teams.find(t => t.id === showInviteModal)?.name}</span>.
+                </p>
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Email Address</label>
+                  <input
+                    type="email"
+                    className="text-input"
+                    placeholder="name@company.com"
+                    value={inviteEmail}
+                    onChange={e => setInviteEmail(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ marginBottom: '32px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Role</label>
+                  <select 
+                    value={inviteRole} 
+                    onChange={e => setInviteRole(e.target.value as TeamRole)}
+                    className="text-input"
+                    style={{ background: 'var(--bg-input)' }}
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div className="modal-actions">
+                  <button className="btn-secondary" onClick={() => setShowInviteModal(null)}>Cancel</button>
+                  <button className="btn-primary" onClick={handleInvite} disabled={!inviteEmail.trim()}>Send Invite</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

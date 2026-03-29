@@ -32,10 +32,25 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
   },
 
   createNewTeam: async (name) => {
-    const settings = useSettingsStore.getState().settings;
-    if (!settings) return;
-    const team = await createTeam(name, settings.email, settings.name);
-    set({ teams: [...get().teams, team] });
+    const { settings } = useSettingsStore.getState();
+    if (!settings) throw new Error("Settings not initialized");
+    
+    try {
+      const team = await createTeam(name, settings.email, settings.name);
+      
+      // Optimistically update the state with the new team
+      // Ensure we create a fresh array reference to trigger re-renders
+      set(state => ({ 
+        teams: [...(state.teams || []), team] 
+      }));
+
+      // Trigger workspace store to recalculate since it derives from teams
+      const { initialize } = (await import('./useWorkspaceStore')).useWorkspaceStore.getState();
+      await initialize();
+    } catch (e) {
+      console.error('[Pulse] Team creation failed:', e);
+      throw e;
+    }
   },
 
   inviteMember: async (teamId, teamName, email, role) => {

@@ -18,15 +18,17 @@ export default function AppShell({ children }: AppShellProps) {
   useKeyboardShortcuts();
 
   return (
-    <div className="app-shell">
-      <TitleBar />
-      <div className="app-body">
-        <Sidebar />
-        <main className="app-main">
-          {children}
-        </main>
+    <div className="app-container">
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
+        <TitleBar />
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <Sidebar />
+          <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {children}
+          </main>
+        </div>
+        <StatusBar />
       </div>
-      <StatusBar />
       <CommandPalette />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
       <Toaster theme="dark" position="bottom-right" />

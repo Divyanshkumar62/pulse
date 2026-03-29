@@ -18,20 +18,66 @@ export default function ActivityFeed() {
   ];
 
   return (
-    <div className="activity-feed" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <h3 className="text-label" style={{ color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent Activity</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div className="activity-feed" style={{ padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+      <h3 className="text-label" style={{ 
+        color: 'var(--accent-primary)', 
+        textTransform: 'uppercase', 
+        letterSpacing: '0.08em', 
+        fontSize: '11px', 
+        fontWeight: 800,
+        opacity: 0.9
+      }}>Recent Activity</h3>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         {activities.map(activity => (
-          <div key={activity.id} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-            <div style={{ width: '24px', height: '24px', borderRadius: '4px', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+          <div key={activity.id} style={{ 
+            display: 'flex', 
+            gap: '14px', 
+            alignItems: 'flex-start',
+            padding: '12px',
+            background: 'rgba(255,255,255,0.02)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-subtle)',
+            transition: 'all var(--transition-base)',
+            cursor: 'default'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            e.currentTarget.style.borderColor = 'var(--accent-subtle)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+            e.currentTarget.style.borderColor = 'var(--border-subtle)';
+          }}
+          >
+            <div style={{ 
+              width: '28px', 
+              height: '28px', 
+              borderRadius: 'var(--radius-md)', 
+              background: 'var(--bg-surface)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              fontSize: '14px',
+              border: '1px solid var(--border-subtle)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+            }}>
               {activity.icon}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{activity.user}</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>{activity.time}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{activity.user}</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', fontWeight: 500 }}>{activity.time}</span>
               </div>
-              <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p style={{ 
+                fontSize: '12px', 
+                color: 'var(--text-secondary)', 
+                margin: 0, 
+                whiteSpace: 'nowrap', 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis',
+                lineHeight: 1.4
+              }}>
                 {activity.target}
               </p>
             </div>

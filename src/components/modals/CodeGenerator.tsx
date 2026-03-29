@@ -39,7 +39,7 @@ export default function CodeGenerator({ isOpen, onClose }: CodeGeneratorProps) {
       >
         <div style={{ padding: '16px', borderBottom: '1px solid var(--border-default)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 className="text-h2">Code Snippet</h2>
-          <button onClick={onClose} style={{ color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '18px' }}>×</button>
+          <button onClick={onClose} style={{ color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
         
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border-default)' }}>

@@ -1,5 +1,6 @@
 import { useTabStore } from '../../stores/useTabStore';
 import { HttpMethod } from '../../types';
+import { toast } from 'sonner';
 
 interface UrlBarProps {
   onSend: () => void;
@@ -32,7 +33,7 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
         )}
         
         {isWebSocket && (
-          <div style={{ padding: '0 12px', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', borderRight: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center' }}>
+          <div style={{ padding: '0 16px', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em', height: '100%', display: 'flex', alignItems: 'center', borderRight: '1px solid var(--border-subtle)' }}>
             WS
           </div>
         )}
@@ -40,7 +41,7 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
         <input
           type="text"
           className="url-input"
-          placeholder="wss://echo.websocket.org"
+          placeholder="https://api.example.com/v1"
           value={request.url}
           onChange={(e) => updateActiveTabRequest({ url: e.target.value })}
           onKeyDown={(e) => {
@@ -49,23 +50,37 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
         />
         
         {!isWebSocket && (
-          <button 
-            onClick={onCode}
-            style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '0 12px', fontSize: '12px', cursor: 'pointer', marginRight: '8px' }}
-            title="Generate Code Snippet"
-          >
-            &lt;/&gt; Code
-          </button>
-        )}
+          <div style={{ display: 'flex', gap: 'var(--space-2)', padding: '4px' }}>
+            <button 
+              className="btn-secondary"
+              onClick={onCode}
+              title="Generate Code Snippet"
+              style={{ padding: '8px 14px', fontSize: '12px' }}
+            >
+              &lt;/&gt; Code
+            </button>
 
-        {!isWebSocket && (
-          <button 
-            className="send-btn" 
-            onClick={onSend}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Sending...' : 'Send'}
-          </button>
+            <button 
+              className="btn-secondary"
+              onClick={() => toast.success('Request saved!')}
+              style={{ width: '40px', padding: '0' }}
+              title="Save Request (Ctrl+S)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                <polyline points="17,21 17,13 7,13 7,21"/>
+                <polyline points="7,3 7,8 15,8"/>
+              </svg>
+            </button>
+
+            <button 
+              className="send-btn" 
+              onClick={onSend}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Sending...' : 'Send'}
+            </button>
+          </div>
         )}
       </div>
     </div>

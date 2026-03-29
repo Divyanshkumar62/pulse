@@ -59,36 +59,43 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="sidebar-container" style={{ width: `${width}px` }}>
-      <nav className="sidebar-nav">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            className={`sidebar-nav-item ${sidebarTab === tab.id ? 'active' : ''}`}
-            onClick={() => setSidebarTab(tab.id)}
-            title={tab.label}
-          >
-            {tab.icon}
-          </button>
-        ))}
-        <div style={{ flex: 1 }} />
-        <button
-          className="sidebar-nav-item"
-          onClick={() => setSettingsOpen(true)}
-          title="Settings"
-          style={{ marginBottom: '8px' }}
-        >
-          ⚙️
-        </button>
-      </nav>
+    <aside className="sidebar" style={{ width: `${width}px` }}>
+      <div className="sidebar-header">
+        <h1>
+          <span>⚡</span>
+          Pulse
+        </h1>
+        <div className="sidebar-tabs">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              className={`sidebar-tab ${sidebarTab === tab.id ? 'active' : ''}`}
+              onClick={() => setSidebarTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
       
-      <div className="sidebar-content" style={{ overflowY: 'auto' }}>
+      <div className="sidebar-content">
         {renderContent()}
       </div>
 
+      <div style={{ padding: 'var(--space-4)', borderTop: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.1)' }}>
+        <button
+          className="btn-secondary"
+          style={{ width: '100%', padding: '10px' }}
+          onClick={() => setSettingsOpen(true)}
+        >
+          ⚙️ Settings
+        </button>
+      </div>
+      
       <div 
         className={`sidebar-resizer ${isDragging ? 'dragging' : ''}`} 
         onMouseDown={startDrag}
+        style={{ cursor: 'col-resize', width: '4px', position: 'absolute', right: 0, top: 0, bottom: 0 }}
       />
     </aside>
   );

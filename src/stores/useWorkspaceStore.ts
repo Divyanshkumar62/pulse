@@ -28,8 +28,20 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   initialize: async () => {
     set({ isLoading: true });
     try {
-      await createDataDir();
-      const collections = await loadCollections();
+      // Step 1: Ensure Backend Data Directory Exists
+      try {
+        await createDataDir();
+      } catch (dirError) {
+        console.warn("[Pulse] Data directory creation failed, falling back to cache.", dirError);
+      }
+
+      // Step 2: Load Collections
+      let collections: Collection[] = [];
+      try {
+        collections = await loadCollections();
+      } catch (loadError) {
+        console.error("[Pulse] Failed to load collections from disk.", loadError);
+      }
       
       const personalWorkspace: Workspace = {
         id: 'personal',
@@ -38,22 +50,27 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
         collections
       };
       
-      // Inherit teams to generate team workspaces
+      // Step 3: Map Team Workspaces
       const teams = useTeamStore.getState().teams;
-      const teamWorkspaces: Workspace[] = teams.map(t => ({
+      const teamWorkspaces: Workspace[] = (teams || []).map(t => ({
         id: `team_${t.id}`,
         name: t.name,
         type: 'team',
         teamId: t.id,
-        collections: [] // Will fetch team remote collections later
+        collections: [] 
       }));
 
       set({ 
         workspaces: [personalWorkspace, ...teamWorkspaces],
-        activeWorkspaceId: 'personal' // Default to personal
+        activeWorkspaceId: 'personal' // Force default to personal to resolve stuck UI
       });
     } catch (e) {
-      console.error('Failed to initialize workspaces', e);
+      console.error('[Pulse] Critical failure in workspace initialization', e);
+      // Fail-safe state
+      set({ 
+        workspaces: [{ id: 'personal', name: 'Personal (Local Only)', type: 'personal', collections: [] }],
+        activeWorkspaceId: 'personal'
+      });
     } finally {
       set({ isLoading: false });
     }
