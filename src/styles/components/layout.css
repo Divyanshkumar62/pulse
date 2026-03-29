@@ -62,14 +62,19 @@
   gap: var(--space-2);
 }
 .sidebar-nav-item {
-  width: 32px;
-  height: 32px;
+  width: var(--btn-md);
+  height: var(--btn-md);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
-  transition: all var(--duration-fast) var(--ease-default);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.sidebar-nav-item svg {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
 }
 .sidebar-nav-item:hover {
   background-color: var(--bg-overlay);

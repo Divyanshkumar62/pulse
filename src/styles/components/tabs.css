@@ -54,10 +54,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: var(--btn-sm);
+  height: var(--btn-sm);
   border-radius: var(--radius-sm);
-  transition: all var(--duration-fast);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.tab-close svg {
+  width: 14px;
+  height: 14px;
 }
 .tab:hover .tab-close {
   opacity: 1;
@@ -94,12 +99,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
+  width: var(--btn-sm);
+  height: var(--btn-sm);
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
-  transition: all var(--duration-fast);
-  font-size: 16px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.new-tab-btn svg {
+  width: 18px;
+  height: 18px;
 }
 .new-tab-btn:hover {
   background-color: var(--bg-overlay);
