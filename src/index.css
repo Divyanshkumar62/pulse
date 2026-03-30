@@ -75,15 +75,16 @@ button:disabled {
 
 .sidebar {
   width: 290px;
-  background: var(--bg-glass);
-  backdrop-filter: var(--blur-glass);
-  border: 1px solid var(--border-default);
+  background: rgba(13, 13, 18, 0.7);
+  backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-xl), 0 0 40px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;
+  transition: all var(--transition-base);
 }
 
 .sidebar-header {
@@ -104,11 +105,11 @@ button:disabled {
 
 .sidebar-tabs {
   display: flex;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 3px;
-  border-radius: var(--radius-lg);
-  gap: 2px;
-  border: 1px solid var(--border-subtle);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px;
+  border-radius: var(--radius-xl);
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sidebar-tab {
@@ -247,22 +248,129 @@ button:disabled {
   box-shadow: 0 0 0 4px var(--accent-subtle), var(--shadow-md);
 }
 
-.method-select {
-  background: var(--bg-surface);
+.method-select-container {
+  position: relative;
+  min-width: 110px;
+}
+
+.method-display {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
   color: var(--accent-primary);
   border: 1px solid var(--border-default);
-  padding: 10px 18px;
+  padding: 0 16px;
   border-radius: var(--radius-xl);
   font-size: 13px;
   font-weight: 800;
-  min-width: 100px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
-.method-select:hover {
-  background: var(--bg-elevated);
+.method-display:hover {
+  background: rgba(255, 255, 255, 0.08);
   border-color: var(--accent-primary);
+  box-shadow: 0 0 12px var(--accent-subtle);
+}
+
+.glass-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: rgba(18, 18, 23, 0.9);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl), 0 15px 45px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  min-width: 140px;
+  overflow: hidden;
+  padding: 6px;
+  animation: dropdownFadeIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.glass-dropdown-item {
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.glass-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--accent-primary);
+  transform: translateX(4px);
+}
+
+/* ──── TOOLTIP UTILITY ──── */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%) translateY(5px);
+  background: rgba(30, 30, 35, 0.95);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  z-index: 1100;
+}
+
+[data-tooltip]:hover::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.request-name-input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  width: 100%;
+  transition: all var(--transition-fast);
+  margin-bottom: 2px;
+}
+
+.request-name-input:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.request-name-input:focus {
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-subtle);
 }
 
 .url-input {

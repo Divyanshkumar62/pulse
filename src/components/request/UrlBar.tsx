@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
 import { HttpMethod } from '../../types';
 import { toast } from 'sonner';
@@ -14,6 +15,19 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
   const { tabs, activeTabId, updateActiveTabRequest } = useTabStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const request = activeTab?.request;
+  
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   if (!request) return null;
 
@@ -21,19 +35,48 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
 
   return (
     <div className="url-bar-container">
-      <div className="url-bar">
+      <input 
+        className="request-name-input"
+        value={request.name}
+        onChange={(e) => updateActiveTabRequest({ name: e.target.value })}
+        placeholder="New Request"
+      />
+      <div className="url-bar" style={{ padding: '4px', gap: '8px' }}>
         {!isWebSocket && (
-          <select 
-            className="method-select"
-            value={request.method}
-            onChange={(e) => updateActiveTabRequest({ method: e.target.value as HttpMethod })}
-          >
-            {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <div className="method-select-container" ref={dropdownRef}>
+            <div 
+              className="method-display"
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              style={{ minWidth: '100px', height: '38px', borderRadius: 'var(--radius-lg)' }}
+            >
+              {request.method}
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ opacity: 0.6, transform: isDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+            
+            {isDropdownOpen && (
+              <div className="glass-dropdown-menu">
+                {METHODS.map(m => (
+                  <div 
+                    key={m} 
+                    className="glass-dropdown-item"
+                    onClick={() => {
+                      updateActiveTabRequest({ method: m });
+                      setIsDropdownOpen(false);
+                    }}
+                    style={{ color: m === request.method ? 'var(--accent-primary)' : 'inherit' }}
+                  >
+                    {m}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         
         {isWebSocket && (
-          <div style={{ padding: '0 16px', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em', height: '100%', display: 'flex', alignItems: 'center', borderRight: '1px solid var(--border-subtle)' }}>
+          <div style={{ padding: '0 16px', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em', height: '38px', display: 'flex', alignItems: 'center', borderRight: '1px solid var(--border-subtle)' }}>
             WS
           </div>
         )}
@@ -47,6 +90,7 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !isWebSocket) onSend();
           }}
+          style={{ padding: '0 8px', fontSize: '14px', height: '38px' }}
         />
         
         {!isWebSocket && (
@@ -55,7 +99,7 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
               className="btn-secondary"
               onClick={onCode}
               title="Generate Code Snippet"
-              style={{ padding: '8px 14px', fontSize: '12px' }}
+              style={{ height: '38px', padding: '0 14px', fontSize: '12px', borderRadius: '10px' }}
             >
               &lt;/&gt; Code
             </button>
@@ -63,7 +107,7 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
             <button 
               className="btn-secondary"
               onClick={() => toast.success('Request saved!')}
-              style={{ width: '40px', padding: '0' }}
+              style={{ width: '38px', height: '38px', padding: '0', borderRadius: '10px' }}
               title="Save Request (Ctrl+S)"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -77,6 +121,7 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
               className="send-btn" 
               onClick={onSend}
               disabled={isLoading}
+              style={{ height: '38px', borderRadius: '10px' }}
             >
               {isLoading ? 'Sending...' : 'Send'}
             </button>
