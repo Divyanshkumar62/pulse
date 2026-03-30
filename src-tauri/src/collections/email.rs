@@ -39,12 +39,18 @@ impl EmailSettings {
             "sendgrid" => EmailProvider::Sendgrid,
             _ => EmailProvider::Mock,
         };
-
+        let api_key = std::env::var("EMAIL_API_KEY").unwrap_or_default();
+        let from_email = std::env::var("EMAIL_FROM").unwrap_or_else(|_| "noreply@pulse.app".to_string());
+        let from_name = std::env::var("EMAIL_FROM_NAME").unwrap_or_else(|_| "Pulse API Client".to_string());
+        
+        log::info!("[Email] Settings loaded - provider: {:?}, api_key_set: {}, from_email: {}", 
+                   provider, !api_key.is_empty(), from_email);
+        
         Self {
             provider,
-            api_key: std::env::var("EMAIL_API_KEY").unwrap_or_default(),
-            from_email: std::env::var("EMAIL_FROM").unwrap_or_else(|_| "noreply@pulse.app".to_string()),
-            from_name: std::env::var("EMAIL_FROM_NAME").unwrap_or_else(|_| "Pulse API Client".to_string()),
+            api_key,
+            from_email,
+            from_name,
         }
     }
 
@@ -163,7 +169,7 @@ pub async fn send_email(settings: &EmailSettings, to: &str, subject: &str, html:
         EmailProvider::Resend => send_via_resend(settings, to, subject, html).await,
         EmailProvider::Sendgrid => send_via_sendgrid(settings, to, subject, html).await,
         EmailProvider::Mock => {
-            println!("[Mock Email] To: {}, Subject: {}", to, subject);
+            log::info!("[Mock Email] To: {}, Subject: {}", to, subject);
             Ok(())
         }
     }
@@ -172,28 +178,41 @@ pub async fn send_email(settings: &EmailSettings, to: &str, subject: &str, html:
 async fn send_via_resend(settings: &EmailSettings, to: &str, subject: &str, html: &str) -> Result<(), String> {
     let client = reqwest::Client::new();
     
-    let email = ResendEmail {
-        from: format!("{} <{}>", settings.from_name, settings.from_email),
+    let from = format!("{} <{}>", settings.from_name, settings.from_email);
+    
+    #[derive(Serialize)]
+    struct ResendRequest {
+        from: String,
+        to: Vec<String>,
+        subject: String,
+        html: String,
+    }
+    
+    let request = ResendRequest {
+        from,
         to: vec![to.to_string()],
         subject: subject.to_string(),
         html: html.to_string(),
     };
     
-    let response = client
-        .post("https://api.resend.com/emails")
+    log::info!("[Email] Sending via Resend API to {} from {}", to, settings.from_email);
+    
+    let response = client.post("https://api.resend.com/emails")
         .header("Authorization", format!("Bearer {}", settings.api_key))
         .header("Content-Type", "application/json")
-        .json(&email)
+        .json(&request)
         .send()
         .await
-        .map_err(|e| format!("Failed to send email: {}", e))?;
+        .map_err(|e| format!("Failed to send request: {}", e))?;
     
-    if response.status().is_success() {
-        println!("[Email] Sent successfully via Resend to {}", to);
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    
+    if status.is_success() {
+        log::info!("[Email] Sent successfully via Resend to {}", to);
         Ok(())
     } else {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
+        log::error!("[Email] Resend API error ({}): {}", status, body);
         Err(format!("Resend API error ({}): {}", status, body))
     }
 }
@@ -254,7 +273,7 @@ async fn send_via_sendgrid(settings: &EmailSettings, to: &str, subject: &str, ht
         .map_err(|e| format!("Failed to send email: {}", e))?;
     
     if response.status().is_success() || response.status().as_u16() == 202 {
-        println!("[Email] Sent successfully via SendGrid to {}", to);
+        log::info!("[Email] Sent successfully via SendGrid to {}", to);
         Ok(())
     } else {
         let status = response.status();
@@ -271,11 +290,31 @@ pub async fn send_invitation_email(
     let html = build_invitation_html(invitation, inviter_name);
     let subject = format!("You've been invited to join {} on Pulse", invitation.team_name);
     
+    log::info!("[Email] Preparing to send invitation to {} via {:?}", invitation.email, settings.provider);
+    
     if settings.is_configured() {
-        send_email(&settings, &invitation.email, &subject, &html).await
+        log::info!("[Email] Sending configured email via {:?}", settings.provider);
+        match send_email(&settings, &invitation.email, &subject, &html).await {
+            Ok(()) => {
+                log::info!("[Email] Sent successfully to {}", invitation.email);
+                Ok(())
+            }
+            Err(e) => {
+                log::error!("[Email] Failed to send email: {}", e);
+                Err(e)
+            }
+        }
     } else {
-        println!("[Email Preview] To: {}, Subject: {}", invitation.email, subject);
-        println!("{}", html);
+        log::info!("[Email] Using mock mode (not configured)");
+        log::info!("[Email Preview] To: {}, Subject: {}", invitation.email, subject);
+        log::info!("{}", html);
         Ok(())
     }
+}
+
+pub async fn resend_invitation_email(
+    invitation: &Invitation,
+) -> Result<(), String> {
+    log::info!("[Email] Resending invitation to {}", invitation.email);
+    send_invitation_email(invitation, &invitation.invited_by_name).await
 }

@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Team, Invitation, TeamRole } from '../types';
 import '../styles/components/teams.css';
+
+console.log('[Pulse] TeamPanel component loaded');
 
 interface TeamPanelProps {
   teams: Team[];
@@ -11,6 +13,9 @@ interface TeamPanelProps {
   onInvite: (teamId: string, teamName: string, email: string, role: TeamRole) => void;
   onAcceptInvitation: (id: string) => void;
   onDeclineInvitation: (id: string) => void;
+  onResendInvite?: (id: string) => void;
+  error?: string | null;
+  onClearError?: () => void;
 }
 
 export default function TeamPanel({
@@ -22,7 +27,12 @@ export default function TeamPanel({
   onInvite,
   onAcceptInvitation,
   onDeclineInvitation,
+  onResendInvite,
+  error,
+  onClearError,
 }: TeamPanelProps) {
+  console.log('[Pulse] TeamPanel rendered, teams:', teams, 'invitations:', invitations);
+  
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState<string | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
@@ -30,22 +40,29 @@ export default function TeamPanel({
   const [inviteRole, setInviteRole] = useState<TeamRole>('member');
   const [activeTab, setActiveTab] = useState<'teams' | 'invitations'>('teams');
   const [isCreating, setIsCreating] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (showCreateModal || showInviteModal) {
+      onClearError?.();
+    }
+  }, [showCreateModal, showInviteModal]);
 
   const pendingInvitations = invitations.filter(i => i.status === 'pending');
-  // Show all teams (including owned teams)
   const userTeams = teams;
+
+  console.log('[Pulse] TeamPanel: userTeams length:', userTeams.length);
 
   const handleCreateTeam = async () => {
     if (newTeamName.trim() && !isCreating) {
       setIsCreating(true);
+      onClearError?.();
       try {
-        console.log('Creating team:', newTeamName.trim());
         await onCreateTeam(newTeamName.trim());
-        console.log('Team created successfully');
         setNewTeamName('');
         setShowCreateModal(false);
-      } catch (error) {
-        console.error('Failed to create team:', error);
+      } catch (err) {
+        // error handled by store
       } finally {
         setIsCreating(false);
       }
@@ -56,15 +73,27 @@ export default function TeamPanel({
     if (showInviteModal && inviteEmail.trim()) {
       const team = teams.find(t => t.id === showInviteModal);
       if (team) {
+        onClearError?.();
         try {
           await onInvite(showInviteModal, team.name, inviteEmail.trim(), inviteRole);
           setInviteEmail('');
           setInviteRole('member');
           setShowInviteModal(null);
-        } catch (error) {
-          console.error('Failed to invite:', error);
+        } catch (err) {
+          // err handled by store
         }
       }
+    }
+  };
+  
+  const handleResend = async (id: string) => {
+    if (onResendInvite && !resendingId) {
+        setResendingId(id);
+        try {
+            await onResendInvite(id);
+        } finally {
+            setResendingId(null);
+        }
     }
   };
 
@@ -83,13 +112,15 @@ export default function TeamPanel({
           className={`sidebar-tab ${activeTab === 'teams' ? 'active' : ''}`}
           onClick={() => setActiveTab('teams')}
         >
-          Teams ({userTeams.length})
+          <span>Teams</span>
+          <span className="tab-badge">{userTeams.length}</span>
         </button>
         <button 
           className={`sidebar-tab ${activeTab === 'invitations' ? 'active' : ''}`}
           onClick={() => setActiveTab('invitations')}
         >
-          Invites ({pendingInvitations.length})
+          <span>Invites</span>
+          <span className="tab-badge">{pendingInvitations.length}</span>
         </button>
       </div>
 
@@ -119,14 +150,7 @@ export default function TeamPanel({
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                 {userTeams.map(team => (
-                  <div key={team.id} style={{ 
-                    background: 'var(--bg-elevated)', 
-                    borderRadius: 'var(--radius-xl)', 
-                    border: '1px solid var(--border-subtle)',
-                    padding: '16px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    transition: 'all var(--transition-base)'
-                  }}>
+                  <div key={team.id} className="pulse-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{team.name}</h3>
                       <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '11px', borderRadius: 'var(--radius-md)' }} onClick={() => setShowInviteModal(team.id)}>
@@ -192,27 +216,44 @@ export default function TeamPanel({
                <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-tertiary)', fontSize: '13px', fontWeight: 500 }}>
                   No pending invitations.
                </div>
-            ) : pendingInvitations.map(invitation => (
-              <div key={invitation.id} style={{ 
-                background: 'var(--bg-elevated)', 
-                borderRadius: 'var(--radius-xl)', 
-                border: '1px solid var(--accent-border)',
-                padding: '16px',
-                boxShadow: '0 4px 20px var(--accent-subtle)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>{invitation.team_name}</span>
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{invitation.role}</span>
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                  Invited by <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{invitation.invited_by}</span>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn-primary" style={{ flex: 1, padding: '8px' }} onClick={() => onAcceptInvitation(invitation.id)}>Accept</button>
-                  <button className="btn-secondary" style={{ flex: 1, padding: '8px' }} onClick={() => onDeclineInvitation(invitation.id)}>Decline</button>
-                </div>
-              </div>
-            ))}
+            ) : pendingInvitations.map(invitation => {
+                const isSentByMe = Boolean(teams.find(t => t.id === invitation.team_id));
+                const isToMe = invitation.email === currentUserEmail;
+
+                return (
+                  <div key={invitation.id} className="pulse-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>{invitation.team_name}</span>
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{invitation.role}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                      {isToMe ? (
+                         <>Invited by <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{invitation.invited_by}</span></>
+                      ) : (
+                         <>Sent to <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{invitation.email}</span></>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {isToMe && (
+                        <>
+                          <button className="btn-primary" style={{ flex: 1, padding: '8px' }} onClick={() => onAcceptInvitation(invitation.id)}>Accept</button>
+                          <button className="btn-secondary btn-danger" style={{ flex: 1, padding: '8px' }} onClick={() => onDeclineInvitation(invitation.id)}>Decline</button>
+                        </>
+                      )}
+                      {!isToMe && isSentByMe && onResendInvite && (
+                          <button 
+                             className="btn-secondary" 
+                             style={{ flex: 1, padding: '8px' }} 
+                             onClick={() => handleResend(invitation.id)}
+                             disabled={resendingId === invitation.id}
+                           >
+                             {resendingId === invitation.id ? 'Sending...' : 'Resend'}
+                           </button>
+                      )}
+                    </div>
+                  </div>
+                );
+            })}
           </div>
         )}
       </div>
@@ -237,6 +278,7 @@ export default function TeamPanel({
                     onKeyDown={e => e.key === 'Enter' && handleCreateTeam()}
                     autoFocus
                   />
+                  {error && <div style={{ color: 'var(--status-server)', fontSize: '12px', marginTop: '10px', fontWeight: 600 }}>{error}</div>}
                 </div>
                 <div className="modal-actions">
                   <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
@@ -279,6 +321,7 @@ export default function TeamPanel({
                     <option value="member">Member</option>
                     <option value="admin">Admin</option>
                   </select>
+                  {error && <div style={{ color: 'var(--status-server)', fontSize: '12px', marginTop: '10px', fontWeight: 600 }}>{error}</div>}
                 </div>
                 <div className="modal-actions">
                   <button className="btn-secondary" onClick={() => setShowInviteModal(null)}>Cancel</button>

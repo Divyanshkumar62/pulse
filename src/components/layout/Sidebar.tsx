@@ -6,15 +6,19 @@ import TeamPanel from '../TeamPanel';
 import CollectionTree from '../collections/CollectionTree';
 import ActivityFeed from '../ActivityFeed';
 
+console.log('[Pulse] Sidebar component loaded');
+
 export default function Sidebar() {
   const { sidebarTab, setSidebarTab, sidebarWidth, setSidebarWidth, setSettingsOpen } = useAppStore();
   const { width, isDragging, startDrag } = useResizable(sidebarWidth, 200, 600, setSidebarWidth);
 
   // Teams store
   const { 
-    teams, invitations, 
-    createNewTeam, inviteMember, acceptInvite, declineInvite 
+    teams, invitations, error, clearError,
+    createNewTeam, inviteMember, acceptInvite, declineInvite, resendInvite
   } = useTeamStore();
+  
+  console.log('[Pulse] Sidebar: teams from store:', teams);
   
   // Settings store
   const { settings } = useSettingsStore();
@@ -38,8 +42,11 @@ export default function Sidebar() {
             invitations={invitations}
             currentUserEmail={settings.email}
             currentUserName={settings.name}
+            error={error}
+            onClearError={clearError}
             onCreateTeam={createNewTeam}
             onInvite={inviteMember}
+            onResendInvite={resendInvite}
             onAcceptInvitation={acceptInvite}
             onDeclineInvitation={declineInvite}
           />

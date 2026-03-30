@@ -53,3 +53,7 @@ Cargo.lock
 *.tmp
 *.temp
 .cache/
+
+# Agent Skills
+.agent/skills/
+.env

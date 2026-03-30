@@ -68,3 +68,25 @@ pub fn import_postman(path: impl AsRef<Path>) -> Result<Collection, Box<dyn std:
             as Box<dyn std::error::Error>
     })
 }
+
+pub fn load_all_collections<P: AsRef<Path>>(dir: P) -> Result<Vec<Collection>, Box<dyn std::error::Error>> {
+    let mut collections = Vec::new();
+    if !dir.as_ref().exists() {
+        return Ok(collections);
+    }
+
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                if ext == "json" || ext == "yaml" || ext == "yml" {
+                    if let Ok(collection) = load_from_file(&path) {
+                        collections.push(collection);
+                    }
+                }
+            }
+        }
+    }
+    Ok(collections)
+}

@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { HttpResponse, Collection, HistoryEntry, Environment, Team, Invitation, TeamRole, RequestBody } from '../types';
-
+import { logger } from '../lib/logger';
 export interface UserSettings {
   email: string;
   name: string;
@@ -65,11 +65,27 @@ export async function saveUserSettings(settings: UserSettings): Promise<void> {
 }
 
 export async function createTeam(name: string, ownerEmail: string, ownerName: string): Promise<Team> {
-  return invoke('create_team', { name, owner_email: ownerEmail, owner_name: ownerName });
+  logger.tauri('createTeam', { name, ownerEmail, ownerName });
+  try {
+    const result = await invoke<Team>('create_team', { name, ownerEmail, ownerName });
+    logger.tauri('createTeam', result, 'OK');
+    return result;
+  } catch (error: any) {
+    logger.tauri('createTeam', error, 'ERR');
+    throw error;
+  }
 }
 
 export async function getTeams(): Promise<Team[]> {
-  return invoke('get_teams');
+  logger.tauri('getTeams');
+  try {
+    const result = await invoke<Team[]>('get_teams');
+    logger.tauri('getTeams', { items: result.length }, 'OK');
+    return result;
+  } catch (error: any) {
+    logger.tauri('getTeams', error, 'ERR');
+    throw error;
+  }
 }
 
 export async function inviteToTeam(
@@ -80,14 +96,22 @@ export async function inviteToTeam(
   invitedBy: string,
   invitedByName: string
 ): Promise<Invitation> {
-  return invoke('invite_to_team', { 
-    team_id: teamId, 
-    team_name: teamName, 
-    email, 
-    role, 
-    invited_by: invitedBy, 
-    invited_by_name: invitedByName 
-  });
+  logger.tauri('inviteToTeam', { teamId, email, role });
+  try {
+    const result = await invoke<Invitation>('invite_to_team', { 
+      teamId, 
+      teamName, 
+      email, 
+      role, 
+      invitedBy, 
+      invitedByName 
+    });
+    logger.tauri('inviteToTeam', result, 'OK');
+    return result;
+  } catch (error: any) {
+    logger.tauri('inviteToTeam', error, 'ERR');
+    throw error;
+  }
 }
 
 export async function getPendingInvitations(): Promise<Invitation[]> {
@@ -99,11 +123,36 @@ export async function getAllInvitations(): Promise<Invitation[]> {
 }
 
 export async function acceptInvitation(invitationId: string): Promise<void> {
-  return invoke('accept_invitation', { invitation_id: invitationId });
+  logger.tauri('acceptInvitation', { invitationId });
+  try {
+    await invoke('accept_invitation', { invitationId });
+    logger.tauri('acceptInvitation', null, 'OK');
+  } catch (error: any) {
+    logger.tauri('acceptInvitation', error, 'ERR');
+    throw error;
+  }
 }
 
 export async function declineInvitation(invitationId: string): Promise<void> {
-  return invoke('decline_invitation', { invitation_id: invitationId });
+  logger.tauri('declineInvitation', { invitationId });
+  try {
+    await invoke('decline_invitation', { invitationId });
+    logger.tauri('declineInvitation', null, 'OK');
+  } catch (error: any) {
+    logger.tauri('declineInvitation', error, 'ERR');
+    throw error;
+  }
+}
+
+export async function resendInvitation(invitationId: string): Promise<void> {
+    logger.tauri('resendInvitation', { invitationId });
+    try {
+        await invoke('resend_invitation', { invitationId });
+        logger.tauri('resendInvitation', null, 'OK');
+    } catch(error: any) {
+        logger.tauri('resendInvitation', error, 'ERR');
+        throw error;
+    }
 }
 export interface OAuthResult {
   code: string;

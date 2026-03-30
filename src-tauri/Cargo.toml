@@ -29,7 +29,10 @@ url = "2.5.8"
 base64 = "0.22.1"
 sha2 = "0.10.9"
 rand = "0.8"
+log = "0.4"
+env_logger = "0.10"
 open = "5.3.3"
+dotenv = "0.15"
 
 [profile.release]
 panic = "abort"

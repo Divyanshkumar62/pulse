@@ -36,6 +36,7 @@ pub struct Invitation {
     pub role: TeamRole,
     pub status: InvitationStatus,
     pub invited_by: String,
+    pub invited_by_name: String,
     pub invited_at: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
     pub accepted_at: Option<DateTime<Utc>>,
@@ -89,6 +90,7 @@ impl Invitation {
         email: String,
         role: TeamRole,
         invited_by: String,
+        invited_by_name: String,
     ) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
@@ -98,6 +100,7 @@ impl Invitation {
             role,
             status: InvitationStatus::Pending,
             invited_by,
+            invited_by_name,
             invited_at: Utc::now(),
             expires_at: Utc::now() + chrono::Duration::days(7),
             accepted_at: None,

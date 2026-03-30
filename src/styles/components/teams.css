@@ -1,359 +1,39 @@
+/* 
+  Team specific styles.
+  Note: Many elements now use global utilities from index.css (e.g. .pulse-card, .btn-primary)
+*/
+
 .team-panel {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-deep);
 }
 
-/* Tabs */
-.team-tabs {
-  display: flex;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--border-default);
-}
-
-.team-tab {
-  flex: 1;
-  padding: var(--space-3) var(--space-4);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-lg);
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.team-tab:hover {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.team-tab.active {
-  background: var(--accent-subtle);
-  border-color: var(--accent-border);
-  color: var(--accent-primary);
-  box-shadow: 0 0 12px var(--accent-glow);
-}
-
-/* Content */
 .teams-content, .invitations-content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
 }
 
-/* Cards with Glass Effect */
-.team-card, .invitation-card {
-  background: var(--bg-glass);
-  backdrop-filter: var(--blur-glass);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xl);
-  padding: var(--space-5);
-  transition: all 0.2s ease;
-}
-
-.team-card:hover, .invitation-card:hover {
-  border-color: var(--accent-border);
-  box-shadow: var(--shadow-glow);
-  transform: translateY(-1px);
-}
-
-.team-header, .invitation-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-4);
-}
-
-.team-name {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* Buttons with States */
-.btn-primary-sm {
-  padding: var(--space-2) var(--space-4);
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
-  border: none;
-  border-radius: var(--radius-md);
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-.btn-primary-sm:hover {
-  background: linear-gradient(135deg, var(--accent-hover), var(--accent-primary));
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-}
-.btn-primary-sm:active {
-  transform: translateY(0);
-}
-.btn-primary-sm:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-secondary-sm {
-  padding: var(--space-2) var(--space-4);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  transition: all 0.2s ease;
-}
-.btn-secondary-sm:hover {
-  background: var(--bg-overlay);
-  color: var(--text-primary);
-  border-color: var(--border-focus);
-}
-.btn-secondary-sm:active {
-  transform: scale(0.98);
-}
-
-/* Member List */
-.member-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.member-row:last-child {
-  border-bottom: none;
-}
-
-.member-avatar {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.member-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.member-name {
-  font-size: 14px;
-  font-weight: 500;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-primary);
-}
-
-/* Role Badges */
-.role-badge {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  letter-spacing: 0.5px;
-}
-
-.role-owner { 
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.1)); 
-  color: var(--accent-primary); 
-  border: 1px solid var(--accent-border);
-}
-.role-admin { 
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1)); 
-  color: #fbbf24; 
-  border: 1px solid rgba(245, 158, 11, 0.3);
-}
-.role-member { 
-  background: var(--bg-surface); 
-  color: var(--text-tertiary); 
-  border: 1px solid var(--border-subtle);
-}
-
-/* Empty State */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-12);
-  text-align: center;
-  color: var(--text-tertiary);
-}
-.empty-state svg {
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--space-4);
-  opacity: 0.5;
-}
-.empty-state p {
-  font-size: 14px;
-  max-width: 200px;
-}
-
-/* Modal Overlay */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Modal */
-.modal {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
-  width: 400px;
-  max-width: 90vw;
-  box-shadow: var(--shadow-lg), 0 0 40px rgba(0, 0, 0, 0.5);
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from { 
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.modal h2 {
-  margin: 0 0 var(--space-5) 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* Input */
-.text-input {
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  background: var(--bg-input);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  color: var(--text-primary);
-  font-size: 14px;
-  transition: all 0.2s ease;
-}
-.text-input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-subtle), var(--shadow-glow);
-}
-.text-input::placeholder {
-  color: var(--text-tertiary);
-}
-
-/* Modal Actions */
-.modal-actions {
-  display: flex;
-  gap: var(--space-3);
-  justify-content: flex-end;
-  margin-top: var(--space-6);
-}
-
-.btn-primary {
-  padding: var(--space-3) var(--space-5);
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
-  border: none;
-  border-radius: var(--radius-lg);
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-}
-.btn-primary:active {
-  transform: translateY(0);
-}
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-secondary {
-  padding: var(--space-3) var(--space-5);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.btn-secondary:hover {
-  background: var(--bg-overlay);
-  color: var(--text-primary);
-  border-color: var(--border-focus);
-}
-
-/* Scrollbar */
+/* Scrollbar specific to team content to match main app scrollbars */
 .teams-content::-webkit-scrollbar,
 .invitations-content::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
+
 .teams-content::-webkit-scrollbar-track,
 .invitations-content::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .teams-content::-webkit-scrollbar-thumb,
 .invitations-content::-webkit-scrollbar-thumb {
   background: var(--border-default);
-  border-radius: 3px;
+  border-radius: var(--radius-full);
 }
+
 .teams-content::-webkit-scrollbar-thumb:hover,
 .invitations-content::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary);

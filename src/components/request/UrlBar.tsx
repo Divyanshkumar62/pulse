@@ -50,7 +50,7 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
         />
         
         {!isWebSocket && (
-          <div style={{ display: 'flex', gap: 'var(--space-2)', padding: '4px' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
             <button 
               className="btn-secondary"
               onClick={onCode}
