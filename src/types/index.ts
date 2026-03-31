@@ -5,6 +5,13 @@ export interface KeyValuePair {
   description?: string;
 }
 
+export interface Variable {
+  key: string;
+  value: string;
+  enabled: boolean;
+}
+
+
 export type Header = KeyValuePair;
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
@@ -88,12 +95,13 @@ export interface Collection {
   description: string | null;
   requests: Request[];
   folders: Folder[];
+  variables?: Variable[];
 }
 
 export interface Environment {
   id: string;
   name: string;
-  variables: { key: string; value: string; enabled: boolean }[];
+  variables: Variable[];
 }
 
 export interface HistoryEntry {

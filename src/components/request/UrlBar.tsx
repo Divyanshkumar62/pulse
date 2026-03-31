@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
 import { HttpMethod } from '../../types';
 import { toast } from 'sonner';
+import { CurlParser } from '../../services/curl';
 
 interface UrlBarProps {
   onSend: () => void;
@@ -87,10 +88,28 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
           placeholder="https://api.example.com/v1"
           value={request.url}
           onChange={(e) => updateActiveTabRequest({ url: e.target.value })}
+          onPaste={(e) => {
+            const pastedText = e.clipboardData.getData('text');
+            if (pastedText.trim().startsWith('curl ')) {
+              e.preventDefault();
+              try {
+                const parsed = CurlParser.parse(pastedText);
+                updateActiveTabRequest({
+                  method: parsed.method,
+                  url: parsed.url,
+                  headers: parsed.headers,
+                  body: parsed.body,
+                });
+                toast.success('Successfully imported cURL request');
+              } catch (err) {
+                toast.error('Failed to parse cURL command');
+              }
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !isWebSocket) onSend();
           }}
-          style={{ padding: '0 8px', fontSize: '14px', height: '38px' }}
+          style={{ padding: '0 8px', fontSize: '14px', height: '38px', flex: 1 }}
         />
         
         {!isWebSocket && (

@@ -5,6 +5,7 @@ import { useSettingsStore } from '../../stores/useSettingsStore';
 import TeamPanel from '../TeamPanel';
 import CollectionTree from '../collections/CollectionTree';
 import ActivityFeed from '../ActivityFeed';
+import EnvironmentsPanel from '../sidebar/EnvironmentsPanel';
 
 console.log('[Pulse] Sidebar component loaded');
 
@@ -91,6 +92,8 @@ export default function Sidebar() {
         );
       case 'history':
         return <ActivityFeed />;
+      case 'environments':
+        return <EnvironmentsPanel />;
       default:
         return (
           <div style={{ padding: '12px', color: 'var(--text-secondary)' }}>

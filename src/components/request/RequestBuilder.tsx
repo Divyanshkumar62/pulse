@@ -10,7 +10,9 @@ import CodeGenerator from '../modals/CodeGenerator';
 import { useTabStore } from '../../stores/useTabStore';
 import { sendRequest } from '../../hooks/useTauri';
 import { useSettingsStore } from '../../stores/useSettingsStore';
+import { useCollectionStore } from '../../stores/useCollectionStore';
 import { toast } from 'sonner';
+import { VariableResolver } from '../../services/variableResolver';
 import '../../styles/components/request.css';
 
 type ConfigTab = 'params' | 'headers' | 'body' | 'auth' | 'scripts';
@@ -20,6 +22,7 @@ import { executePreRequestScript } from '../../services/scriptRunner';
 
 export default function RequestBuilder() {
   const { tabs, activeTabId, setTabResponse, updateActiveTabRequest } = useTabStore();
+  const { collections } = useCollectionStore();
   const { settings } = useSettingsStore();
   const { environments, activeEnvId, updateEnvironment } = useEnvStore();
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('params');
@@ -99,9 +102,43 @@ export default function RequestBuilder() {
         }
       });
       
+      // Resolve variables
+      const activeEnv = environments.find(e => e.id === activeEnvId);
+      const envVars = activeEnv?.variables || [];
+      
+      const parentCollection = collections.find(c =>
+        c.requests.some(r => r.id === activeTab.request.id) ||
+        c.folders.some(f => f.requests.some(r => r.id === activeTab.request.id))
+      );
+      const colVars = parentCollection?.variables || [];
+
+      // Resolve URL
+      finalUrl = VariableResolver.resolve(finalUrl, colVars, envVars);
+
+      // Resolve Headers
+      const resolvedHeaders: Record<string, string> = {};
+      Object.entries(headerRecord).forEach(([key, value]) => {
+        const rKey = VariableResolver.resolve(key, colVars, envVars);
+        const rValue = VariableResolver.resolve(value, colVars, envVars);
+        if (rKey) resolvedHeaders[rKey] = rValue;
+      });
+
+      // Resolve Body
+      let resolvedBody = { ...body };
+      if (body.type === 'raw') {
+        resolvedBody.content = VariableResolver.resolve(body.content, colVars, envVars);
+      } else if (body.type === 'json') {
+        resolvedBody.content = VariableResolver.resolve(body.content, colVars, envVars);
+      } else if (body.type === 'graphql' && body.graphql) {
+        resolvedBody.graphql = {
+          query: VariableResolver.resolve(body.graphql.query, colVars, envVars),
+          variables: VariableResolver.resolve(body.graphql.variables, colVars, envVars),
+        };
+      }
+
       if (!settings) throw new Error('Settings not loaded');
       
-      const response = await sendRequest(method, finalUrl, headerRecord, body, settings);
+      const response = await sendRequest(method, finalUrl, resolvedHeaders, resolvedBody, settings);
       setTabResponse(activeTab.id, response);
     } catch (error: any) {
       toast.error('Request failed: ' + String(error.message || error));
