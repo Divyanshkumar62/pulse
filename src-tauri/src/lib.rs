@@ -1,6 +1,7 @@
-mod oauth;
 mod collections;
 mod http;
+mod script_runner;
+mod oauth;
 
 use log::{info, error};
 
@@ -148,6 +149,14 @@ async fn send_http_request(
     )
     .await
     .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn execute_script(
+    script: String,
+    context: script_runner::ScriptContext,
+) -> Result<script_runner::ScriptExecutionResult, String> {
+    script_runner::execute_js(script, context)
 }
 
 #[tauri::command]
@@ -434,6 +443,7 @@ pub fn run() {
             resend_invitation,
             load_collections,
             create_data_dir,
+            execute_script,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
