@@ -73,6 +73,7 @@ export interface Request {
   body: RequestBody;
   auth?: AuthConfig;
   preRequestScript?: string;
+  testScript?: string;
 }
 
 export interface HttpRequest {
@@ -81,6 +82,7 @@ export interface HttpRequest {
   headers: Header[];
   body: RequestBody;
   preRequestScript?: string;
+  testScript?: string;
 }
 
 export interface Folder {

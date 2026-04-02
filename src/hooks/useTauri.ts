@@ -189,3 +189,22 @@ export async function exchangeOAuthToken(
 export async function exportCollection(collection: Collection, format: string): Promise<any> {
   return invoke('export_collection', { collection, format });
 }
+
+export interface ScriptExecutionResult {
+  environment: Record<string, string>;
+  collection: Record<string, string>;
+  logs: string[];
+  tests: { name: string; passed: boolean; message?: string }[];
+}
+
+export async function executeScript(
+  script: string,
+  context: {
+    environment: Record<string, string>;
+    collection: Record<string, string>;
+    request: { url: string; method: string; headers: Record<string, string> };
+    response?: { status: number; body: string; headers: Record<string, string> };
+  }
+): Promise<ScriptExecutionResult> {
+  return invoke('execute_script', { script, context });
+}
