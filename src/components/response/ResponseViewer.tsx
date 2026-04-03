@@ -1,61 +1,99 @@
 import { useState } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
+import { useAppStore } from '../../stores/useAppStore';
 import ResponseBody from './ResponseBody';
+import '../../styles/components/response-viewer.css';
+
+type ResponseTab = 'body' | 'preview' | 'headers' | 'test-results' | 'console';
 
 export default function ResponseViewer() {
   const { activeTabId, tabs } = useTabStore();
-  const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'cookies'>('body');
+  const { responsePosition, setResponsePosition } = useAppStore();
+  const [activeTab, setActiveTab] = useState<ResponseTab>('body');
 
   const tabData = tabs.find(t => t.id === activeTabId);
   const response = tabData?.response;
 
+  const tabsConfig: { id: ResponseTab; label: string }[] = [
+    { id: 'body', label: 'JSON' },
+    { id: 'preview', label: 'PREVIEW' },
+    { id: 'headers', label: 'HEADERS' },
+    { id: 'test-results', label: 'TEST RESULTS' },
+    { id: 'console', label: 'CONSOLE' },
+  ];
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-deep)' }}>
-      <div className="request-config-tabs" style={{ marginTop: 0, padding: '0 var(--space-4)', backgroundColor: 'var(--bg-surface)' }}>
-        <button 
-          className={`config-tab ${activeTab === 'body' ? 'active' : ''}`}
-          onClick={() => setActiveTab('body')}
-        >
-          Body
-        </button>
-        <button 
-          className={`config-tab ${activeTab === 'headers' ? 'active' : ''}`}
-          onClick={() => setActiveTab('headers')}
-        >
-          Headers
-        </button>
-        <button 
-          className={`config-tab ${activeTab === 'cookies' ? 'active' : ''}`}
-          onClick={() => setActiveTab('cookies')}
-        >
-          Cookies
-        </button>
+    <div className="response-viewer">
+      <div className="response-toolbar">
+        <div className="response-tabs">
+          {tabsConfig.map(tab => (
+            <button 
+              key={tab.id}
+              className={`response-tab ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
         
-        <div style={{ flex: 1 }} />
-        {response && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px' }}>
-            <span style={{ color: 'var(--status-success)', fontWeight: 600 }}>{response.status} {response.status_text}</span>
-            <span style={{ color: 'var(--text-secondary)' }}>{response.time_ms} ms</span>
-            <span style={{ color: 'var(--text-secondary)' }}>{response.body.length} bytes</span>
+        <div className="response-actions">
+          {response && (
+            <div className="response-meta">
+              <span className={`status-pill ${response.status < 400 ? 'success' : 'error'}`}>
+                {response.status} {response.status_text}
+              </span>
+              <span className="meta-item">{response.time_ms}ms</span>
+              <span className="meta-item">{Math.round(response.body.length / 1024 * 100) / 100} KB</span>
+            </div>
+          )}
+          
+          <div className="layout-toggles">
+            <button 
+              className={`layout-btn ${responsePosition === 'bottom' ? 'active' : ''}`}
+              onClick={() => setResponsePosition('bottom')}
+              title="Dock to bottom"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+            </button>
+            <button 
+              className={`layout-btn ${responsePosition === 'right' ? 'active' : ''}`}
+              onClick={() => setResponsePosition('right')}
+              title="Dock to right"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+            </button>
           </div>
-        )}
+        </div>
       </div>
       
-      <div style={{ flex: 1, padding: 'var(--space-4)', overflow: 'hidden' }}>
+      <div className="response-content">
         {response ? (
           activeTab === 'body' ? (
             <ResponseBody 
               content={response.body} 
               contentType={response.headers.find(h => h.key.toLowerCase() === 'content-type')?.value || 'application/json'} 
             />
+          ) : activeTab === 'headers' ? (
+            <div className="headers-view">
+              {response.headers.map((h, i) => (
+                <div key={i} className="header-row">
+                  <span className="header-key">{h.key}:</span>
+                  <span className="header-value">{h.value}</span>
+                </div>
+              ))}
+            </div>
           ) : (
-            <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', marginTop: '40px' }}>
-              {activeTab} viewer coming soon...
+            <div className="placeholder-view">
+              <div className="placeholder-icon">🛠️</div>
+              <p>{activeTab.replace('-', ' ')} view is under development</p>
             </div>
           )
         ) : (
-          <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', marginTop: '40px' }}>
-            Response will appear here
+          <div className="empty-response">
+            <div className="empty-icon">📡</div>
+            <h3>Waiting for Request</h3>
+            <p>Send a request to see the response data here.</p>
           </div>
         )}
       </div>

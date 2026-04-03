@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
-import TitleBar from './TitleBar';
+import Header from './Header';
+import NavSidebar from './NavSidebar';
+import ActivityPanel from './ActivityPanel';
 import StatusBar from './StatusBar';
-import Sidebar from './Sidebar';
 import CommandPalette from '../modals/CommandPalette';
 import SettingsModal from '../modals/SettingsModal';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
@@ -19,11 +20,12 @@ export default function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="app-container">
-      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
-        <TitleBar />
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <Sidebar />
-          <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="app-layout">
+        <Header />
+        <div className="layout-body">
+          <NavSidebar />
+          <ActivityPanel />
+          <main className="main-content">
             {children}
           </main>
         </div>

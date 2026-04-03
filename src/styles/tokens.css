@@ -20,53 +20,53 @@
   --radius-full: 9999px;
 
   /* ──── APPLE DARK (ELECTRIC BLUE GLASS) ──── */
-  --bg-deep:        #000000;
-  --bg-surface:     rgba(28, 28, 30, 0.75);
-  --bg-elevated:    rgba(44, 44, 46, 0.82);
-  --bg-overlay:     rgba(58, 58, 60, 0.94);
-  --bg-glass:       rgba(20, 20, 22, 0.72);
-  --bg-input:       rgba(28, 28, 30, 0.88);
+  --bg-deep:        #080a0f;
+  --bg-surface:     rgba(13, 17, 23, 0.72);
+  --bg-elevated:    rgba(22, 27, 34, 0.82);
+  --bg-overlay:     rgba(30, 35, 45, 0.94);
+  --bg-glass:       rgba(10, 14, 20, 0.65);
+  --bg-input:       rgba(15, 20, 28, 0.88);
 
-  --border-default: rgba(255, 255, 255, 0.12);
-  --border-subtle:  rgba(255, 255, 255, 0.08);
-  --border-focus:   #0A84FF; /* Electric Blue */
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-subtle:  rgba(255, 255, 255, 0.04);
+  --border-focus:   #0070F3; /* Authentic Electric Blue */
 
   --text-primary:   #FFFFFF;
   --text-secondary: #98989D;
   --text-tertiary:  #636366;
-  --text-link:      #0A84FF;
+  --text-link:      #0070F3;
 
-  --accent-primary:    #0A84FF;
-  --accent-hover:      #32ADE6;
-  --accent-active:     #007AFF;
-  --accent-subtle:     rgba(10, 132, 255, 0.18);
-  --accent-border:     rgba(10, 132, 255, 0.35);
+  --accent-primary:    #0070F3;
+  --accent-hover:      #0081FF;
+  --accent-active:     #0059C2;
+  --accent-subtle:     rgba(0, 112, 243, 0.12);
+  --accent-border:     rgba(0, 112, 243, 0.25);
 
   /* ──── METHODS & STATUS (Clean High Contrast) ──── */
-  --method-get:     #34C759;
-  --method-post:    #FFCC00;
-  --method-put:     #5856D6;
-  --method-delete:  #FF3B30;
+  --method-get:     #2ECC71;
+  --method-post:    #F1C40F;
+  --method-put:     #9B59B6;
+  --method-delete:  #E74C3C;
   --method-patch:   #AF52DE;
   --method-head:    #5AC8FA;
   --method-options: #8E8E93;
 
-  --status-success: #34C759;
-  --status-redirect:#FFCC00;
-  --status-client:  #FF9500;
-  --status-server:  #FF3B30;
-  --status-info:    #5AC8FA;
+  --status-success: #2ECC71;
+  --status-redirect:#F1C40F;
+  --status-client:  #E67E22;
+  --status-server:  #E74C3C;
+  --status-info:    #3498DB;
 
   /* ──── EFFECTS ──── */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.5);
-  --blur-glass: blur(32px) saturate(190%);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --blur-glass: blur(40px) saturate(180%);
   
   /* ──── ANIMATION ──── */
-  --transition-fast: 120ms cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-base: 220ms cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 150ms cubic-bezier(0.2, 0, 0, 1);
+  --transition-base: 250ms cubic-bezier(0.2, 0, 0, 1);
+  --transition-slow: 450ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* ──── LIGHT THEME (ELECTRIC BLUE GLASS) ──── */

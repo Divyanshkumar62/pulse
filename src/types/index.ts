@@ -5,13 +5,6 @@ export interface KeyValuePair {
   description?: string;
 }
 
-export interface Variable {
-  key: string;
-  value: string;
-  enabled: boolean;
-}
-
-
 export type Header = KeyValuePair;
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
@@ -73,7 +66,6 @@ export interface Request {
   body: RequestBody;
   auth?: AuthConfig;
   preRequestScript?: string;
-  testScript?: string;
 }
 
 export interface HttpRequest {
@@ -82,7 +74,6 @@ export interface HttpRequest {
   headers: Header[];
   body: RequestBody;
   preRequestScript?: string;
-  testScript?: string;
 }
 
 export interface Folder {
@@ -97,13 +88,13 @@ export interface Collection {
   description: string | null;
   requests: Request[];
   folders: Folder[];
-  variables?: Variable[];
+  variables: KeyValuePair[];
 }
 
 export interface Environment {
   id: string;
   name: string;
-  variables: Variable[];
+  variables: { key: string; value: string; enabled: boolean }[];
 }
 
 export interface HistoryEntry {

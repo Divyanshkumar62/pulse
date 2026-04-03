@@ -1,4 +1,5 @@
 import { KeyValuePair } from '../../types';
+import '../../styles/components/key-value-table.css';
 
 interface KeyValueTableProps {
   items: KeyValuePair[];
@@ -36,40 +37,46 @@ export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key',
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div className="kv-table">
       {displayItems.map((item, index) => (
-        <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <input 
-            type="checkbox" 
-            checked={item.enabled !== false} 
-            onChange={(e) => handleChange(index, 'enabled', e.target.checked)}
-            style={{ accentColor: 'var(--accent-primary)', width: '14px', height: '14px' }}
-          />
-          <input
-            style={{ flex: 1, background: 'transparent', border: '1px solid var(--border-default)', color: 'var(--text-primary)', padding: '6px 8px', borderRadius: '4px', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
-            placeholder={keyPlaceholder}
-            value={item.key || ''}
-            onChange={(e) => handleChange(index, 'key', e.target.value)}
-          />
-          <input
-            style={{ flex: 1, background: 'transparent', border: '1px solid var(--border-default)', color: 'var(--text-primary)', padding: '6px 8px', borderRadius: '4px', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
-            placeholder={valuePlaceholder}
-            value={item.value || ''}
-            onChange={(e) => handleChange(index, 'value', e.target.value)}
-          />
-          <input
-            style={{ flex: 1, background: 'transparent', border: '1px solid var(--border-default)', color: 'var(--text-primary)', padding: '6px 8px', borderRadius: '4px', fontSize: '12px' }}
-            placeholder="Description"
-            value={item.description || ''}
-            onChange={(e) => handleChange(index, 'description', e.target.value)}
-          />
+        <div key={index} className="kv-row">
+          <div className="kv-check-wrapper">
+            <input 
+              type="checkbox" 
+              className="kv-checkbox"
+              checked={item.enabled !== false} 
+              onChange={(e) => handleChange(index, 'enabled', e.target.checked)}
+            />
+          </div>
+          <div className="kv-input-group">
+            <input
+              className="kv-input mono"
+              placeholder={keyPlaceholder}
+              value={item.key || ''}
+              onChange={(e) => handleChange(index, 'key', e.target.value)}
+            />
+            <input
+              className="kv-input mono"
+              placeholder={valuePlaceholder}
+              value={item.value || ''}
+              onChange={(e) => handleChange(index, 'value', e.target.value)}
+            />
+            <input
+              className="kv-input"
+              placeholder="Description"
+              value={item.description || ''}
+              onChange={(e) => handleChange(index, 'description', e.target.value)}
+            />
+          </div>
           <button 
-            style={{ background: 'transparent', color: 'var(--text-tertiary)', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', visibility: (item.key || item.value) ? 'visible' : 'hidden' }}
+            className="kv-delete-btn"
+            style={{ visibility: (item.key || item.value) ? 'visible' : 'hidden' }}
             onClick={() => handleDelete(index)}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-elevated)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            ×
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
         </div>
       ))}

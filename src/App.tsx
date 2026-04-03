@@ -8,23 +8,18 @@ import { useSettingsStore } from './stores/useSettingsStore';
 import { useWorkspaceStore } from './stores/useWorkspaceStore';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 
-console.log('[Pulse] App component loading...');
-
 export default function App() {
-  console.log('[Pulse] App component rendered');
-  
   const initEnvStore = useEnvStore(state => state.initialize);
   const initSettingsStore = useSettingsStore(state => state.initialize);
   const initTeamStore = useTeamStore(state => state.initialize);
   const initWorkspaceStore = useWorkspaceStore(state => state.initialize);
 
   useEffect(() => {
-    console.log('[Pulse] App useEffect running - initializing stores...');
-    
+    // Initialize required stores on boot
     initSettingsStore().then(() => {
-      console.log('[Pulse] Settings initialized, now initializing teams...');
+      // Teams need settings for email/name
       initTeamStore().then(() => {
-        console.log('[Pulse] Teams initialized, now initializing workspaces...');
+        // Workspaces need teams for team workspaces
         initWorkspaceStore();
       });
     });

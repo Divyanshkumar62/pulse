@@ -56,4 +56,3 @@ Cargo.lock
 
 # Agent Skills
 .agent/skills/
-.env

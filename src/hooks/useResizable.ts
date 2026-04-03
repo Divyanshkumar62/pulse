@@ -1,12 +1,15 @@
 import { useState, useCallback, useEffect } from 'react';
 
+type Axis = 'x' | 'y';
+
 export function useResizable(
-  initialWidth: number,
-  minWidth: number,
-  maxWidth: number,
-  onWidthChange?: (width: number) => void
+  initialSize: number,
+  minSize: number,
+  maxSize: number,
+  onSizeChange?: (size: number) => void,
+  axis: Axis = 'x'
 ) {
-  const [width, setWidth] = useState(initialWidth);
+  const [size, setSize] = useState(initialSize);
   const [isDragging, setIsDragging] = useState(false);
 
   const startDrag = useCallback((e: React.MouseEvent) => {
@@ -18,11 +21,22 @@ export function useResizable(
     if (!isDragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      let newWidth = e.clientX;
-      if (newWidth < minWidth) newWidth = minWidth;
-      if (newWidth > maxWidth) newWidth = maxWidth;
-      setWidth(newWidth);
-      if (onWidthChange) onWidthChange(newWidth);
+      let newSize = axis === 'x' ? e.clientX : window.innerHeight - e.clientY;
+      
+      // For sidebar (left to right), it's clientX.
+      // For response (bottom to top), it's window.innerHeight - clientY.
+      // Wait, let's make it more robust. 
+      // Actually, for ActivityPanel, it was width.
+      // For ResponsePanel (bottom), it's height.
+      
+      // But useResizable is used by both. 
+      // Let's passed a direction or just handle it based on axis.
+      
+      if (newSize < minSize) newSize = minSize;
+      if (newSize > maxSize) newSize = maxSize;
+      
+      setSize(newSize);
+      if (onSizeChange) onSizeChange(newSize);
     };
 
     const handleMouseUp = () => {
@@ -32,8 +46,7 @@ export function useResizable(
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     
-    // Add a class to body while resizing to prevent text selection and keep cursor
-    document.body.style.cursor = 'col-resize';
+    document.body.style.cursor = axis === 'x' ? 'col-resize' : 'row-resize';
     document.body.style.userSelect = 'none';
 
     return () => {
@@ -42,7 +55,12 @@ export function useResizable(
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isDragging, minWidth, maxWidth, onWidthChange]);
+  }, [isDragging, minSize, maxSize, onSizeChange, axis]);
 
-  return { width, isDragging, startDrag };
+  return { 
+    width: axis === 'x' ? size : 0, 
+    height: axis === 'y' ? size : 0, 
+    isDragging, 
+    startDrag 
+  };
 }

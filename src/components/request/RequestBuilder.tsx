@@ -138,7 +138,7 @@ export default function RequestBuilder() {
       <UrlBar onSend={handleSend} onCode={() => setIsCodeModalOpen(true)} isLoading={isLoading} />
       
       {isWebSocket ? (
-        <div style={{ flex: 1, padding: '20px', minHeight: 0 }}>
+        <div className="websocket-container-glass">
           <WebSocketPanel />
         </div>
       ) : (
