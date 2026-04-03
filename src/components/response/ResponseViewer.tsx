@@ -4,11 +4,10 @@ import ResponseBody from './ResponseBody';
 
 export default function ResponseViewer() {
   const { activeTabId, tabs } = useTabStore();
-  const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'cookies' | 'tests' | 'console'>('body');
+  const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'cookies'>('body');
 
   const tabData = tabs.find(t => t.id === activeTabId);
   const response = tabData?.response;
-  const scriptResults = tabData?.scriptResults;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-deep)' }}>
@@ -31,18 +30,6 @@ export default function ResponseViewer() {
         >
           Cookies
         </button>
-        <button 
-          className={`config-tab ${activeTab === 'tests' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tests')}
-        >
-          Test Results {scriptResults?.tests && scriptResults.tests.length > 0 && `(${scriptResults.tests.filter(t => t.passed).length}/${scriptResults.tests.length})`}
-        </button>
-        <button 
-          className={`config-tab ${activeTab === 'console' ? 'active' : ''}`}
-          onClick={() => setActiveTab('console')}
-        >
-          Console {scriptResults?.logs && scriptResults.logs.length > 0 && `(${scriptResults.logs.length})`}
-        </button>
         
         <div style={{ flex: 1 }} />
         {response && (
@@ -61,40 +48,6 @@ export default function ResponseViewer() {
               content={response.body} 
               contentType={response.headers.find(h => h.key.toLowerCase() === 'content-type')?.value || 'application/json'} 
             />
-          ) : activeTab === 'tests' ? (
-            <div className="test-results" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {scriptResults?.tests && scriptResults.tests.length > 0 ? (
-                scriptResults.tests.map((test: any, i: number) => (
-                  <div key={i} className="glass-panel" style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '12px', borderLeft: `4px solid ${test.passed ? 'var(--status-success)' : 'var(--status-error)'}` }}>
-                    <span style={{ fontSize: '18px' }}>{test.passed ? '✓' : '✗'}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: '13px' }}>{test.name}</div>
-                      {test.message && <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px' }}>{test.message}</div>}
-                    </div>
-                    <span style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.6 }}>{test.passed ? 'Passed' : 'Failed'}</span>
-                  </div>
-                ))
-              ) : (
-                <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', marginTop: '40px' }}>
-                  No tests were executed. Add tests in the "Tests" tab.
-                </div>
-              )}
-            </div>
-          ) : activeTab === 'console' ? (
-            <div className="console-output" style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
-              {scriptResults?.logs && scriptResults.logs.length > 0 ? (
-                scriptResults.logs.map((log: string, i: number) => (
-                  <div key={i} style={{ padding: '4px 8px', borderBottom: '1px solid var(--border-subtle)', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>
-                    <span style={{ color: 'var(--accent-primary)', marginRight: '8px', opacity: 0.5 }}>[{new Date().toLocaleTimeString()}]</span>
-                    {log}
-                  </div>
-                ))
-              ) : (
-                <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', marginTop: '40px' }}>
-                  Console is empty.
-                </div>
-              )}
-            </div>
           ) : (
             <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', marginTop: '40px' }}>
               {activeTab} viewer coming soon...

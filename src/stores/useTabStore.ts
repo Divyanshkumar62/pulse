@@ -8,10 +8,6 @@ export interface Tab {
   isDirty?: boolean;
   wsMessages?: WebSocketMessage[];
   wsStatus?: WebSocketStatus;
-  scriptResults?: {
-    logs: string[];
-    tests: { name: string; passed: boolean; message?: string }[];
-  };
 }
 
 interface TabStore {
@@ -22,7 +18,7 @@ interface TabStore {
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateActiveTabRequest: (updates: Partial<Request>) => void;
-  setTabResponse: (id: string, response: HttpResponse, scriptResults?: Tab['scriptResults']) => void;
+  setTabResponse: (id: string, response: HttpResponse) => void;
   addWsMessage: (tabId: string, message: WebSocketMessage) => void;
   setWsStatus: (tabId: string, status: WebSocketStatus) => void;
   clearWsMessages: (tabId: string) => void;
@@ -77,11 +73,11 @@ export const useTabStore = create<TabStore>((set, get) => ({
     });
   },
 
-  setTabResponse: (id, response, scriptResults) => {
+  setTabResponse: (id, response) => {
     const { tabs } = get();
     set({
       tabs: tabs.map(t => 
-        t.id === id ? { ...t, response, scriptResults } : t
+        t.id === id ? { ...t, response } : t
       )
     });
   },

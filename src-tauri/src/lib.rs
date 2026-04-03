@@ -1,7 +1,6 @@
+mod oauth;
 mod collections;
 mod http;
-mod script_runner;
-mod oauth;
 
 use log::{info, error};
 
@@ -152,14 +151,6 @@ async fn send_http_request(
 }
 
 #[tauri::command]
-fn execute_script(
-    script: String,
-    context: script_runner::ScriptContext,
-) -> Result<script_runner::ScriptExecutionResult, String> {
-    script_runner::execute_js(script, context)
-}
-
-#[tauri::command]
 fn load_collection(path: String) -> Result<collections::types::Collection, String> {
     loader::load_from_file(&path).map_err(|e| e.to_string())
 }
@@ -298,7 +289,6 @@ fn load_collections() -> Result<Vec<Collection>, String> {
 
 #[tauri::command]
 fn create_team(name: String, owner_email: String, owner_name: String) -> Result<Team, String> {
-    log::info!("[Pulse Backend] [Command: create_team] Status: Started | Details: name='{}'", name);
     log::info!("Creating team: {} for owner: {} ({})", name, owner_name, owner_email);
     let teams_path = get_data_dir().join("teams.yaml");
     
@@ -332,7 +322,6 @@ async fn invite_to_team(
     invited_by: String,
     invited_by_name: String,
 ) -> Result<Invitation, String> {
-    log::info!("[Pulse Backend] [Command: invite_to_team] Status: Started | Details: email='{}'", email);
     let teams_path = get_data_dir().join("teams.yaml");
     let invitations_path = get_data_dir().join("invitations.json");
     
@@ -351,12 +340,11 @@ async fn invite_to_team(
         email,
         role_enum,
         invited_by,
-        invited_by_name.clone(),
     )?;
     
     if let Err(e) = email::send_invitation_email(&invitation, &invited_by_name).await {
-        log::error!("[Pulse Backend] [Command: invite_to_team] Status: Error | Details: Failed to send email: {}", e);
-        log::info!("[Pulse] Email preview saved. Configure EMAIL_PROVIDER, EMAIL_API_KEY to enable sending.");
+        eprintln!("[Pulse] Warning: Failed to send email: {}", e);
+        println!("[Pulse] Email preview saved. Configure EMAIL_PROVIDER, EMAIL_API_KEY to enable sending.");
     }
     
     Ok(invitation)
@@ -376,7 +364,6 @@ fn get_all_invitations() -> Result<Vec<Invitation>, String> {
 
 #[tauri::command]
 fn accept_invitation(invitation_id: String) -> Result<(), String> {
-    log::info!("[Pulse Backend] [Command: accept_invitation] Status: Started | Details: id='{}'", invitation_id);
     let invitations_path = get_data_dir().join("invitations.json");
     let teams_path = get_data_dir().join("teams.yaml");
     let settings = get_user_settings()?;
@@ -393,23 +380,8 @@ fn accept_invitation(invitation_id: String) -> Result<(), String> {
 
 #[tauri::command]
 fn decline_invitation(invitation_id: String) -> Result<(), String> {
-    log::info!("[Pulse Backend] [Command: decline_invitation] Status: Started | Details: id='{}'", invitation_id);
     let invitations_path = get_data_dir().join("invitations.json");
     team_loader::decline_invitation(invitations_path, invitation_id)
-}
-
-#[tauri::command]
-async fn resend_invitation(invitation_id: String) -> Result<(), String> {
-    log::info!("[Pulse Backend] [Command: resend_invitation] Status: Started | Details: id='{}'", invitation_id);
-    let invitations_path = get_data_dir().join("invitations.json");
-    let invitations = team_loader::load_invitations(&invitations_path).map_err(|e| e.to_string())?;
-    
-    let invitation = invitations
-        .into_iter()
-        .find(|i| i.id == invitation_id)
-        .ok_or_else(|| "Invitation not found".to_string())?;
-        
-    email::resend_invitation_email(&invitation).await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -440,10 +412,8 @@ pub fn run() {
             get_all_invitations,
             accept_invitation,
             decline_invitation,
-            resend_invitation,
             load_collections,
             create_data_dir,
-            execute_script,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

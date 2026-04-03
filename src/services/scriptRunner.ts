@@ -1,58 +1,56 @@
-import { Request, Environment, Collection } from '../types';
-import { executeScript, ScriptExecutionResult } from '../hooks/useTauri';
+import { Request, Environment, Header } from '../types';
 
-export async function runScript(
-  script: string, 
-  request: Request, 
-  environment?: Environment,
-  collection?: Collection,
-  response?: { status: number; body: string; headers: Record<string, string> }
-): Promise<ScriptExecutionResult> {
-  if (!script || !script.trim()) {
-    return {
-      environment: {},
-      collection: {},
-      logs: [],
-      tests: [],
-    };
-  }
-
-  // Convert Pulse structures to a flat Record for the Rust sandbox
-  const envMap: Record<string, string> = {};
-  environment?.variables.forEach(v => {
-    if (v.enabled !== false) envMap[v.key] = v.value;
-  });
-
-  const colMap: Record<string, string> = {};
-  collection?.variables?.forEach(v => {
-    if (v.enabled !== false) colMap[v.key] = v.value;
-  });
-
-  const headerMap: Record<string, string> = {};
-  request.headers.forEach(h => {
-    if (h.enabled !== false && h.key) headerMap[h.key] = h.value;
-  });
-
-  try {
-    const result = await executeScript(script, {
-      environment: envMap,
-      collection: colMap,
-      request: {
-        url: request.url,
-        method: request.method,
-        headers: headerMap,
-      },
-      response: response ? {
-        status: response.status,
-        body: response.body,
-        headers: response.headers,
-      } : undefined,
-    });
-
-    return result;
-  } catch (error: any) {
-    console.error('Script execution error:', error);
-    throw new Error(`Script Error: ${error.message || String(error)}`);
-  }
+export interface ScriptResult {
+  modifiedUrl?: string;
+  addedHeaders: Header[];
+  environmentUpdates: Record<string, string>;
 }
 
+export function executePreRequestScript(
+  script: string, 
+  request: Request, 
+  environment?: Environment
+): ScriptResult {
+  const result: ScriptResult = {
+    addedHeaders: [],
+    environmentUpdates: {},
+  };
+
+  if (!script || !script.trim()) return result;
+
+  // Pulse API implementation
+  const pulse = {
+    request: {
+      url: {
+        set: (url: string) => { result.modifiedUrl = url; }
+      },
+      headers: {
+        add: (key: string, value: string) => {
+          result.addedHeaders.push({ key, value, enabled: true });
+        }
+      }
+    },
+    environment: {
+      get: (key: string) => {
+        const variable = environment?.variables.find(v => v.key === key && v.enabled !== false);
+        return variable ? variable.value : undefined;
+      },
+      set: (key: string, value: string) => {
+        result.environmentUpdates[key] = value;
+      }
+    }
+  };
+
+  try {
+    // We use a Function constructor for a simple sandbox. 
+    // In a production app, a more robust sandbox like isolated-vm would be preferred,
+    // but for a Tauri/Web context, this provides localized scope.
+    const runner = new Function('pulse', script);
+    runner(pulse);
+  } catch (error: any) {
+    console.error('Pre-request script error:', error);
+    throw new Error(`Script Error: ${error.message}`);
+  }
+
+  return result;
+}
