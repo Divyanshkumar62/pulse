@@ -32,8 +32,6 @@ rand = "0.8"
 log = "0.4"
 env_logger = "0.10"
 open = "5.3.3"
-dotenv = "0.15"
-boa_engine = "0.21"
 
 [profile.release]
 panic = "abort"

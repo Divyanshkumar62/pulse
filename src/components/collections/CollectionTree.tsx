@@ -5,7 +5,6 @@ import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import VirtualList from '../ui/VirtualList';
 import { toast } from 'sonner';
 import ExportModal from '../modals/ExportModal';
-import VariablesModal from '../modals/VariablesModal';
 
 type TreeItem = 
   | { type: 'collection'; id: string; name: string; data: any; level: number }
@@ -19,7 +18,6 @@ export default function CollectionTree() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [containerHeight, setContainerHeight] = useState(500);
   const [exportingCollection, setExportingCollection] = useState<any | null>(null);
-  const [variableCollection, setVariableCollection] = useState<any | null>(null);
 
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
 
@@ -72,7 +70,6 @@ export default function CollectionTree() {
       items.push({ label: 'New Request', icon: '⚡', onClick: () => toast('New Request coming soon') });
       items.push({ label: 'New Folder', icon: '📁', onClick: () => toast('New Folder coming soon') });
       items.push({ label: 'Export', icon: '📤', onClick: () => setExportingCollection(data) });
-      items.push({ label: 'Variables', icon: '🔧', onClick: () => setVariableCollection(data) });
       items.push({ label: 'Rename', icon: '✏️', onClick: () => toast('Rename coming soon') });
       items.push({ label: 'Delete', icon: '🗑️', danger: true, onClick: () => toast('Delete coming soon') });
     } else if (type === 'folder') {
@@ -193,13 +190,6 @@ export default function CollectionTree() {
         <ExportModal 
           collection={exportingCollection} 
           onClose={() => setExportingCollection(null)} 
-        />
-      )}
-
-      {variableCollection && (
-        <VariablesModal 
-          collection={variableCollection} 
-          onClose={() => setVariableCollection(null)} 
         />
       )}
     </div>
