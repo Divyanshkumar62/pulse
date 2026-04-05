@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Team, Invitation, TeamRole } from '../types';
 import '../styles/components/teams.css';
+import CustomSelect from './ui/CustomSelect';
 
 interface TeamPanelProps {
   teams: Team[];
@@ -31,7 +32,9 @@ export default function TeamPanel({
   const [activeTab, setActiveTab] = useState<'teams' | 'invitations'>('teams');
   const [isCreating, setIsCreating] = useState(false);
 
-  const pendingInvitations = invitations.filter(i => i.status === 'pending');
+  const incomingInvitations = invitations.filter(i => i.status === 'pending' && i.email === currentUserEmail);
+  const sentInvitations = invitations.filter(i => i.status === 'pending' && i.invited_by === currentUserEmail);
+  
   // Show all teams (including owned teams)
   const userTeams = teams;
 
@@ -39,9 +42,7 @@ export default function TeamPanel({
     if (newTeamName.trim() && !isCreating) {
       setIsCreating(true);
       try {
-        console.log('Creating team:', newTeamName.trim());
         await onCreateTeam(newTeamName.trim());
-        console.log('Team created successfully');
         setNewTeamName('');
         setShowCreateModal(false);
       } catch (error) {
@@ -77,19 +78,19 @@ export default function TeamPanel({
   };
 
   return (
-    <div className="team-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <div className="sidebar-tabs">
+    <div className="team-panel">
+      <div className="team-tabs">
         <button 
-          className={`sidebar-tab ${activeTab === 'teams' ? 'active' : ''}`}
+          className={`team-tab ${activeTab === 'teams' ? 'active' : ''}`}
           onClick={() => setActiveTab('teams')}
         >
           Teams ({userTeams.length})
         </button>
         <button 
-          className={`sidebar-tab ${activeTab === 'invitations' ? 'active' : ''}`}
+          className={`team-tab ${activeTab === 'invitations' ? 'active' : ''}`}
           onClick={() => setActiveTab('invitations')}
         >
-          Invites ({pendingInvitations.length})
+          Invites ({incomingInvitations.length})
         </button>
       </div>
 
@@ -158,7 +159,6 @@ export default function TeamPanel({
                           </div>
                           <span style={{ 
                             fontSize: '9px', 
-                            textTransform: 'uppercase', 
                             fontWeight: 800, 
                             padding: '3px 8px', 
                             background: 'rgba(255,255,255,0.05)', 
@@ -168,6 +168,42 @@ export default function TeamPanel({
                             letterSpacing: '0.04em'
                           }}>
                             {member.role}
+                          </span>
+                        </div>
+                      ))}
+                      
+                      {/* Show pending invitations sent for this team */}
+                      {sentInvitations.filter(i => i.team_id === team.id).map(invitation => (
+                        <div key={invitation.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: 0.6 }}>
+                          <div style={{ 
+                            width: '28px', 
+                            height: '28px', 
+                            borderRadius: '50%', 
+                            background: 'var(--bg-deep)',
+                            color: 'var(--text-tertiary)',
+                            fontSize: '11px', 
+                            fontWeight: 800, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            border: '1px dashed var(--border-default)'
+                          }}>
+                            ?
+                          </div>
+                          <div style={{ flex: 1, fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+                            {invitation.email}
+                          </div>
+                          <span style={{ 
+                            fontSize: '9px', 
+                            fontWeight: 700, 
+                            padding: '2px 6px', 
+                            background: 'var(--bg-deep)', 
+                            borderRadius: 'var(--radius-sm)', 
+                            border: '1px solid var(--border-subtle)',
+                            color: 'var(--text-tertiary)',
+                            letterSpacing: '0.04em'
+                          }}>
+                            Pending
                           </span>
                         </div>
                       ))}
@@ -188,21 +224,15 @@ export default function TeamPanel({
 
         {activeTab === 'invitations' && (
           <div className="invitations-content" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            {pendingInvitations.length === 0 ? (
+            {incomingInvitations.length === 0 ? (
                <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-tertiary)', fontSize: '13px', fontWeight: 500 }}>
                   No pending invitations.
                </div>
-            ) : pendingInvitations.map(invitation => (
-              <div key={invitation.id} style={{ 
-                background: 'var(--bg-elevated)', 
-                borderRadius: 'var(--radius-xl)', 
-                border: '1px solid var(--accent-border)',
-                padding: '16px',
-                boxShadow: '0 4px 20px var(--accent-subtle)'
-              }}>
+            ) : incomingInvitations.map(invitation => (
+              <div key={invitation.id} className="invitation-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', alignItems: 'center' }}>
                   <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>{invitation.team_name}</span>
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{invitation.role}</span>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--accent-primary)', letterSpacing: '0.05em' }}>{invitation.role}</span>
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
                   Invited by <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{invitation.invited_by}</span>
@@ -227,7 +257,7 @@ export default function TeamPanel({
                   Set up a shared space for your projects and collaborate in real-time.
                 </p>
                 <div style={{ marginBottom: '32px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Team Name</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Team Name</label>
                   <input
                     type="text"
                     className="text-input"
@@ -258,7 +288,7 @@ export default function TeamPanel({
                   Add a colleague to <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{teams.find(t => t.id === showInviteModal)?.name}</span>.
                 </p>
                 <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Email Address</label>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Email Address</label>
                   <input
                     type="email"
                     className="text-input"
@@ -269,16 +299,15 @@ export default function TeamPanel({
                   />
                 </div>
                 <div style={{ marginBottom: '32px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Role</label>
-                  <select 
-                    value={inviteRole} 
-                    onChange={e => setInviteRole(e.target.value as TeamRole)}
-                    className="text-input"
-                    style={{ background: 'var(--bg-input)' }}
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Role</label>
+                  <CustomSelect 
+                    value={inviteRole}
+                    onChange={(val) => setInviteRole(val as TeamRole)}
+                    options={[
+                      { value: 'member', label: 'Member' },
+                      { value: 'admin', label: 'Admin' },
+                    ]}
+                  />
                 </div>
                 <div className="modal-actions">
                   <button className="btn-secondary" onClick={() => setShowInviteModal(null)}>Cancel</button>

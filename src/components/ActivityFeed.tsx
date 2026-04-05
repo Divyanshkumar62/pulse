@@ -19,13 +19,11 @@ export default function ActivityFeed() {
 
   return (
     <div className="activity-feed" style={{ padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-      <h3 className="text-label" style={{ 
+      <h3 style={{ 
         color: 'var(--accent-primary)', 
-        textTransform: 'uppercase', 
-        letterSpacing: '0.08em', 
-        fontSize: '11px', 
-        fontWeight: 800,
-        opacity: 0.9
+        fontSize: '13px', 
+        fontWeight: 700,
+        margin: 0
       }}>Recent Activity</h3>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>

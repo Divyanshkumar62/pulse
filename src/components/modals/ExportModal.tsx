@@ -59,7 +59,7 @@ export default function ExportModal({ collection, onClose }: ExportModalProps) {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Format</label>
+          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)' }}>Format</label>
           <div 
             onClick={() => setFormat('postman')}
             style={{

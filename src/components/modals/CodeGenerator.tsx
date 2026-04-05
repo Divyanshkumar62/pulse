@@ -47,7 +47,7 @@ export default function CodeGenerator({ isOpen, onClose }: CodeGeneratorProps) {
             className={`config-tab ${lang === 'curl' ? 'active' : ''}`}
             onClick={() => setLang('curl')}
           >
-            cURL
+            Curl
           </button>
           <button 
             className={`config-tab ${lang === 'js' ? 'active' : ''}`}

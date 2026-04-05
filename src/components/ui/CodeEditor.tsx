@@ -56,23 +56,27 @@ export default function CodeEditor({ value, onChange, language = 'javascript', h
         EditorView.theme({
           "&": { 
             height, 
+            width: "100%",
             fontSize: "13px", 
             fontFamily: "var(--font-mono)",
             background: "transparent !important",
           },
           ".cm-gutters": {
-            backgroundColor: "transparent !important",
+            backgroundColor: "rgba(0, 0, 0, 0.3) !important",
             border: "none !important",
             color: "var(--text-tertiary)",
+            minWidth: "32px",
           },
           ".cm-content": {
               caretColor: "var(--accent-primary)",
+              padding: "10px 0",
+              width: "100%",
           },
           ".cm-activeLine": {
-              backgroundColor: "rgba(0, 112, 243, 0.05) !important",
+              backgroundColor: "rgba(0, 112, 243, 0.08) !important",
           },
           ".cm-activeLineGutter": {
-              backgroundColor: "rgba(0, 112, 243, 0.1) !important",
+              backgroundColor: "rgba(0, 112, 243, 0.15) !important",
               color: "var(--accent-primary)",
           }
         })

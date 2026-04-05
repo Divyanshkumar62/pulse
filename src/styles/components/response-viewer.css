@@ -55,7 +55,6 @@
   border-radius: var(--radius-full);
   font-size: 10px;
   font-weight: 800;
-  text-transform: uppercase;
 }
 
 .status-pill.success {
@@ -84,8 +83,8 @@
 }
 
 .layout-btn {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);

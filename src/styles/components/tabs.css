@@ -65,10 +65,23 @@
   text-align: center;
 }
 
-.method-get { color: var(--status-success); background: var(--status-success-subtle); }
-.method-post { color: var(--accent-primary); background: var(--accent-subtle); }
-.method-put { color: var(--status-warning); background: var(--status-warning-subtle); }
-.method-delete { color: var(--status-error); background: var(--status-error-subtle); }
+.method-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 4px;
+  border-radius: 4px;
+  min-width: 36px;
+  text-align: center;
+  display: inline-block;
+}
+
+.method-get { color: var(--method-get); background: var(--status-success-subtle); }
+.method-post { color: var(--method-post); background: var(--status-warning-subtle); }
+.method-put { color: var(--method-put); background: rgba(155, 89, 182, 0.15); }
+.method-delete { color: var(--method-delete); background: var(--status-error-subtle); }
+.method-patch { color: var(--method-patch); background: rgba(175, 82, 222, 0.15); }
+.method-head { color: var(--method-head); background: rgba(90, 200, 250, 0.15); }
+.method-options { color: var(--method-options); background: rgba(142, 142, 147, 0.15); }
 
 .tab-name {
   font-size: 12px;

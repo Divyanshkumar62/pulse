@@ -316,6 +316,10 @@
 .btn-primary:active {
   transform: translateY(0);
 }
+.btn-primary:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -338,6 +342,45 @@
   background: var(--bg-overlay);
   color: var(--text-primary);
   border-color: var(--border-focus);
+}
+.btn-secondary:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.btn-secondary:active {
+  transform: scale(0.98);
+  background: var(--bg-surface);
+}
+
+/* Modal Close Button */
+.modal-close-btn {
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.modal-close-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.modal-close-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.modal-close-btn:active {
+  transform: scale(0.95);
 }
 
 /* Scrollbar */

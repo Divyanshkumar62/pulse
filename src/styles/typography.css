@@ -26,7 +26,6 @@ h2, .text-h2 {
   font-size: 11px;
   line-height: 1.4;
   color: var(--text-secondary);
-  text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 

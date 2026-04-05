@@ -48,15 +48,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-default)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 className="text-h2" style={{ margin: 0 }}>Settings</h2>
           <button 
-            onClick={onClose} 
-            style={{ 
-              color: 'var(--text-tertiary)', 
-              background: 'transparent', 
-              border: 'none', 
-              cursor: 'pointer', 
-              fontSize: '24px',
-              padding: '0 4px'
-            }}
+            className="modal-close-btn"
+            onClick={onClose}
           >
             ×
           </button>
@@ -64,7 +57,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', maxHeight: '70vh' }}>
           <section>
-            <h3 className="text-label" style={{ marginBottom: '12px', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>User Profile</h3>
+            <h3 className="text-label" style={{ marginBottom: '12px', color: 'var(--accent-primary)', letterSpacing: '0.05em' }}>User Profile</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
                 <label className="text-label" style={{ display: 'block', marginBottom: '6px' }}>Your Name</label>
@@ -90,7 +83,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </section>
 
           <section style={{ paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
-            <h3 className="text-label" style={{ marginBottom: '12px', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Request Defaults</h3>
+            <h3 className="text-label" style={{ marginBottom: '12px', color: 'var(--accent-primary)', letterSpacing: '0.05em' }}>Request Defaults</h3>
             <div style={{ marginBottom: '16px' }}>
               <label className="text-label" style={{ display: 'block', marginBottom: '6px' }}>Timeout (seconds)</label>
               <input
@@ -125,7 +118,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </section>
 
           <section style={{ paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
-            <h3 className="text-label" style={{ marginBottom: '16px', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Appearance</h3>
+            <h3 className="text-label" style={{ marginBottom: '16px', color: 'var(--accent-primary)', letterSpacing: '0.05em' }}>Appearance</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               {[
                 { id: 'dark', name: 'Electric Blue', colors: ['#0d1117', '#2563eb', '#e6edf3'] },
@@ -162,7 +155,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </section>
 
           <section style={{ paddingTop: '20px', borderTop: '1px solid var(--border-subtle)', marginBottom: '12px' }}>
-             <h3 className="text-label" style={{ marginBottom: '12px', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>App Info</h3>
+             <h3 className="text-label" style={{ marginBottom: '12px', color: 'var(--accent-primary)', letterSpacing: '0.05em' }}>App Info</h3>
              <div style={{ background: 'var(--bg-surface)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span className="text-label" style={{ color: 'var(--text-secondary)' }}>Version</span>

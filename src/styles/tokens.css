@@ -52,9 +52,14 @@
   --method-options: #8E8E93;
 
   --status-success: #2ECC71;
+  --status-success-subtle: rgba(46, 204, 113, 0.15);
   --status-redirect:#F1C40F;
   --status-client:  #E67E22;
   --status-server:  #E74C3C;
+  --status-error: #E74C3C;
+  --status-error-subtle: rgba(231, 76, 60, 0.15);
+  --status-warning: #F1C40F;
+  --status-warning-subtle: rgba(241, 196, 15, 0.15);
   --status-info:    #3498DB;
 
   /* ──── EFFECTS ──── */
