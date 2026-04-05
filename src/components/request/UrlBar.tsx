@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
 import { HttpMethod } from '../../types';
 import { toast } from 'sonner';
@@ -10,32 +11,72 @@ interface UrlBarProps {
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
 
+const METHOD_COLORS: Record<HttpMethod, string> = {
+  GET: 'var(--method-get)',
+  POST: 'var(--method-post)',
+  PUT: 'var(--method-put)',
+  DELETE: 'var(--method-delete)',
+  PATCH: 'var(--method-patch)',
+  HEAD: 'var(--method-head)',
+  OPTIONS: 'var(--method-options)',
+};
+
 export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
   const { tabs, activeTabId, updateActiveTabRequest } = useTabStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const request = activeTab?.request;
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   if (!request) return null;
 
   const isWebSocket = request.url?.startsWith('ws://') || request.url?.startsWith('wss://');
+  const currentColor = METHOD_COLORS[request.method as HttpMethod] || 'var(--accent-primary)';
 
   return (
     <div className="url-bar-container">
       <div className="url-bar-glass">
         {!isWebSocket && (
-          <div className="method-selector">
-            <select 
+          <div className="method-selector" ref={dropdownRef}>
+            <button
               className="method-select-premium"
-              value={request.method}
-              onChange={(e) => updateActiveTabRequest({ method: e.target.value as HttpMethod })}
+              style={{ color: currentColor }}
+              onClick={() => setDropdownOpen(!dropdownOpen)}
             >
-              {METHODS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-            <div className="method-chevron">
+              {request.method}
+            </button>
+            <div className="method-chevron" style={{ color: currentColor }}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
+            {dropdownOpen && (
+              <div className="method-dropdown-glass">
+                {METHODS.map(m => (
+                  <button
+                    key={m}
+                    className={`method-dropdown-item ${request.method === m ? 'active' : ''}`}
+                    style={{ '--method-color': METHOD_COLORS[m] } as React.CSSProperties}
+                    onClick={() => {
+                      updateActiveTabRequest({ method: m });
+                      setDropdownOpen(false);
+                    }}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         
@@ -94,7 +135,7 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
                   <div className="loader-mini"></div>
                 ) : (
                   <>
-                    SEND
+                    Send
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="22" y1="2" x2="11" y2="13"></line>
                       <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
