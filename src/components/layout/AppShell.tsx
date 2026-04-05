@@ -15,7 +15,7 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const { isSettingsOpen, setSettingsOpen } = useAppStore();
+  const { isSettingsOpen, setSettingsOpen, sidebarVisible } = useAppStore();
   useKeyboardShortcuts();
 
   return (
@@ -24,7 +24,7 @@ export default function AppShell({ children }: AppShellProps) {
         <Header />
         <div className="layout-body">
           <NavSidebar />
-          <ActivityPanel />
+          {sidebarVisible && <ActivityPanel />}
           <main className="main-content">
             {children}
           </main>
