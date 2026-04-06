@@ -65,7 +65,14 @@ export default function NavSidebar() {
           <button
             key={tab.id}
             className={`nav-btn ${sidebarTab === tab.id ? 'active' : ''}`}
-            onClick={() => setSidebarTab(tab.id as any)}
+            onClick={() => {
+              if (sidebarTab === tab.id) {
+                toggleSidebar();
+              } else {
+                setSidebarTab(tab.id as any);
+                if (!sidebarVisible) toggleSidebar();
+              }
+            }}
             title={tab.label}
           >
             {tab.icon}

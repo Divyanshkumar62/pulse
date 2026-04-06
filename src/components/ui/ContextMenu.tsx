@@ -56,7 +56,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
         borderRadius: '6px',
         padding: '4px',
         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-        zIndex: 10000,
+        zIndex: 20000,
         minWidth: '160px',
         display: 'flex',
         flexDirection: 'column'

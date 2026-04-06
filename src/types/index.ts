@@ -55,6 +55,13 @@ export interface HttpResponse {
   time_ms: number;
 }
 
+export interface Variable {
+  key: string;
+  value: string;
+  enabled?: boolean;
+  description?: string;
+}
+
 export interface Request {
   id: string;
   name: string;
@@ -66,6 +73,7 @@ export interface Request {
   body: RequestBody;
   auth?: AuthConfig;
   preRequestScript?: string;
+  testScript?: string;
 }
 
 export interface HttpRequest {
@@ -80,6 +88,7 @@ export interface Folder {
   id: string;
   name: string;
   requests: Request[];
+  folders?: Folder[];
 }
 
 export interface Collection {

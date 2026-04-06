@@ -5,6 +5,7 @@ import ActivityPanel from './ActivityPanel';
 import StatusBar from './StatusBar';
 import CommandPalette from '../modals/CommandPalette';
 import SettingsModal from '../modals/SettingsModal';
+import AddEnvironmentModal from '../modals/AddEnvironmentModal';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useAppStore } from '../../stores/useAppStore';
 import { Toaster } from 'sonner';
@@ -15,7 +16,7 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const { isSettingsOpen, setSettingsOpen, sidebarVisible } = useAppStore();
+  const { isSettingsOpen, setSettingsOpen, sidebarVisible, isAddEnvironmentModalOpen, setAddEnvironmentModalOpen } = useAppStore();
   useKeyboardShortcuts();
 
   return (
@@ -33,6 +34,7 @@ export default function AppShell({ children }: AppShellProps) {
       </div>
       <CommandPalette />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
+      <AddEnvironmentModal />
       <Toaster theme="dark" position="bottom-right" />
     </div>
   );

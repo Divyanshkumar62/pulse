@@ -6,8 +6,11 @@ import { useSettingsStore } from '../../stores/useSettingsStore';
 import TeamPanel from '../TeamPanel';
 import CollectionTree from '../collections/CollectionTree';
 import ActivityFeed from '../ActivityFeed';
-import { useCollectionStore } from '../../stores/useCollectionStore';
+import EnvironmentsPanel from '../sidebar/EnvironmentsPanel';
 import CustomSelect from '../ui/CustomSelect';
+import MockServerPanel from '../sidebar/MockServerPanel';
+import MonitorSidebar from '../monitor/MonitorSidebar';
+import { useCollectionStore } from '../../stores/useCollectionStore';
 import { v4 as uuidv4 } from 'uuid';
 import '../../styles/components/activity-panel.css';
 
@@ -105,29 +108,11 @@ export default function ActivityPanel() {
       case 'history':
         return <ActivityFeed />;
       case 'environments':
-        return (
-          <div className="activity-placeholder">
-            <div className="placeholder-icon">🌍</div>
-            <h3>Environments</h3>
-            <p>Manage your variables and environments.</p>
-          </div>
-        );
+        return <EnvironmentsPanel />;
       case 'mock-servers':
-        return (
-          <div className="activity-placeholder">
-            <div className="placeholder-icon">☁️</div>
-            <h3>Mock Servers</h3>
-            <p>Create mock endpoints for your APIs.</p>
-          </div>
-        );
+        return <MockServerPanel />;
       case 'monitor':
-        return (
-          <div className="activity-placeholder">
-            <div className="placeholder-icon">📈</div>
-            <h3>Monitoring</h3>
-            <p>Track your API performance and uptime.</p>
-          </div>
-        );
+        return <MonitorSidebar />;
       default:
         return null;
     }

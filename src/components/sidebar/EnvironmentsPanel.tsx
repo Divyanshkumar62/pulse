@@ -1,57 +1,15 @@
-import { useState } from 'react';
 import { useEnvStore } from '../../stores/useEnvStore';
-import { Variable } from '../../types';
-import KeyValueTable from '../request/KeyValueTable';
-import { v4 as uuidv4 } from 'uuid';
+import { useAppStore } from '../../stores/useAppStore';
 
 export default function EnvironmentsPanel() {
-  const { environments, activeEnvId, setActiveEnvId, addEnvironment, updateEnvironment, deleteEnvironment } = useEnvStore();
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  const activeEnv = environments.find(e => e.id === activeEnvId);
-
-  const handleCreate = () => {
-    addEnvironment({ id: uuidv4(), name: 'New Environment', variables: [] });
-  };
-
-  const selectedEnv = editingId ? environments.find(e => e.id === editingId) : null;
-
-  if (selectedEnv) {
-    return (
-      <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', height: '100%', gap: '12px' }}>
-         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-           <button 
-             onClick={() => setEditingId(null)}
-             style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
-           >
-             ← Back
-           </button>
-           <input 
-             value={selectedEnv.name}
-             onChange={(e) => updateEnvironment(selectedEnv.id, { name: e.target.value })}
-             style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '14px', fontWeight: 600, outline: 'none' }}
-           />
-         </div>
-         <p className="text-body" style={{ margin: 0, opacity: 0.7, fontSize: '13px' }}>
-            Environment variables override Global variables. Use {'{{variable_name}}'} syntax.
-         </p>
-         <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-           <KeyValueTable 
-             items={selectedEnv.variables}
-             onChange={(newVars) => updateEnvironment(selectedEnv.id, { variables: newVars as Variable[] })}
-             keyPlaceholder="Variable Name"
-             valuePlaceholder="Value"
-           />
-         </div>
-      </div>
-    );
-  }
+  const { environments, activeEnvId, setActiveEnvId, deleteEnvironment } = useEnvStore();
+  const { setAddEnvironmentModalOpen, setSelectedEnvironmentId } = useAppStore();
 
   return (
     <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 className="text-h2" style={{ margin: 0, fontSize: '14px' }}>Environments</h2>
-        <button onClick={handleCreate} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '12px' }}>
+        <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>Environments</h2>
+        <button onClick={() => setAddEnvironmentModalOpen(true)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '12px' }}>
           + New
         </button>
       </div>
@@ -79,13 +37,13 @@ export default function EnvironmentsPanel() {
                 border: activeEnvId === env.id ? 'none' : '2px solid var(--border-subtle)'
               }} />
               <span style={{ fontSize: '13px', fontWeight: activeEnvId === env.id ? 600 : 500 }}>
-                {env.name}
+                {env.name} {env.variables.length > 0 && `(${env.variables.length})`}
               </span>
             </div>
             
             <div style={{ display: 'flex', gap: '4px' }}>
               <button 
-                onClick={(e) => { e.stopPropagation(); setEditingId(env.id); }}
+                onClick={(e) => { e.stopPropagation(); setSelectedEnvironmentId(env.id); }}
                 style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
                 title="Edit Variables"
               >
@@ -103,6 +61,15 @@ export default function EnvironmentsPanel() {
             </div>
           </div>
         ))}
+
+        {environments.length === 0 && (
+          <div style={{ marginTop: '20px', padding: '20px', textAlign: 'center', border: '1px dashed var(--border-subtle)', borderRadius: '12px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>No environments found</p>
+            <button onClick={() => setAddEnvironmentModalOpen(true)} className="btn-primary" style={{ fontSize: '12px', padding: '8px 16px' }}>
+              Add Environment
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

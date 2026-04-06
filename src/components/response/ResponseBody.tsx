@@ -33,7 +33,10 @@ export default function ResponseBody({ content, contentType }: { content: string
         oneDark,
         EditorState.readOnly.of(true),
         EditorView.theme({
-          "&": { height: "100%", fontSize: "12px", fontFamily: "var(--font-mono)" },
+          "&": { height: "100%", fontSize: "12px", fontFamily: "var(--font-mono)", backgroundColor: "#0d0f14 !important" },
+          ".cm-gutters": { backgroundColor: "#0d0f14 !important", border: "none", color: "var(--text-tertiary)" },
+          ".cm-activeLineGutter": { backgroundColor: "#0d0f14" },
+          ".cm-activeLine": { backgroundColor: "#0d0f14" }
         })
       ]
     });

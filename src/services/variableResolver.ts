@@ -1,5 +1,11 @@
 import { Variable } from '../types';
 
+interface EnvVariable {
+  key: string;
+  value: string;
+  enabled: boolean;
+}
+
 /**
  * Resolves {{variable_name}} patterns in a given string.
  * Priority: Collection Variables -> Environment Variables
@@ -8,21 +14,21 @@ export class VariableResolver {
   static resolve(
     text: string, 
     collectionVariables: Variable[] = [], 
-    environmentVariables: Variable[] = []
+    environmentVariables: EnvVariable[] | Variable[] = []
   ): string {
     if (!text || typeof text !== 'string') return text;
 
     // Combine variables, prioritizing collection over environment
-    // Only consider enabled variables
+    // Consider variables enabled (default to true if undefined)
     const variablesMap = new Map<string, string>();
     
-    environmentVariables
-      .filter(v => v.enabled && v.key.trim().length > 0)
+    (environmentVariables as Variable[])
+      .filter(v => v.enabled !== false && v.key?.trim().length > 0)
       .forEach(v => variablesMap.set(v.key, v.value));
 
     // Collection variables overwrite environment variables
     collectionVariables
-      .filter(v => v.enabled && v.key.trim().length > 0)
+      .filter(v => v.enabled !== false && v.key?.trim().length > 0)
       .forEach(v => variablesMap.set(v.key, v.value));
 
     // Look for {{var}}

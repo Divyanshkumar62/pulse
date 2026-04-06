@@ -8,20 +8,22 @@ import WebSocketPanel from './WebSocketPanel';
 import ScriptsEditor from './ScriptsEditor';
 import CodeGenerator from '../modals/CodeGenerator';
 import { useTabStore } from '../../stores/useTabStore';
+import { useCollectionStore } from '../../stores/useCollectionStore';
 import { sendRequest } from '../../hooks/useTauri';
+import { VariableResolver } from '../../services/variableResolver';
+import { useEnvStore } from '../../stores/useEnvStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { toast } from 'sonner';
 import '../../styles/components/request.css';
 
 type ConfigTab = 'params' | 'headers' | 'body' | 'auth' | 'scripts';
-
-import { useEnvStore } from '../../stores/useEnvStore';
 import { executePreRequestScript } from '../../services/scriptRunner';
 
 export default function RequestBuilder() {
   const { tabs, activeTabId, setTabResponse, updateActiveTabRequest } = useTabStore();
   const { settings } = useSettingsStore();
   const { environments, activeEnvId, updateEnvironment } = useEnvStore();
+  const { collections } = useCollectionStore();
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('params');
   const [isLoading, setIsLoading] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
@@ -99,9 +101,33 @@ export default function RequestBuilder() {
         }
       });
       
+      // Resolve variables in URL and headers before sending
+      const activeEnv = environments.find(e => e.id === activeEnvId);
+      const envVars = activeEnv?.variables?.filter(v => v.enabled !== false && v.key) || [];
+      
+      const activeCollection = collections.find(c => c.id === activeTab.collectionId);
+      const collectionVars = activeCollection?.variables?.filter(v => v.enabled !== false && v.key) || [];
+      
+      finalUrl = VariableResolver.resolve(finalUrl, collectionVars, envVars);
+      
+      // Resolve variables in header values
+      const resolvedHeaders: Record<string, string> = {};
+      Object.entries(headerRecord).forEach(([key, value]) => {
+        resolvedHeaders[key] = VariableResolver.resolve(value, collectionVars, envVars);
+      });
+      
+      // Resolve variables in body content if it's a string
+      let resolvedBody = body;
+      if (body && typeof body === 'object' && 'content' in body && typeof body.content === 'string') {
+        resolvedBody = {
+          ...body,
+          content: VariableResolver.resolve(body.content, collectionVars, envVars)
+        };
+      }
+      
       if (!settings) throw new Error('Settings not loaded');
       
-      const response = await sendRequest(method, finalUrl, headerRecord, body, settings);
+      const response = await sendRequest(method, finalUrl, resolvedHeaders, resolvedBody, settings);
       setTabResponse(activeTab.id, response);
     } catch (error: any) {
       toast.error('Request failed: ' + String(error.message || error));

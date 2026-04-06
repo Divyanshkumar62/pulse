@@ -1,32 +1,105 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useTabStore } from '../../stores/useTabStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import VirtualList from '../ui/VirtualList';
-import CustomSelect from '../ui/CustomSelect';
 import { toast } from 'sonner';
-import ExportModal from '../modals/ExportModal';
 import { v4 as uuidv4 } from 'uuid';
 
 type TreeItem = 
   | { type: 'collection'; id: string; name: string; data: any; level: number }
-  | { type: 'folder'; id: string; name: string; data: any; level: number }
-  | { type: 'request'; id: string; name: string; method: string; data: any; level: number };
+  | { type: 'folder'; id: string; name: string; data: any; level: number; collectionId: string }
+  | { type: 'request'; id: string; name: string; method: string; data: any; level: number; collectionId: string }
+  | { type: 'creating'; itemType: 'request' | 'folder'; parentId: string; parentType: 'collection' | 'folder'; level: number };
 
 export default function CollectionTree() {
-  const { workspaces, activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore();
+  const { workspaces, activeWorkspaceId } = useWorkspaceStore();
   const { openTab } = useTabStore();
-  const { collections, addCollection, addFolder, addRequest } = useCollectionStore();
+  const { collections, addCollection, addFolder, addRequest, updateCollection, updateRequest } = useCollectionStore();
+  
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, items: ContextMenuItem[]} | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [containerHeight, setContainerHeight] = useState(500);
-  const [exportingCollection, setExportingCollection] = useState<any | null>(null);
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
-  const [renamingItem, setRenamingItem] = useState<{ id: string; type: 'collection' | 'folder' | 'request'; name: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<TreeItem[]>([]);
+  
+  const [creatingInline, setCreatingInline] = useState<{ parentId: string; parentType: 'collection' | 'folder'; itemType: 'request' | 'folder' } | null>(null);
+  const [creatingName, setCreatingName] = useState('');
+  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+  
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const createInputRef = useRef<HTMLInputElement>(null);
 
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
+
+  useEffect(() => {
+    if (creatingInline && createInputRef.current) {
+      createInputRef.current.focus();
+    }
+  }, [creatingInline]);
+
+  const performSearch = useCallback((query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const results: TreeItem[] = [];
+    const lowerQuery = query.toLowerCase();
+
+    collections.forEach(collection => {
+      if (collection.name.toLowerCase().includes(lowerQuery)) {
+        results.push({ type: 'collection', id: collection.id, name: collection.name, data: collection, level: 0 });
+      }
+
+      collection.requests.forEach(req => {
+        if (req.name.toLowerCase().includes(lowerQuery)) {
+          results.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: 1, collectionId: collection.id });
+        }
+      });
+
+      const searchInFolders = (folders: any[], level: number, collectionId: string) => {
+        folders.forEach(folder => {
+          if (folder.name.toLowerCase().includes(lowerQuery)) {
+            results.push({ type: 'folder', id: folder.id, name: folder.name, data: folder, level, collectionId });
+          }
+          folder.requests.forEach((req: any) => {
+            if (req.name.toLowerCase().includes(lowerQuery)) {
+              results.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: level + 1, collectionId });
+            }
+          });
+          if (folder.folders) {
+            searchInFolders(folder.folders, level + 1, collectionId);
+          }
+        });
+      };
+
+      if (collection.folders) {
+        searchInFolders(collection.folders, 1, collection.id);
+      }
+    });
+
+    setSearchResults(results);
+  }, [collections]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, performSearch]);
 
   const handleCreateCollection = async () => {
     if (!newCollectionName.trim()) return;
@@ -46,49 +119,122 @@ export default function CollectionTree() {
     toast.success(`Collection "${newCollectionName}" created`);
   };
 
-  const handleCreateFolder = (collectionId: string) => {
-    const newFolder = {
-      id: uuidv4(),
-      name: 'New Folder',
-      requests: []
-    };
-    addFolder(collectionId, newFolder);
-    setExpandedItems(prev => new Set([...prev, collectionId]));
-    toast.success('Folder created');
-  };
-
   const handleCreateRequest = (collectionId: string, folderId: string | null) => {
-    const newRequest = {
-      id: uuidv4(),
-      name: 'New Request',
-      method: 'GET' as const,
-      url: '',
-      headers: [],
-      body: { type: 'none' as const, content: '' }
-    };
-    addRequest(collectionId, folderId, newRequest);
-    openTab(newRequest);
-    toast.success('Request created');
+    setCreatingInline({ parentId: folderId || collectionId, parentType: folderId ? 'folder' : 'collection', itemType: 'request' });
+    setCreatingName('');
   };
 
-  const handleRename = (id: string, type: 'collection' | 'folder' | 'request', currentName: string) => {
-    setRenamingItem({ id, type, name: currentName });
+  const handleCreateFolder = (collectionId: string, parentFolderId: string | null) => {
+    setCreatingInline({ parentId: parentFolderId || collectionId, parentType: parentFolderId ? 'folder' : 'collection', itemType: 'folder' });
+    setCreatingName('');
   };
 
-  const handleRenameSubmit = () => {
-    if (!renamingItem) return;
+  const confirmCreate = () => {
+    if (!creatingInline || !creatingName.trim()) return;
     
-    if (renamingItem.type === 'collection') {
-      // Update collection name
-      // For now just close the rename
-    } else if (renamingItem.type === 'folder') {
-      // Update folder name
-    } else if (renamingItem.type === 'request') {
-      // Update request name
+    const { parentId, parentType, itemType } = creatingInline;
+    
+    if (itemType === 'request') {
+      const newRequest = {
+        id: uuidv4(),
+        name: creatingName.trim(),
+        method: 'GET' as const,
+        url: '',
+        headers: [],
+        body: { type: 'none' as const, content: '' }
+      };
+      
+      if (parentType === 'collection') {
+        addRequest(parentId, null, newRequest);
+        openTab(newRequest, parentId);
+      } else {
+        const collection = collections.find(c => c.folders?.some(f => f.id === parentId));
+        if (collection) {
+          addRequest(collection.id, parentId, newRequest);
+          openTab(newRequest, collection.id);
+        }
+      }
+      toast.success('Request created');
+    } else {
+      const newFolder = {
+        id: uuidv4(),
+        name: creatingName.trim(),
+        requests: [],
+        folders: []
+      };
+      
+      if (parentType === 'collection') {
+        addFolder(parentId, null, newFolder);
+      } else {
+        const collection = collections.find(c => c.folders?.some(f => f.id === parentId));
+        if (collection) {
+          addFolder(collection.id, parentId, newFolder);
+        }
+      }
+      setExpandedItems(prev => new Set([...prev, parentId]));
+      toast.success('Folder created');
     }
     
-    setRenamingItem(null);
-    toast.success('Item renamed');
+    setCreatingInline(null);
+    setCreatingName('');
+  };
+
+  const cancelCreate = () => {
+    setCreatingInline(null);
+    setCreatingName('');
+  };
+
+  const startEdit = (id: string, name: string) => {
+    setEditingId(id);
+    setEditingValue(name);
+  };
+
+  const saveEdit = () => {
+    if (!editingId || !editingValue.trim()) {
+      setEditingId(null);
+      return;
+    }
+    
+    const collection = collections.find(c => c.id === editingId);
+    if (collection) {
+      updateCollection(editingId, { name: editingValue.trim() }, '');
+      setEditingId(null);
+      toast.success('Collection renamed');
+      return;
+    }
+    
+    for (const col of collections) {
+      const req = col.requests.find(r => r.id === editingId);
+      if (req) {
+        updateRequest(col.id, editingId, { name: editingValue.trim() });
+        setEditingId(null);
+        toast.success('Request renamed');
+        return;
+      }
+      const findInFolders = (folders: any[]): boolean => {
+        for (const f of folders) {
+          const r = f.requests?.find((r: any) => r.id === editingId);
+          if (r) {
+            updateRequest(col.id, editingId, { name: editingValue.trim() });
+            return true;
+          }
+          if (f.folders && findInFolders(f.folders)) return true;
+        }
+        return false;
+      };
+      if (findInFolders(col.folders)) {
+        setEditingId(null);
+        toast.success('Request renamed');
+        return;
+      }
+    }
+    
+    setEditingId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingValue('');
   };
 
   useEffect(() => {
@@ -108,58 +254,80 @@ export default function CollectionTree() {
   const flattenedItems = useMemo(() => {
     const items: TreeItem[] = [];
 
+    const processFolders = (folders: any[], level: number, collectionId: string) => {
+      folders.forEach(folder => {
+        const folderWithCollectionId = { ...folder, collectionId };
+        items.push({ type: 'folder', id: folder.id, name: folder.name, data: folderWithCollectionId, level, collectionId });
+        
+        if (creatingInline && creatingInline.parentId === folder.id && creatingInline.itemType === 'request') {
+          items.push({ type: 'creating', itemType: 'request', parentId: folder.id, parentType: 'folder', level: level + 1 });
+        }
+        
+        if (expandedItems.has(folder.id)) {
+          folder.requests.forEach((req: any) => {
+            items.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: level + 1, collectionId });
+          });
+          
+          if (folder.folders && folder.folders.length > 0) {
+            processFolders(folder.folders, level + 1, collectionId);
+          }
+        }
+      });
+    };
+
     collections.forEach(collection => {
       items.push({ type: 'collection', id: collection.id, name: collection.name, data: collection, level: 0 });
       
+      if (creatingInline && creatingInline.parentId === collection.id) {
+        if (creatingInline.itemType === 'request') {
+          items.push({ type: 'creating', itemType: 'request', parentId: collection.id, parentType: 'collection', level: 1 });
+        } else {
+          items.push({ type: 'creating', itemType: 'folder', parentId: collection.id, parentType: 'collection', level: 1 });
+        }
+      }
+      
       if (expandedItems.has(collection.id)) {
         collection.requests.forEach(req => {
-          items.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: 1 });
+          items.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: 1, collectionId: collection.id });
         });
         
-        collection.folders.forEach(folder => {
-          items.push({ type: 'folder', id: folder.id, name: folder.name, data: folder, level: 1 });
-          if (expandedItems.has(folder.id)) {
-            folder.requests.forEach(req => {
-              items.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: 2 });
-            });
-          }
-        });
+        if (collection.folders && collection.folders.length > 0) {
+          processFolders(collection.folders, 1, collection.id);
+        }
       }
     });
 
     return items;
-  }, [collections, expandedItems]);
+  }, [collections, expandedItems, creatingInline]);
 
   const handleContextMenu = (e: React.MouseEvent, type: 'collection' | 'folder' | 'request', data: any, fromDotButton = false) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // Calculate position - if from dot button, position it closer
     let menuX = e.clientX;
     let menuY = e.clientY;
     
     if (fromDotButton) {
       const rect = (e.target as HTMLElement).getBoundingClientRect();
-      menuX = rect.left - 150; // Position to the left of the button
-      menuY = rect.bottom + 5; // Just below the button
+      menuX = rect.left - 150;
+      menuY = rect.bottom + 5;
     }
     
     const items: ContextMenuItem[] = [];
     if (type === 'collection') {
-      items.push({ label: 'New Request', icon: '⚡', onClick: () => handleCreateRequest(data.id, null) });
-      items.push({ label: 'New Folder', icon: '📁', onClick: () => handleCreateFolder(data.id) });
-      items.push({ label: 'Export', icon: '📤', onClick: () => setExportingCollection(data) });
-      items.push({ label: 'Rename', icon: '✏️', onClick: () => handleRename(data.id, 'collection', data.name) });
-      items.push({ label: 'Delete', icon: '🗑️', danger: true, onClick: () => toast('Delete coming soon') });
+      items.push({ label: 'New Request', onClick: () => handleCreateRequest(data.id, null) });
+      items.push({ label: 'New Folder', onClick: () => handleCreateFolder(data.id, null) });
+      items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
+      items.push({ label: 'Delete', danger: true, onClick: () => toast('Delete coming soon') });
     } else if (type === 'folder') {
-      items.push({ label: 'New Request', icon: '⚡', onClick: () => handleCreateRequest(data.collectionId, data.id) });
-      items.push({ label: 'New Folder', icon: '📁', onClick: () => handleCreateFolder(data.id) });
-      items.push({ label: 'Rename', icon: '✏️', onClick: () => handleRename(data.id, 'folder', data.name) });
-      items.push({ label: 'Delete', icon: '🗑️', danger: true, onClick: () => toast('Delete coming soon') });
+      items.push({ label: 'New Request', onClick: () => handleCreateRequest(data.collectionId, data.id) });
+      items.push({ label: 'New Folder', onClick: () => handleCreateFolder(data.collectionId, data.id) });
+      items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
+      items.push({ label: 'Delete', danger: true, onClick: () => toast('Delete coming soon') });
     } else if (type === 'request') {
-      items.push({ label: 'Rename', icon: '✏️', onClick: () => handleRename(data.id, 'request', data.name) });
-      items.push({ label: 'Duplicate', icon: '📄', onClick: () => toast('Duplicate coming soon') });
-      items.push({ label: 'Delete', icon: '🗑️', danger: true, onClick: () => toast('Delete coming soon') });
+      items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
+      items.push({ label: 'Duplicate', onClick: () => toast('Duplicate coming soon') });
+      items.push({ label: 'Delete', danger: true, onClick: () => toast('Delete coming soon') });
     }
     
     setContextMenu({ x: menuX, y: menuY, items });
@@ -168,12 +336,73 @@ export default function CollectionTree() {
   const renderTreeItem = (item: TreeItem) => {
     const paddingLeft = item.level * 12 + 8;
 
+    if (item.type === 'creating') {
+      return (
+        <div style={{ paddingLeft, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
+          <span style={{ width: '14px' }}></span>
+          <input
+            ref={createInputRef}
+            type="text"
+            value={creatingName}
+            onChange={(e) => setCreatingName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') confirmCreate();
+              if (e.key === 'Escape') cancelCreate();
+            }}
+            onBlur={confirmCreate}
+            placeholder={`New ${item.itemType}...`}
+            style={{
+              flex: 1,
+              padding: '4px 8px',
+              background: 'var(--bg-input)',
+              border: '1px solid var(--accent-primary)',
+              borderRadius: '4px',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              outline: 'none'
+            }}
+          />
+        </div>
+      );
+    }
+
     if (item.type === 'collection' || item.type === 'folder') {
+      if (editingId === item.id) {
+        return (
+          <div style={{ paddingLeft, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
+            <span style={{ width: '14px' }}></span>
+            <input
+              ref={editInputRef}
+              type="text"
+              value={editingValue}
+              onChange={(e) => setEditingValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveEdit();
+                if (e.key === 'Escape') cancelEdit();
+              }}
+              onBlur={saveEdit}
+              style={{
+                flex: 1,
+                padding: '4px 8px',
+                background: 'var(--bg-input)',
+                border: '1px solid var(--accent-primary)',
+                borderRadius: '4px',
+                color: 'var(--text-primary)',
+                fontSize: item.type === 'collection' ? '13px' : '12px',
+                outline: 'none',
+                fontWeight: item.type === 'collection' ? 600 : 500
+              }}
+            />
+          </div>
+        );
+      }
+
       const isExpanded = expandedItems.has(item.id);
       return (
         <div 
           onClick={() => toggleExpand(item.id)}
           onContextMenu={(e) => handleContextMenu(e, item.type, item.data)}
+          onDoubleClick={() => startEdit(item.id, item.name)}
           style={{ 
             paddingLeft,
             display: 'flex', 
@@ -211,7 +440,6 @@ export default function CollectionTree() {
             className="tree-actions"
             onClick={(e) => {
               e.stopPropagation();
-              // Position popup closer to the button (offset x by -140, y by 10)
               handleContextMenu(e, item.type, item.data, true);
             }}
             style={{
@@ -232,12 +460,41 @@ export default function CollectionTree() {
       );
     }
 
+    if (editingId === item.id) {
+      return (
+        <div style={{ paddingLeft: paddingLeft + 18, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
+          <input
+            ref={editInputRef}
+            type="text"
+            value={editingValue}
+            onChange={(e) => setEditingValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveEdit();
+              if (e.key === 'Escape') cancelEdit();
+            }}
+            onBlur={saveEdit}
+            style={{
+              flex: 1,
+              padding: '4px 8px',
+              background: 'var(--bg-input)',
+              border: '1px solid var(--accent-primary)',
+              borderRadius: '4px',
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              outline: 'none'
+            }}
+          />
+        </div>
+      );
+    }
+
     return (
       <div 
         className="tree-request-item"
         style={{ paddingLeft: paddingLeft + 18, height: '32px' }}
-        onClick={() => openTab(item.data)}
+        onClick={() => openTab(item.data, item.collectionId)}
         onContextMenu={(e) => handleContextMenu(e, 'request', item.data)}
+        onDoubleClick={() => startEdit(item.id, item.name)}
       >
         <span className={`method-badge method-${item.method.toLowerCase()}`} style={{ width: '36px', textAlign: 'center', fontSize: '9px' }}>{item.method}</span>
         <span style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
@@ -247,8 +504,27 @@ export default function CollectionTree() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <input
+          type="text"
+          placeholder="Search collections, folders, requests..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            color: 'var(--text-primary)',
+            fontSize: '13px',
+            outline: 'none'
+          }}
+        />
+      </div>
+
       {isCreatingCollection ? (
-        <div style={{ padding: 'var(--space-3)', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.2)' }}>
+        <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.2)' }}>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input
               type="text"
@@ -261,7 +537,7 @@ export default function CollectionTree() {
                 flex: 1,
                 padding: '8px 12px',
                 background: 'var(--bg-input)',
-                border: '1px solid var(--border-subtle)',
+                border: '1px solid var(--accent-primary)',
                 borderRadius: 'var(--radius-md)',
                 color: 'var(--text-primary)',
                 fontSize: '13px',
@@ -300,9 +576,42 @@ export default function CollectionTree() {
           </div>
         </div>
       ) : null}
-      
+
       <div style={{ flex: 1, padding: 'var(--space-2) 0' }}>
-        {flattenedItems.length > 0 ? (
+        {searchQuery.trim() ? (
+          searchResults.length > 0 ? (
+            <div style={{ padding: '0 8px' }}>
+              {searchResults.map((item: any) => (
+                <div 
+                  key={`${item.type}-${item.id}`}
+                  style={{ 
+                    paddingLeft: item.level * 12 + 8,
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '6px', 
+                    height: '32px',
+                    cursor: 'pointer',
+                    borderRadius: '4px'
+                  }}
+                  onClick={() => item.type === 'request' ? openTab(item.data, item.collectionId) : setExpandedItems(prev => new Set([...prev, item.id]))}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  {item.type === 'collection' && <span style={{ fontSize: '11px' }}>📁</span>}
+                  {item.type === 'folder' && <span style={{ fontSize: '11px' }}>📂</span>}
+                  {item.type === 'request' && (
+                    <span className={`method-badge method-${item.method.toLowerCase()}`} style={{ width: '36px', textAlign: 'center', fontSize: '9px' }}>{item.method}</span>
+                  )}
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-tertiary)', fontSize: '13px' }}>
+              No results found for "{searchQuery}"
+            </div>
+          )
+        ) : flattenedItems.length > 0 ? (
           <VirtualList
             items={flattenedItems}
             height={containerHeight}
@@ -319,9 +628,31 @@ export default function CollectionTree() {
             overscan={10}
           />
         ) : (
-          <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', marginTop: '60px', fontSize: '13px', fontWeight: 500 }}>
-            {activeWorkspace ? 'No collections found.' : 'Initialising environment...'}
-            {!activeWorkspace && <div className="loading-spinner" style={{ margin: '20px auto' }}></div>}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '60px', gap: '16px' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="1" opacity="0.4">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              <line x1="12" y1="11" x2="12" y2="17"/>
+              <line x1="9" y1="14" x2="15" y2="14"/>
+            </svg>
+            <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', fontSize: '13px', fontWeight: 500 }}>
+              {activeWorkspace ? 'No collections yet' : 'Initialising environment...'}
+              {!activeWorkspace && <div className="loading-spinner" style={{ margin: '20px auto' }}></div>}
+            </p>
+            <button 
+              onClick={() => setIsCreatingCollection(true)}
+              style={{
+                background: 'var(--accent-primary)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Create Collection
+            </button>
           </div>
         )}
       </div>
@@ -329,14 +660,6 @@ export default function CollectionTree() {
       {contextMenu && (
         <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenu.items} onClose={() => setContextMenu(null)} />
       )}
-
-      {exportingCollection && (
-        <ExportModal 
-          collection={exportingCollection} 
-          onClose={() => setExportingCollection(null)} 
-        />
-      )}
     </div>
   );
 }
-

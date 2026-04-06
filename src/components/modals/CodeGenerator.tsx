@@ -32,7 +32,7 @@ export default function CodeGenerator({ isOpen, onClose }: CodeGeneratorProps) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }} onClick={onClose}>
       <div 
         style={{ width: '700px', backgroundColor: 'var(--bg-deep)', borderRadius: '8px', border: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
         onClick={e => e.stopPropagation()}

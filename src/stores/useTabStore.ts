@@ -1,8 +1,10 @@
 import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
 import { Request, HttpResponse, WebSocketMessage, WebSocketStatus } from '../types';
 
 export interface Tab {
   id: string; // Typically corresponds to the request ID
+  collectionId?: string; 
   request: Request;
   response?: HttpResponse;
   isDirty?: boolean;
@@ -14,7 +16,7 @@ interface TabStore {
   tabs: Tab[];
   activeTabId: string | null;
   
-  openTab: (request: Request) => void;
+  openTab: (request: Request, collectionId?: string) => void;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateActiveTabRequest: (updates: Partial<Request>) => void;
@@ -24,16 +26,17 @@ interface TabStore {
   clearWsMessages: (tabId: string) => void;
 }
 
-export const useTabStore = create<TabStore>((set, get) => ({
+export const useTabStore = create<TabStore>()(
+  subscribeWithSelector((set, get) => ({
   tabs: [],
   activeTabId: null,
 
-  openTab: (request) => {
+  openTab: (request, collectionId) => {
     const { tabs } = get();
     const existing = tabs.find(t => t.id === request.id);
     if (!existing) {
       set({ 
-        tabs: [...tabs, { id: request.id, request }],
+        tabs: [...tabs, { id: request.id, request, collectionId }],
         activeTabId: request.id 
       });
     } else {
@@ -110,4 +113,5 @@ export const useTabStore = create<TabStore>((set, get) => ({
       )
     });
   }
-}));
+}))
+);

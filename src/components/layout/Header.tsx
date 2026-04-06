@@ -1,7 +1,10 @@
 import { useAppStore } from '../../stores/useAppStore';
+import UserProfileModal from '../modals/UserProfileModal';
 import '../../styles/components/header.css';
 
 export default function Header() {
+  const { isProfileOpen, setProfileOpen } = useAppStore();
+  
   return (
     <header className="app-header" data-tauri-drag-region>
       <div className="header-left" data-tauri-drag-region>
@@ -19,10 +22,12 @@ export default function Header() {
       </div>
 
       <div className="header-right">
-        <div className="user-profile">
+        <div className="user-profile" onClick={() => setProfileOpen(true)}>
           <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Profile" />
         </div>
       </div>
+
+      <UserProfileModal isOpen={isProfileOpen} onClose={() => setProfileOpen(false)} />
     </header>
   );
 }
