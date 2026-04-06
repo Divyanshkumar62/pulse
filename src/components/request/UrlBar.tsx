@@ -9,9 +9,9 @@ interface UrlBarProps {
   isLoading: boolean;
 }
 
-const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
+const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'WS'];
 
-const METHOD_COLORS: Record<HttpMethod, string> = {
+const METHOD_COLORS: Record<string, string> = {
   GET: 'var(--method-get)',
   POST: 'var(--method-post)',
   PUT: 'var(--method-put)',
@@ -19,6 +19,7 @@ const METHOD_COLORS: Record<HttpMethod, string> = {
   PATCH: 'var(--method-patch)',
   HEAD: 'var(--method-head)',
   OPTIONS: 'var(--method-options)',
+  WS: '#10b981', // emerald green for websockets
 };
 
 export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
@@ -40,8 +41,8 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
 
   if (!request) return null;
 
-  const isWebSocket = request.url?.startsWith('ws://') || request.url?.startsWith('wss://');
-  const currentColor = METHOD_COLORS[request.method as HttpMethod] || 'var(--accent-primary)';
+  const isWebSocket = request.method === 'WS' || request.url?.startsWith('ws://') || request.url?.startsWith('wss://');
+  const currentColor = METHOD_COLORS[request.method] || 'var(--accent-primary)';
 
   return (
     <div className="url-bar-container">
@@ -80,7 +81,7 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
           </div>
         )}
         
-        {isWebSocket && (
+        {isWebSocket && dropdownOpen === false && request.method === 'WS' === false && (
           <div className="ws-indicator">
             <span className="ws-dot"></span>
             WS
@@ -144,6 +145,14 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
                 )}
               </button>
             </>
+          )}
+          {isWebSocket && (
+             <button 
+                className="send-btn-premium" 
+                onClick={onSend}
+              >
+                Connect
+              </button>
           )}
         </div>
       </div>

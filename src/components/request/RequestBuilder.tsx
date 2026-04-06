@@ -54,7 +54,7 @@ export default function RequestBuilder() {
 
     setIsLoading(true);
     try {
-      const { method, url, headers, body, auth, preRequestScript } = activeTab.request;
+      const { method, url, headers, body, auth, preRequestScript, testScript } = activeTab.request;
       
       // 1. Execute Pre-request Script
       let finalUrl = url;
@@ -129,6 +129,27 @@ export default function RequestBuilder() {
       
       const response = await sendRequest(method, finalUrl, resolvedHeaders, resolvedBody, settings);
       setTabResponse(activeTab.id, response);
+
+      // 3. Execute Test Script (Post-request)
+      if (testScript) {
+        const activeEnv = environments.find(e => e.id === activeEnvId);
+        // We reuse the same sandbox logic, but now inject the response
+        const testResult = executePreRequestScript(testScript, activeTab.request, activeEnv, response);
+        
+        // Apply environment updates from the test script (Request Chaining)
+        if (Object.keys(testResult.environmentUpdates).length > 0 && activeEnv) {
+          const newVariables = [...activeEnv.variables];
+          Object.entries(testResult.environmentUpdates).forEach(([key, value]) => {
+            const idx = newVariables.findIndex(v => v.key === key);
+            if (idx >= 0) {
+              newVariables[idx] = { ...newVariables[idx], value };
+            } else {
+              newVariables.push({ key, value, enabled: true });
+            }
+          });
+          updateEnvironment(activeEnv.id, { variables: newVariables });
+        }
+      }
     } catch (error: any) {
       toast.error('Request failed: ' + String(error.message || error));
       console.error(error);

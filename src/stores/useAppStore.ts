@@ -15,6 +15,7 @@ interface AppStore {
   selectedMonitorId: string | null;
   selectedEnvironmentId: string | null;
   isAddEnvironmentModalOpen: boolean;
+  isImportModalOpen: boolean;
   
   setSidebarTab: (tab: SidebarTab) => void;
   setSidebarWidth: (width: number) => void;
@@ -27,6 +28,7 @@ interface AppStore {
   setSelectedMonitorId: (id: string | null) => void;
   setSelectedEnvironmentId: (id: string | null) => void;
   setAddEnvironmentModalOpen: (open: boolean) => void;
+  setImportModalOpen: (open: boolean) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -41,6 +43,7 @@ export const useAppStore = create<AppStore>((set) => ({
   selectedMonitorId: null,
   selectedEnvironmentId: null,
   isAddEnvironmentModalOpen: false,
+  isImportModalOpen: false,
   
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
   setSidebarWidth: (width) => set({ sidebarWidth: width }),
@@ -53,4 +56,5 @@ export const useAppStore = create<AppStore>((set) => ({
   setSelectedMonitorId: (id) => set({ selectedMonitorId: id }),
   setSelectedEnvironmentId: (id) => set({ selectedEnvironmentId: id }),
   setAddEnvironmentModalOpen: (open) => set({ isAddEnvironmentModalOpen: open }),
+  setImportModalOpen: (open) => set({ isImportModalOpen: open }),
 }));

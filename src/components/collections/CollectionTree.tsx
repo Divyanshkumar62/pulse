@@ -2,8 +2,10 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useTabStore } from '../../stores/useTabStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
+import { useAppStore } from '../../stores/useAppStore';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import VirtualList from '../ui/VirtualList';
+import ImportModal from '../modals/ImportModal';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -17,6 +19,7 @@ export default function CollectionTree() {
   const { workspaces, activeWorkspaceId } = useWorkspaceStore();
   const { openTab } = useTabStore();
   const { collections, addCollection, addFolder, addRequest, updateCollection, updateRequest } = useCollectionStore();
+  const { isImportModalOpen, setImportModalOpen } = useAppStore();
   
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, items: ContextMenuItem[]} | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -504,14 +507,14 @@ export default function CollectionTree() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+      <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: '8px' }}>
         <input
           type="text"
-          placeholder="Search collections, folders, requests..."
+          placeholder="Search collections..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{
-            width: '100%',
+            flex: 1,
             padding: '8px 12px',
             background: 'var(--bg-input)',
             border: '1px solid var(--border-subtle)',
@@ -521,6 +524,30 @@ export default function CollectionTree() {
             outline: 'none'
           }}
         />
+        <button
+          onClick={() => setImportModalOpen(true)}
+          style={{
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            padding: '8px 12px',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s'
+          }}
+          title="Import Collection"
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
       </div>
 
       {isCreatingCollection ? (
@@ -660,6 +687,8 @@ export default function CollectionTree() {
       {contextMenu && (
         <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenu.items} onClose={() => setContextMenu(null)} />
       )}
+      
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setImportModalOpen(false)} />
     </div>
   );
 }

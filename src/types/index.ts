@@ -7,7 +7,7 @@ export interface KeyValuePair {
 
 export type Header = KeyValuePair;
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS' | 'WS';
 
 export interface GraphQLConfig {
   query: string;

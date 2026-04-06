@@ -1,4 +1,4 @@
-import { Request, Environment, Header } from '../types';
+import { Request, Environment, Header, HttpResponse } from '../types';
 
 export interface ScriptResult {
   modifiedUrl?: string;
@@ -9,7 +9,8 @@ export interface ScriptResult {
 export function executePreRequestScript(
   script: string, 
   request: Request, 
-  environment?: Environment
+  environment?: Environment,
+  response?: HttpResponse
 ): ScriptResult {
   const result: ScriptResult = {
     addedHeaders: [],
@@ -38,7 +39,19 @@ export function executePreRequestScript(
       set: (key: string, value: string) => {
         result.environmentUpdates[key] = value;
       }
-    }
+    },
+    response: response ? {
+      json: () => {
+        try {
+          return JSON.parse(response.body);
+        } catch {
+          return null;
+        }
+      },
+      status: response.status,
+      headers: response.headers,
+      body: response.body
+    } : undefined
   };
 
   try {
