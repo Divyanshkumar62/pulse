@@ -8,6 +8,7 @@ import { useEnvStore } from './stores/useEnvStore';
 import { useTeamStore } from './stores/useTeamStore';
 import { useSettingsStore } from './stores/useSettingsStore';
 import { useWorkspaceStore } from './stores/useWorkspaceStore';
+import { useHistoryStore } from './stores/useHistoryStore';
 import { useAppStore } from './stores/useAppStore';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 
@@ -16,6 +17,7 @@ export default function App() {
   const initSettingsStore = useSettingsStore(state => state.initialize);
   const initTeamStore = useTeamStore(state => state.initialize);
   const initWorkspaceStore = useWorkspaceStore(state => state.initialize);
+  const initHistoryStore = useHistoryStore(state => state.initialize);
   const { sidebarTab, selectedMonitorId, selectedEnvironmentId } = useAppStore();
 
   useEffect(() => {
@@ -25,7 +27,8 @@ export default function App() {
       });
     });
     initEnvStore();
-  }, [initEnvStore, initSettingsStore, initTeamStore, initWorkspaceStore]);
+    initHistoryStore();
+  }, [initEnvStore, initSettingsStore, initTeamStore, initWorkspaceStore, initHistoryStore]);
 
   const showMonitorDashboard = sidebarTab === 'monitor' && selectedMonitorId;
   const showEnvironmentEditor = sidebarTab === 'environments' && selectedEnvironmentId;

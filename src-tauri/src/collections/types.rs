@@ -14,6 +14,7 @@ pub struct Folder {
     pub id: String,
     pub name: String,
     pub requests: Vec<Request>,
+    pub folders: Option<Vec<Folder>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

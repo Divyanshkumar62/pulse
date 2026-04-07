@@ -13,7 +13,10 @@ import { sendRequest } from '../../hooks/useTauri';
 import { VariableResolver } from '../../services/variableResolver';
 import { useEnvStore } from '../../stores/useEnvStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
+import { useHistoryStore } from '../../stores/useHistoryStore';
 import { toast } from 'sonner';
+import type { HttpRequest } from '../../types';
+import { v4 as uuidv4 } from 'uuid';
 import '../../styles/components/request.css';
 
 type ConfigTab = 'params' | 'headers' | 'body' | 'auth' | 'scripts';
@@ -24,6 +27,7 @@ export default function RequestBuilder() {
   const { settings } = useSettingsStore();
   const { environments, activeEnvId, updateEnvironment } = useEnvStore();
   const { collections } = useCollectionStore();
+  const { addEntry } = useHistoryStore();
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('params');
   const [isLoading, setIsLoading] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
@@ -129,6 +133,25 @@ export default function RequestBuilder() {
       
       const response = await sendRequest(method, finalUrl, resolvedHeaders, resolvedBody, settings);
       setTabResponse(activeTab.id, response);
+
+      // Save to history
+      const httpRequest: HttpRequest = {
+        method: activeTab.request.method,
+        url: finalUrl,
+        headers: Object.entries(resolvedHeaders).map(([key, value]) => ({ key, value })),
+        body: resolvedBody,
+        preRequestScript: activeTab.request.preRequestScript,
+      };
+      await addEntry({
+        id: uuidv4(),
+        timestamp: new Date().toISOString(),
+        method: activeTab.request.method,
+        url: finalUrl,
+        status: response.status,
+        time_ms: response.time_ms,
+        request: httpRequest,
+        response: response,
+      });
 
       // 3. Execute Test Script (Post-request)
       if (testScript) {

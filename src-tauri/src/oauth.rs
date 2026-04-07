@@ -1,4 +1,3 @@
-use rand::thread_rng;
 use rand::Rng;
 use rand::distributions::Alphanumeric;
 use sha2::{Digest, Sha256};

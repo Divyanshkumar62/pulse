@@ -1,0 +1,17 @@
+id: 734d3c43-5431-4a66-b750-aad1513b15fb
+name: collection1
+description: null
+requests:
+- id: a0695b80-8b6c-449c-9c83-508c6fdf2de3
+  name: New Request
+  method: GET
+  protocol: null
+  url: https://jsonplaceholder.{{code}}.com/posts
+  headers: []
+  body:
+    type: none
+    content: ''
+    graphql: null
+  auth: null
+  pre_request_script: null
+folders: []

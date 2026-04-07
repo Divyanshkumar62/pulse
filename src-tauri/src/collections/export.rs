@@ -1,4 +1,4 @@
-use crate::collections::types::{Collection, Folder, Header, Request};
+use crate::collections::types::{Collection, Folder, Request};
 use serde_json::{json, Value};
 
 pub fn to_postman_v21(collection: &Collection) -> Value {

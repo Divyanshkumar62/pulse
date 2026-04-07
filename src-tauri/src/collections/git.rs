@@ -18,6 +18,26 @@ fn has_remote(path: &str) -> bool {
         .unwrap_or(false)
 }
 
+fn get_remote_url(path: &str) -> Option<String> {
+    Command::new("git")
+        .args(["remote", "get-url", "origin"])
+        .current_dir(path)
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                let url = String::from_utf8_lossy(&o.stdout).trim().to_string();
+                if url.is_empty() {
+                    None
+                } else {
+                    Some(url)
+                }
+            } else {
+                None
+            }
+        })
+}
+
 pub fn git_init(path: &str) -> Result<(), String> {
     let output = Command::new("git")
         .arg("init")
@@ -81,7 +101,7 @@ pub fn git_status(path: &str) -> Result<GitStatus, String> {
 
 pub fn git_commit(path: &str, message: &str) -> Result<(), String> {
     let add_output = Command::new("git")
-        .args(["add", "."])
+        .args(["add", "-A"])
         .current_dir(path)
         .output()
         .map_err(|e| format!("Failed to git add: {}", e))?;
@@ -107,6 +127,10 @@ pub fn git_push(path: &str) -> Result<bool, String> {
         return Ok(false);
     }
 
+    if get_remote_url(path).is_none() {
+        return Ok(false);
+    }
+
     let output = Command::new("git")
         .args(["push", "-u", "origin", "HEAD"])
         .current_dir(path)
@@ -121,8 +145,12 @@ pub fn git_push(path: &str) -> Result<bool, String> {
 
 pub fn git_pull(path: &str) -> Result<(), String> {
     if !has_remote(path) {
+        return Err("No remote configured. Run: git remote add origin <url>".to_string());
+    }
+
+    if get_remote_url(path).is_none() {
         return Err(
-            "No remote configured. Add a remote with: git remote add origin <url>".to_string(),
+            "Remote 'origin' exists but URL not set. Run: git remote add origin <url>".to_string(),
         );
     }
 
@@ -133,7 +161,16 @@ pub fn git_pull(path: &str) -> Result<(), String> {
         .map_err(|e| format!("Failed to git pull: {}", e))?;
 
     if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        let err = String::from_utf8_lossy(&output.stderr).to_string();
+        if err.contains("Could not read from remote repository")
+            || err.contains("does not appear to be a git repository")
+        {
+            return Err(
+                "Remote 'origin' exists but is not reachable. Check URL or permissions."
+                    .to_string(),
+            );
+        }
+        return Err(err);
     }
     Ok(())
 }

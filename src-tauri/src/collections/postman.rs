@@ -136,6 +136,7 @@ fn extract_items(items: Vec<PostmanItem>) -> (Vec<Request>, Vec<Folder>) {
                     id: folder_id.clone(),
                     name: folder.name,
                     requests: folder_requests,
+                    folders: None,
                 });
                 folders.extend(subfolders);
             }

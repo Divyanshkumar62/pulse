@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useAppStore } from '../../stores/useAppStore';
-import { getGitStatus, gitInit, gitPull, GitStatus } from '../../hooks/useTauri';
+import { getGitStatus, gitPull, GitStatus } from '../../hooks/useTauri';
 import { GitBranch, RefreshCw, CheckCircle, ArrowUp } from 'lucide-react';
 import { toast } from 'sonner';
 import '../../styles/components/git-sync.css';
@@ -52,8 +52,9 @@ export default function GitSync() {
     }
   };
 
-  const openCommitModal = () => {
-    setCommitModalOpen(true, status, activeWorkspace?.path || '');
+  const openCommitModal = async () => {
+    const freshStatus = await getGitStatus(activeWorkspace?.path || '');
+    setCommitModalOpen(true, freshStatus, activeWorkspace?.path || '');
   };
 
   if (!activeWorkspace?.path) return null;
