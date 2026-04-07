@@ -4,6 +4,7 @@ import type { HttpResponse, Collection, HistoryEntry, Environment, Team, Invitat
 export interface UserSettings {
   email: string;
   name: string;
+  avatarUrl?: string;
   default_timeout_secs: number;
   follow_redirects: boolean;
   verify_ssl: boolean;
@@ -137,6 +138,47 @@ export async function exchangeOAuthToken(
   });
 }
 
-export async function exportCollection(collection: Collection, format: string): Promise<any> {
+export async function exportCollection(collection: Collection, format: String): Promise<any> {
   return invoke('export_collection', { collection, format });
+}
+
+// Workspace Sync Commands
+export async function saveCollectionToDisk(workspacePath: string, collection: Collection): Promise<void> {
+  return invoke('save_collection_to_disk', { workspacePath, collection });
+}
+
+export async function loadCollectionsFromWorkspace(workspacePath: string): Promise<Collection[]> {
+  return invoke('load_collections_from_workspace', { workspacePath });
+}
+
+export async function saveWorkspaceToDisk(workspacePath: string, environments: Environment[]): Promise<void> {
+  return invoke('save_workspace_to_disk', { workspacePath, environments });
+}
+
+// Git Commands
+export interface GitStatus {
+  branch: string;
+  has_changes: boolean;
+  untracked: string[];
+  modified: string[];
+}
+
+export async function gitInit(path: string): Promise<void> {
+  return invoke('git_init_repo', { path });
+}
+
+export async function getGitStatus(path: string): Promise<GitStatus> {
+  return invoke('get_git_status', { path });
+}
+
+export async function gitCommit(path: string, message: string): Promise<void> {
+  return invoke('git_commit_changes', { path, message });
+}
+
+export async function gitPush(path: string): Promise<boolean> {
+  return invoke('git_push_repo', { path });
+}
+
+export async function gitPull(path: string): Promise<void> {
+  return invoke('git_pull_repo', { path });
 }

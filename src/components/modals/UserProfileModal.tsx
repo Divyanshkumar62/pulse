@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 
 interface UserProfileModalProps {
@@ -10,20 +10,32 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   const { settings, updateSettings } = useSettingsStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (settings) {
       setName(settings.name || '');
       setEmail(settings.email || '');
+      setAvatarUrl(settings.avatarUrl || '');
     }
   }, [settings, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSave = async () => {
-    await updateSettings({ name, email });
-    setIsEditing(false);
+    await updateSettings({ name, email, avatarUrl });
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -64,20 +76,53 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
         
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px',
-              fontWeight: 700,
-              color: 'white',
-            }}>
-              {name ? name.charAt(0).toUpperCase() : '?'}
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: avatarUrl 
+                  ? `url(${avatarUrl}) center/cover no-repeat`
+                  : 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+                fontWeight: 700,
+                color: 'white',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                position: 'relative'
+              }}
+            >
+              {!avatarUrl && (name ? name.charAt(0).toUpperCase() : '?')}
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(0,0,0,0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0,
+                transition: 'opacity 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              </div>
             </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleAvatarChange}
+              accept="image/*"
+              style={{ display: 'none' }}
+            />
             <div>
               <p style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {name || 'User'}
@@ -113,6 +158,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
         <div style={{ padding: '16px 24px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--border-default)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
           <button className="btn-secondary" onClick={onClose} style={{ padding: '8px 24px' }}>Done</button>
+          <button className="btn-primary" onClick={handleSave} style={{ padding: '8px 24px' }}>Save</button>
         </div>
       </div>
     </div>

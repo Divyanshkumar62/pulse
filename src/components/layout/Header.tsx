@@ -1,9 +1,11 @@
 import { useAppStore } from '../../stores/useAppStore';
-import UserProfileModal from '../modals/UserProfileModal';
+import { useSettingsStore } from '../../stores/useSettingsStore';
 import '../../styles/components/header.css';
+import GitSync from './GitSync';
 
 export default function Header() {
-  const { isProfileOpen, setProfileOpen } = useAppStore();
+  const { setProfileOpen } = useAppStore();
+  const { settings } = useSettingsStore();
   
   return (
     <header className="app-header" data-tauri-drag-region>
@@ -19,15 +21,20 @@ export default function Header() {
       </div>
 
       <div className="header-center" data-tauri-drag-region>
+        <GitSync />
       </div>
 
       <div className="header-right">
         <div className="user-profile" onClick={() => setProfileOpen(true)}>
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Profile" />
+          {settings?.avatarUrl ? (
+            <img src={settings.avatarUrl} alt="Profile" />
+          ) : (
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 600, color: 'white' }}>
+              {settings?.name ? settings.name.charAt(0).toUpperCase() : '?'}
+            </div>
+          )}
         </div>
       </div>
-
-      <UserProfileModal isOpen={isProfileOpen} onClose={() => setProfileOpen(false)} />
     </header>
   );
 }
