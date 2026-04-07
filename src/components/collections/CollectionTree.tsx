@@ -5,7 +5,6 @@ import { useCollectionStore } from '../../stores/useCollectionStore';
 import { useAppStore } from '../../stores/useAppStore';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import VirtualList from '../ui/VirtualList';
-import ImportModal from '../modals/ImportModal';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -28,6 +27,7 @@ export default function CollectionTree() {
   const [newCollectionName, setNewCollectionName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<TreeItem[]>([]);
+  const [showMenuDropdown, setShowMenuDropdown] = useState(false);
   
   const [creatingInline, setCreatingInline] = useState<{ parentId: string; parentType: 'collection' | 'folder'; itemType: 'request' | 'folder' } | null>(null);
   const [creatingName, setCreatingName] = useState('');
@@ -37,6 +37,7 @@ export default function CollectionTree() {
   
   const editInputRef = useRef<HTMLInputElement>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
+  const menuDropdownRef = useRef<HTMLDivElement>(null);
 
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
 
@@ -52,6 +53,18 @@ export default function CollectionTree() {
       createInputRef.current.focus();
     }
   }, [creatingInline]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showMenuDropdown && menuDropdownRef.current && !menuDropdownRef.current.contains(e.target as Node)) {
+        setShowMenuDropdown(false);
+      }
+    };
+    if (showMenuDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMenuDropdown]);
 
   const performSearch = useCallback((query: string) => {
     if (!query.trim()) {
@@ -525,28 +538,139 @@ export default function CollectionTree() {
           }}
         />
         <button
-          onClick={() => setImportModalOpen(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenuDropdown(!showMenuDropdown);
+          }}
           style={{
             background: 'var(--bg-input)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-md)',
-            padding: '8px 12px',
+            padding: '8px 10px',
             color: 'var(--text-secondary)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            position: 'relative'
           }}
-          title="Import Collection"
+          title="Menu"
           onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
           onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="5" r="2"/>
+            <circle cx="12" cy="12" r="2"/>
+            <circle cx="12" cy="19" r="2"/>
           </svg>
+          {showMenuDropdown && (
+            <div 
+              ref={menuDropdownRef}
+              style={{
+              position: 'absolute',
+              top: '100%',
+              right: 0,
+              marginTop: '4px',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              zIndex: 1000,
+              minWidth: '150px',
+              overflow: 'hidden'
+            }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsCreatingCollection(true);
+                  setShowMenuDropdown(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  <line x1="12" y1="11" x2="12" y2="17"/>
+                  <line x1="9" y1="14" x2="15" y2="14"/>
+                </svg>
+                Add Collection
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setImportModalOpen(true);
+                  setShowMenuDropdown(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                cURL Import
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (activeWorkspaceId) {
+                    useWorkspaceStore.getState().linkWorkspaceToFolder(activeWorkspaceId);
+                  }
+                  setShowMenuDropdown(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--accent-primary)',
+                  fontSize: '13px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontWeight: 600
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5L15 8V2H9v6l1 6.5a4.8 4.8 0 0 0-1 3.5v4"/>
+                  <path d="M9 18h6"/>
+                </svg>
+                Connect Git Folder
+              </button>
+            </div>
+          )}
         </button>
       </div>
 
@@ -675,11 +799,33 @@ export default function CollectionTree() {
                 padding: '8px 16px',
                 fontSize: '13px',
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                width: '180px'
               }}
             >
               Create Collection
             </button>
+            {!activeWorkspace?.path && (
+              <button 
+                onClick={() => activeWorkspaceId && useWorkspaceStore.getState().linkWorkspaceToFolder(activeWorkspaceId)}
+                style={{
+                  background: 'transparent',
+                  color: 'var(--accent-primary)',
+                  border: '1px solid var(--accent-primary)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  width: '180px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(37, 99, 235, 0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                Connect Git Folder
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -687,8 +833,6 @@ export default function CollectionTree() {
       {contextMenu && (
         <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenu.items} onClose={() => setContextMenu(null)} />
       )}
-      
-      <ImportModal isOpen={isImportModalOpen} onClose={() => setImportModalOpen(false)} />
     </div>
   );
 }
