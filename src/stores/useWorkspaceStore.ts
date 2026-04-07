@@ -163,6 +163,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
       const path = Array.isArray(selected) ? selected[0] : selected;
       
+      // Extract folder name from path
+      const folderName = path.split(/[/\\]/).pop() || 'Workspace';
+      
       // Initialize Git repo if needed
       try {
         await gitInit(path);
@@ -182,12 +185,25 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       meta[workspaceId] = { path, isGitEnabled: true };
       await saveWorkspaceMeta(meta);
 
-      // Load existing collections from workspace if any
+      // Create a collection from the workspace folder
+      const { useCollectionStore } = await import('./useCollectionStore');
+      const newCollection: Collection = {
+        id: `ws-${Date.now()}`,
+        name: folderName,
+        description: `Workspace: ${path}`,
+        requests: [],
+        folders: [],
+        variables: []
+      };
+      useCollectionStore.getState().addCollection(newCollection, path);
+      
+      // Also try to load any existing collections from workspace
       const workspaceCollections = await loadCollectionsFromWorkspace(path);
       if (workspaceCollections.length > 0) {
-        const { useCollectionStore } = await import('./useCollectionStore');
         for (const col of workspaceCollections) {
-          useCollectionStore.getState().addCollection(col, path);
+          if (col.name !== folderName) {
+            useCollectionStore.getState().addCollection(col, path);
+          }
         }
       }
 
