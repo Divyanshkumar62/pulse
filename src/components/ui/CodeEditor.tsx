@@ -3,6 +3,7 @@ import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { javascript } from '@codemirror/lang-javascript';
+import { json } from '@codemirror/lang-json';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { bracketMatching, foldGutter, foldKeymap, indentOnInput, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
@@ -16,6 +17,43 @@ interface CodeEditorProps {
   height?: string;
   placeholder?: string;
 }
+
+const customTheme = EditorView.theme({
+  "&": { 
+    height: "100%", 
+    width: "100%",
+    fontSize: "13px", 
+    fontFamily: "var(--font-mono)",
+    backgroundColor: "#0b0f16 !important",
+  },
+  ".cm-scroller": {
+    overflow: "auto",
+  },
+  ".cm-gutters": {
+    backgroundColor: "#0b0f16 !important",
+    border: "none !important",
+    color: "var(--text-tertiary)",
+    minWidth: "32px",
+  },
+  ".cm-content": {
+    caretColor: "var(--accent-primary)",
+    padding: "10px 0",
+    width: "100%",
+  },
+  ".cm-activeLine": {
+    backgroundColor: "rgba(0, 112, 243, 0.08) !important",
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "rgba(0, 112, 243, 0.15) !important",
+    color: "var(--accent-primary)",
+  },
+  ".cm-selectionBackground, ::selection": {
+    backgroundColor: "rgba(0, 112, 243, 0.3) !important",
+  },
+  ".cm-cursor": {
+    borderLeftColor: "var(--accent-primary)",
+  }
+}, { dark: true });
 
 export default function CodeEditor({ value, onChange, language = 'javascript', height = '100%', placeholder }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,40 +84,14 @@ export default function CodeEditor({ value, onChange, language = 'javascript', h
           ...searchKeymap,
           ...lintKeymap,
         ]),
-        language === 'javascript' ? javascript() : [],
+        language === 'json' ? json() : javascript(),
         oneDark,
+        customTheme,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             onChange(update.state.doc.toString());
           }
         }),
-        EditorView.theme({
-          "&": { 
-            height, 
-            width: "100%",
-            fontSize: "13px", 
-            fontFamily: "var(--font-mono)",
-            background: "transparent !important",
-          },
-          ".cm-gutters": {
-            backgroundColor: "rgba(0, 0, 0, 0.3) !important",
-            border: "none !important",
-            color: "var(--text-tertiary)",
-            minWidth: "32px",
-          },
-          ".cm-content": {
-              caretColor: "var(--accent-primary)",
-              padding: "10px 0",
-              width: "100%",
-          },
-          ".cm-activeLine": {
-              backgroundColor: "rgba(0, 112, 243, 0.08) !important",
-          },
-          ".cm-activeLineGutter": {
-              backgroundColor: "rgba(0, 112, 243, 0.15) !important",
-              color: "var(--accent-primary)",
-          }
-        })
       ]
     });
 
@@ -117,8 +129,7 @@ export default function CodeEditor({ value, onChange, language = 'javascript', h
         overflow: 'hidden', 
         borderRadius: 'var(--radius-md)',
         border: '1px solid var(--border-subtle)',
-        background: 'var(--bg-overlay)',
-        backdropFilter: 'blur(10px)',
+        background: '#0b0f16',
       }}
     >
       <div ref={containerRef} style={{ height: '100%' }} />
