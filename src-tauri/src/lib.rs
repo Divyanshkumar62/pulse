@@ -292,6 +292,11 @@ async fn git_pull_repo(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn git_add_remote(path: String, remote_name: String, remote_url: String) -> Result<(), String> {
+    collections::git::git_add_remote(&path, &remote_name, &remote_url)
+}
+
+#[tauri::command]
 fn get_user_settings() -> Result<UserSettings, String> {
     let path = get_data_dir().join("settings.json");
     if path.exists() {
@@ -464,6 +469,7 @@ pub fn run() {
             git_commit_changes,
             git_push_repo,
             git_pull_repo,
+            git_add_remote,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -182,3 +182,7 @@ export async function gitPush(path: string): Promise<boolean> {
 export async function gitPull(path: string): Promise<void> {
   return invoke('git_pull_repo', { path });
 }
+
+export async function gitAddRemote(path: string, remoteName: string, remoteUrl: string): Promise<void> {
+  return invoke('git_add_remote', { path, remoteName, remoteUrl });
+}
