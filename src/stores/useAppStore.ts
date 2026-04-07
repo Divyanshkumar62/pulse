@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { GitStatus } from '../hooks/useTauri';
 
 type SidebarTab = 'collections' | 'environments' | 'history' | 'mock-servers' | 'monitor' | 'teams';
 type ResponsePosition = 'bottom' | 'right';
@@ -16,6 +17,9 @@ interface AppStore {
   selectedEnvironmentId: string | null;
   isAddEnvironmentModalOpen: boolean;
   isImportModalOpen: boolean;
+  isCommitModalOpen: boolean;
+  commitModalStatus: GitStatus | null;
+  commitModalPath: string;
   
   setSidebarTab: (tab: SidebarTab) => void;
   setSidebarWidth: (width: number) => void;
@@ -29,6 +33,7 @@ interface AppStore {
   setSelectedEnvironmentId: (id: string | null) => void;
   setAddEnvironmentModalOpen: (open: boolean) => void;
   setImportModalOpen: (open: boolean) => void;
+  setCommitModalOpen: (open: boolean, status?: GitStatus | null, path?: string) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -44,6 +49,9 @@ export const useAppStore = create<AppStore>((set) => ({
   selectedEnvironmentId: null,
   isAddEnvironmentModalOpen: false,
   isImportModalOpen: false,
+  isCommitModalOpen: false,
+  commitModalStatus: null,
+  commitModalPath: '',
   
   setSidebarTab: (tab) => set({ sidebarTab: tab }),
   setSidebarWidth: (width) => set({ sidebarWidth: width }),
@@ -57,4 +65,9 @@ export const useAppStore = create<AppStore>((set) => ({
   setSelectedEnvironmentId: (id) => set({ selectedEnvironmentId: id }),
   setAddEnvironmentModalOpen: (open) => set({ isAddEnvironmentModalOpen: open }),
   setImportModalOpen: (open) => set({ isImportModalOpen: open }),
+  setCommitModalOpen: (open, status, path) => set({
+    isCommitModalOpen: open,
+    commitModalStatus: status ?? null,
+    commitModalPath: path ?? ''
+  }),
 }));

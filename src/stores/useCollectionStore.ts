@@ -1,20 +1,26 @@
 import { create } from 'zustand';
 import { Collection, Folder, Request } from '../types';
+import { useWorkspaceStore } from './useWorkspaceStore';
+
+interface CollectionWithPath extends Collection {
+  _diskPath?: string;
+}
 
 interface CollectionStore {
-  collections: Collection[];
+  collections: CollectionWithPath[];
   activeCollectionId: string | null;
   isLoading: boolean;
   
   // Actions
   addCollection: (collection: Collection, path: string) => Promise<void>;
-  updateCollection: (id: string, updates: Partial<Collection>, path: string) => Promise<void>;
+  updateCollection: (id: string, updates: Partial<Collection>, _path: string) => Promise<void>;
   addFolder: (collectionId: string, parentFolderId: string | null, folder: Folder) => Promise<void>;
   addRequest: (collectionId: string, folderId: string | null, request: Request) => Promise<void>;
   updateRequest: (collectionId: string, requestId: string, updates: Partial<Request>) => Promise<void>;
   
-  // Persistence Integrations
-  saveToDisk: (id: string, path: string) => Promise<void>;
+  // Persistence
+  saveCollectionToDisk: (id: string) => Promise<void>;
+  saveAllCollectionsToDisk: () => Promise<void>;
 }
 
 export const useCollectionStore = create<CollectionStore>((set, get) => ({
@@ -23,12 +29,16 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
   isLoading: false,
 
   addCollection: async (collection: Collection, path: string) => {
-    set((state) => ({ collections: [...state.collections, collection] }));
+    set((state) => ({
+      collections: [...state.collections, { ...collection, _diskPath: path }]
+    }));
   },
 
-  updateCollection: async (id: string, updates: Partial<Collection>, path: string) => {
+  updateCollection: async (id: string, updates: Partial<Collection>, _path: string) => {
     set((state) => ({
-      collections: state.collections.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+      collections: state.collections.map((c) =>
+        c.id === id ? { ...c, ...updates } : c
+      ),
     }));
   },
 
@@ -116,5 +126,57 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     }));
   },
 
-  saveToDisk: async (id: string, path: string) => {}
+  saveCollectionToDisk: async (id: string) => {
+    const collection = get().collections.find((c) => c.id === id);
+    if (!collection) return;
+
+    const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
+      w => w.id === useWorkspaceStore.getState().activeWorkspaceId
+    );
+    const workspacePath = activeWorkspace?.path;
+    if (!workspacePath) return;
+
+    try {
+      const { saveCollectionToDisk } = await import('../hooks/useTauri');
+      await saveCollectionToDisk(workspacePath, collection);
+    } catch (e) {
+      console.error(`[Pulse] Failed to save collection ${collection.name} to disk:`, e);
+    }
+  },
+
+  saveAllCollectionsToDisk: async () => {
+    const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
+      w => w.id === useWorkspaceStore.getState().activeWorkspaceId
+    );
+    const workspacePath = activeWorkspace?.path;
+    if (!workspacePath) return;
+
+    const { saveCollectionToDisk } = await import('../hooks/useTauri');
+    const collections = get().collections;
+
+    for (const collection of collections) {
+      try {
+        await saveCollectionToDisk(workspacePath, collection);
+      } catch (e) {
+        console.error(`[Pulse] Failed to save collection ${collection.name}:`, e);
+      }
+    }
+  }
 }));
+
+// Auto-save: debounce saves to disk whenever collections change
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+useCollectionStore.subscribe((state, prevState) => {
+  const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
+    w => w.id === useWorkspaceStore.getState().activeWorkspaceId
+  );
+  if (!activeWorkspace?.path || !activeWorkspace.isGitEnabled) return;
+
+  const hasChanged = state.collections !== prevState.collections;
+  if (!hasChanged) return;
+
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(async () => {
+    await state.saveAllCollectionsToDisk();
+  }, 1500);
+});
