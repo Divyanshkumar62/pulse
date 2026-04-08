@@ -149,3 +149,38 @@ export interface Invitation {
 }
 
 export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired';
+
+export interface FlowNodeMapping {
+  sourcePath: string;
+  targetVar: string;
+}
+
+export interface FlowNode {
+  id: string;
+  type: 'request' | 'logic' | 'delay' | 'start' | 'end';
+  position: { x: number; y: number };
+  data: {
+    name: string;
+    requestId?: string;
+    delayMs?: number;
+    condition?: string;
+    mappings?: FlowNodeMapping[];
+    status?: 'idle' | 'running' | 'success' | 'error';
+    lastResponse?: HttpResponse;
+  };
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  animated?: boolean;
+}
+
+export interface Flow {
+  id: string;
+  name: string;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  workspaceId: string;
+}

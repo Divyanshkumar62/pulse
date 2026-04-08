@@ -4,6 +4,7 @@ import TabBar from './components/tabs/TabBar';
 import TabContent from './components/tabs/TabContent';
 import MonitorDashboard from './components/monitor/MonitorDashboardView';
 import EnvironmentVariableEditor from './components/environments/EnvironmentVariableEditor';
+import FlowBuilder from './components/flow/FlowBuilder';
 import { useEnvStore } from './stores/useEnvStore';
 import { useTeamStore } from './stores/useTeamStore';
 import { useSettingsStore } from './stores/useSettingsStore';
@@ -32,6 +33,7 @@ export default function App() {
 
   const showMonitorDashboard = sidebarTab === 'monitor' && selectedMonitorId;
   const showEnvironmentEditor = sidebarTab === 'environments' && selectedEnvironmentId;
+  const showFlowBuilder = sidebarTab === 'flows';
 
   return (
     <ErrorBoundary>
@@ -40,6 +42,8 @@ export default function App() {
           <MonitorDashboard />
         ) : showEnvironmentEditor ? (
           <EnvironmentVariableEditor />
+        ) : showFlowBuilder ? (
+          <FlowBuilder />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <TabBar />

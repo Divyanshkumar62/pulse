@@ -55,6 +55,16 @@ export default function NavSidebar() {
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
         </svg>
       )
+    },
+    { 
+      id: 'flows', 
+      label: 'Flows',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 7 13.5 15.5 8.5 10.5 2 17"></path>
+          <path d="M16 7h6v6"></path>
+        </svg>
+      )
     }
   ] as const;
 

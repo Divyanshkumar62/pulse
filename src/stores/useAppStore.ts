@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { GitStatus } from '../hooks/useTauri';
 
-type SidebarTab = 'collections' | 'environments' | 'history' | 'mock-servers' | 'monitor' | 'teams';
+type SidebarTab = 'collections' | 'environments' | 'history' | 'mock-servers' | 'monitor' | 'teams' | 'flows';
 type ResponsePosition = 'bottom' | 'right';
 
 interface AppStore {
