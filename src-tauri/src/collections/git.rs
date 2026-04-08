@@ -147,51 +147,6 @@ pub fn git_pull(path: &str) -> Result<(), String> {
     if !has_remote(path) {
         return Err("No remote configured. Run: git remote add origin <url>".to_string());
     }
-    
-    if get_remote_url(path).is_none() {
-        return Err("Remote 'origin' exists but URL not set. Run: git remote add origin <url>".to_string());
-    }
-
-    let output = Command::new("git")
-        .args(["pull", "--rebase", "origin", "HEAD"])
-        .current_dir(path)
-        .output()
-        .map_err(|e| format!("Failed to git pull: {}", e))?;
-
-    if !output.status.success() {
-        let err = String::from_utf8_lossy(&output.stderr).to_string();
-        if err.contains("Could not read from remote repository") || err.contains("does not appear to be a git repository") {
-            return Err("Remote 'origin' exists but is not reachable. Check URL or permissions.".to_string());
-        }
-        return Err(err);
-    }
-    Ok(())
-}
-
-pub fn git_add_remote(path: &str, remote_name: &str, remote_url: &str) -> Result<(), String> {
-    if has_remote(path) {
-        let output = Command::new("git")
-            .args(["remote", "set-url", remote_name, remote_url])
-            .current_dir(path)
-            .output()
-            .map_err(|e| format!("Failed to set remote URL: {}", e))?;
-        
-        if !output.status.success() {
-            return Err(String::from_utf8_lossy(&output.stderr).to_string());
-        }
-    } else {
-        let output = Command::new("git")
-            .args(["remote", "add", remote_name, remote_url])
-            .current_dir(path)
-            .output()
-            .map_err(|e| format!("Failed to add remote: {}", e))?;
-        
-        if !output.status.success() {
-            return Err(String::from_utf8_lossy(&output.stderr).to_string());
-        }
-    }
-    Ok(())
-}
 
     if get_remote_url(path).is_none() {
         return Err(
@@ -216,6 +171,31 @@ pub fn git_add_remote(path: &str, remote_name: &str, remote_url: &str) -> Result
             );
         }
         return Err(err);
+    }
+    Ok(())
+}
+
+pub fn git_add_remote(path: &str, remote_name: &str, remote_url: &str) -> Result<(), String> {
+    if has_remote(path) {
+        let output = Command::new("git")
+            .args(["remote", "set-url", remote_name, remote_url])
+            .current_dir(path)
+            .output()
+            .map_err(|e| format!("Failed to set remote URL: {}", e))?;
+
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+    } else {
+        let output = Command::new("git")
+            .args(["remote", "add", remote_name, remote_url])
+            .current_dir(path)
+            .output()
+            .map_err(|e| format!("Failed to add remote: {}", e))?;
+
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
     }
     Ok(())
 }
