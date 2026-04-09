@@ -1,147 +1,132 @@
 import React, { useState } from 'react';
 import { useCollectionStore } from '../../stores/useCollectionStore';
 import { useFlowStore } from '../../stores/useFlowStore';
-import { Search, Plus, Folder as FolderIcon, FileCode, Play, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 export default function FlowSidebar() {
   const { collections } = useCollectionStore();
-  const { flows, activeFlowId, addFlow, setActiveFlow, deleteFlow } = useFlowStore();
-  const [searchTerm, setSearchTerm] = useState('');
+  const { flows, activeFlowId, addFlow, setActiveFlow } = useFlowStore();
 
   const handleCreateFlow = () => {
     const newFlow = {
       id: uuidv4(),
-      name: 'New Flow',
-      nodes: [
-        {
-          id: 'start',
-          type: 'start' as const,
-          position: { x: 250, y: 50 },
-          data: { name: 'Start' }
-        }
-      ],
+      name: 'Untitled Workflow',
+      nodes: [],
       edges: [],
-      workspaceId: 'default' // Should be dynamic
+      workspaceId: 'default'
     };
     addFlow(newFlow);
     setActiveFlow(newFlow.id);
   };
 
-  const onDragStart = (event: React.DragEvent, nodeType: string, requestId?: string, name?: string) => {
+  const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
-    if (requestId) event.dataTransfer.setData('requestId', requestId);
-    if (name) event.dataTransfer.setData('name', name);
     event.dataTransfer.effectAllowed = 'move';
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#1e293b] border-r border-white/5">
-      <div className="p-4 border-b border-white/10 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Flows</h2>
-          <button 
-            onClick={handleCreateFlow}
-            className="p-1.5 hover:bg-blue-600/20 text-blue-400 rounded-md transition-colors"
+    <div className="w-[280px] h-screen bg-[#0f111a] flex flex-col p-5">
+      {/* Section 1: Top Brand Header */}
+      <div className="flex flex-col items-start mb-8">
+        <div className="flex flex-row items-center gap-2">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-blue-500">
+            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor" />
+          </svg>
+          <span className="text-xl font-bold text-white">Pulse</span>
+        </div>
+        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1">API FLOW BUILDER</span>
+      </div>
+
+      {/* Section 2 & 3: Category Groups */}
+      <div className="flex-1 overflow-y-auto">
+        
+        {/* LIBRARY Section */}
+        <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-3 mt-6">LIBRARY</div>
+        <div className="flex flex-col gap-1">
+          <div
+            className="flex flex-row items-center gap-3 px-3 py-2.5 w-full rounded-lg bg-white/10 backdrop-blur-sm text-white transition-all duration-200 cursor-pointer"
+            onClick={() => {}}
           >
-            <Plus size={18} />
-          </button>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-blue-400">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" />
+              <path d="M12 11v6M9 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span className="text-sm">Flows</span>
+          </div>
+          <div
+            className="flex flex-row items-center gap-3 px-3 py-2.5 w-full rounded-lg hover:bg-white/10 hover:backdrop-blur-sm text-gray-300 hover:text-white transition-all duration-200 cursor-pointer"
+            onClick={() => {}}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gray-500">
+              <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="text-sm">Collections</span>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          {flows.length > 0 ? (
-            flows.map(flow => (
-              <div 
-                key={flow.id}
-                onClick={() => setActiveFlow(flow.id)}
-                className={`group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${
-                  activeFlowId === flow.id ? 'bg-blue-600/20 border border-blue-500/30' : 'hover:bg-white/5 border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <Play size={14} className={activeFlowId === flow.id ? 'text-blue-400' : 'text-slate-400'} />
-                  <span className={`text-sm truncate ${activeFlowId === flow.id ? 'text-white font-medium' : 'text-slate-300'}`}>
-                    {flow.name}
-                  </span>
-                </div>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); deleteFlow(flow.id); }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-slate-500 transition-all"
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-6 border border-dashed border-white/5 rounded-lg px-2">
-              <p className="text-[10px] text-slate-500 font-medium">No flows created yet.</p>
-              <button 
-                onClick={handleCreateFlow}
-                className="mt-2 text-[10px] text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                + Create Flow
-              </button>
-            </div>
-          )}
+        {/* CONTROL ITEMS Section */}
+        <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-3 mt-6">CONTROL ITEMS</div>
+        <div className="flex flex-col gap-1">
+          <div
+            draggable
+            onDragStart={(e) => onDragStart(e, 'delay')}
+            className="flex flex-row items-center gap-3 px-3 py-2.5 w-full rounded-lg hover:bg-white/10 hover:backdrop-blur-sm text-gray-300 hover:text-white transition-all duration-200 cursor-grab active:cursor-grabbing"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-orange-400">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+              <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span className="text-sm">Delay Node</span>
+          </div>
+        </div>
+
+        {/* API REQUESTS Section */}
+        <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-3 mt-6">API REQUESTS</div>
+        <div className="flex flex-col gap-1">
+          <div
+            draggable
+            onDragStart={(e) => onDragStart(e, 'request')}
+            className="flex flex-row items-center gap-3 px-3 py-2.5 w-full rounded-lg hover:bg-white/10 hover:backdrop-blur-sm text-gray-300 hover:text-white transition-all duration-200 cursor-grab active:cursor-grabbing"
+          >
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded text-green-400 border border-green-400/30">GET</span>
+            <span className="text-sm">collect1</span>
+          </div>
+          <div
+            draggable
+            onDragStart={(e) => onDragStart(e, 'request')}
+            className="flex flex-row items-center gap-3 px-3 py-2.5 w-full rounded-lg hover:bg-white/10 hover:backdrop-blur-sm text-gray-300 hover:text-white transition-all duration-200 cursor-grab active:cursor-grabbing"
+          >
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded text-blue-400 border border-blue-400/30">POST</span>
+            <span className="text-sm">POSTreq1</span>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-          <input
-            type="text"
-            placeholder="Search requests..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 transition-all"
+      {/* Section 4: Bottom Footer */}
+      <div className="mt-auto">
+        <button
+          onClick={handleCreateFlow}
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg mb-4 transition-colors"
+        >
+          + New Flow
+        </button>
+        
+        <div className="flex flex-row items-center">
+          <img
+            src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex"
+            alt="User"
+            className="w-8 h-8 rounded-full"
           />
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Control Items</h3>
-            <div 
-              draggable 
-              onDragStart={(e) => onDragStart(e, 'delay')}
-              className="flex items-center gap-2 p-2 hover:bg-white/5 rounded-md cursor-grab active:cursor-grabbing group transition-colors"
-            >
-              <FileCode size={14} className="text-blue-400" />
-              <span className="text-xs text-slate-300 group-hover:text-white">Delay Node</span>
-            </div>
+          <div className="flex flex-col ml-3">
+            <span className="text-sm text-white font-medium">Alex Chen</span>
+            <span className="text-xs text-gray-500">Pro Developer</span>
           </div>
-
-          <div className="space-y-1">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">API Requests</h3>
-            {collections.map(collection => (
-              <div key={collection.id} className="space-y-1">
-                <div className="flex items-center gap-2 px-1 py-1 text-xs text-slate-400 font-medium">
-                  <FolderIcon size={12} />
-                  <span>{collection.name}</span>
-                </div>
-                <div className="pl-4 space-y-1">
-                  {collection.requests.map(req => (
-                    <div 
-                      key={req.id}
-                      draggable
-                      onDragStart={(e) => onDragStart(e, 'request', req.id, req.name)}
-                      className="flex items-center gap-2 p-1.5 hover:bg-white/5 rounded-md cursor-grab active:cursor-grabbing group transition-colors"
-                    >
-                      <span className={`text-[9px] font-bold px-1 rounded ${
-                        req.method === 'GET' ? 'text-green-400' : 
-                        req.method === 'POST' ? 'text-blue-400' : 'text-slate-400'
-                      }`}>
-                        {req.method}
-                      </span>
-                      <span className="text-xs text-slate-300 group-hover:text-white truncate">
-                        {req.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <button className="ml-auto text-gray-400 hover:text-white">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
