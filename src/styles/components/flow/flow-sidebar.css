@@ -1,0 +1,171 @@
+/* Sidebar Container */
+.flow-sidebar {
+  width: 280px;
+  height: 100%;
+  background-color: #0b0f16;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  user-select: none;
+  z-index: 10;
+  color: white;
+  font-family: sans-serif;
+}
+
+/* Brand Header */
+.sidebar-header {
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+}
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.brand-icon {
+  width: 20px;
+  height: 20px;
+  color: #3b82f6;
+}
+.brand-subtitle {
+  font-size: 10px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: bold;
+}
+
+/* Scrollable List Area */
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+/* Hide scrollbar for a cleaner look */
+.sidebar-content::-webkit-scrollbar { display: none; }
+.sidebar-content { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Categories */
+.category-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.category-title {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  padding: 0 8px;
+}
+
+/* Nav Items (The Pills) */
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  width: 100%;
+  border-radius: 8px;
+  background: transparent;
+  color: #9ca3af;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+.nav-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.nav-item.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+/* HTTP Badges */
+.http-badge {
+  font-size: 9px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.badge-get {
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+.badge-post {
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+
+/* Footer & Buttons */
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+}
+.primary-btn {
+  width: 100%;
+  background-color: #2563eb;
+  color: white;
+  font-weight: 500;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: background-color 0.2s;
+}
+.primary-btn:hover { background-color: #1d4ed8; }
+
+/* User Profile Row */
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px;
+}
+.avatar-wrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #374151;
+  flex-shrink: 0;
+}
+.avatar-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.user-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+.user-name { font-size: 14px; font-weight: 500; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.user-role { font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
