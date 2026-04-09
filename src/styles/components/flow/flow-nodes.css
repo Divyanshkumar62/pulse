@@ -1,128 +1,276 @@
-.request-node-container {
-  min-width: 180px;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 12px;
+/* Empty State */
+.flow-workspace {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #080a13;
+}
+
+.flow-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   color: white;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  font-family: sans-serif;
 }
 
-.request-node-container.running {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
+.flow-empty-state svg {
+  width: 48px;
+  height: 48px;
+  color: #3b82f6;
 }
 
-.request-node-container.success {
-  border-color: rgba(34, 197, 94, 0.5);
+.flow-empty-state h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
 }
 
-.request-node-container.error {
-  border-color: rgba(239, 68, 68, 0.5);
+.flow-empty-state p {
+  font-size: 14px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.request-node-container {
+  min-width: 240px;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  overflow: hidden;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.request-node-container:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.node-status-bar {
+  height: 4px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.request-node-container.running .node-status-bar {
+  background: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.request-node-container.success .node-status-bar {
+  background: #22c55e;
+}
+
+.request-node-container.error .node-status-bar {
+  background: #ef4444;
+}
+
+.request-node-active-tag {
+  background: #3b82f6;
+  color: white;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 4px 12px;
+  text-transform: uppercase;
+}
+
+.request-node-content {
+  padding: 16px;
 }
 
 .request-node-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.request-node-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: flex-start;
+  margin-bottom: 16px;
 }
 
 .request-name {
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #e2e8f0;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.01em;
 }
 
-.execution-meta {
+.node-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.node-field-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.node-field-value {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.method-badge {
   font-size: 10px;
-  color: #94a3b8;
-  font-family: monospace;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+.status-value {
+  color: #4ade80;
+}
+
+.node-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.node-link {
+  font-size: 10px;
+  font-weight: 700;
+  color: #60a5fa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.node-link:hover {
+  opacity: 0.8;
 }
 
 .flow-handle {
-  width: 8px !important;
-  height: 8px !important;
-  background: var(--accent-primary) !important;
+  width: 10px !important;
+  height: 10px !important;
+  background: #3b82f6 !important;
   border: 2px solid #0f172a !important;
-}
-
-.request-node-header .method-badge {
-  font-size: 9px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
 }
 
 .logic-node-container {
-  min-width: 100px;
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--accent-primary);
-  border-radius: 20px;
-  padding: 8px 16px;
+  min-width: 140px;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 16px;
   color: white;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-.logic-node-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #e2e8f0;
-}
-
-.logic-node-container.branch {
-  border-color: #a855f7;
-  border-radius: 12px;
-}
-
-/* Edge Styles */
 .react-flow__edge-path {
-  stroke: rgba(255, 255, 255, 0.2) !important;
-  stroke-width: 2 !important;
-  transition: stroke 0.3s ease;
+  stroke: #314a74 !important;
+  stroke-width: 3 !important;
+  transition: all 0.3s ease;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke: #3b82f6 !important;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
 }
 
 .react-flow__edge.animated .react-flow__edge-path {
-  stroke: #3b82f6 !important; /* Electric Blue */
-  stroke-dasharray: 5;
-  animation: flow-edge-anim 0.5s linear infinite;
-  filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.8));
+  stroke-dasharray: 10;
+  animation: flow-edge-anim 1s linear infinite;
 }
 
 @keyframes flow-edge-anim {
-  from {
-    stroke-dashoffset: 10;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
+  from { stroke-dashoffset: 20; }
+  to { stroke-dashoffset: 0; }
 }
 
-.spinning {
-  animation: spin 1s linear infinite;
+/* ──── PREMIUM ENTRY UI ──── */
+
+.mesh-gradient-bg {
+  position: absolute;
+  inset: 0;
+  background-color: #080a13;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(96, 165, 250, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(29, 78, 216, 0.06) 0%, transparent 50%);
+  z-index: 0;
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.mesh-sphere {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: mesh-float 20s infinite alternate ease-in-out;
 }
+
+@keyframes mesh-float {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(100px, 50px) scale(1.2); }
+}
+
+.glass-card-premium {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.molecule-glow {
+  filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.4));
+  animation: molecule-pulse 4s infinite ease-in-out;
+}
+
+@keyframes molecule-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+.molecule-core-pulse {
+  animation: core-glow 2s infinite ease-in-out;
+}
+
+@keyframes core-glow {
+  0%, 100% { fill: #3b82f6; filter: brightness(1); }
+  50% { fill: #60a5fa; filter: brightness(1.5); }
+}
+
+.step-indicator-active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+}
+
+.text-glow-blue {
+  text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* ──── NOISE OVERLAY ──── */
+.noise-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0.02;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
