@@ -21,14 +21,7 @@ export default function FlowSidebar() {
   return (
     <div className="flow-sidebar">
       
-      {/* SECTION 3: Footer */}
-      <div className="sidebar-footer">
-        <button className="primary-btn" onClick={handleCreateFlow}>
-          + New Flow
-        </button>
-      </div>
-
-      {/* SECTION 2: Scrollable List Area */}
+      {/* SECTION 1: Scrollable List Area */}
       <div className="sidebar-content">
         
         {/* Library Group */}
@@ -60,6 +53,13 @@ export default function FlowSidebar() {
             <span>POSTreq1</span>
           </button>
         </div>
+      </div>
+
+      {/* SECTION 2: Footer with Create Flow Button */}
+      <div className="sidebar-footer">
+        <button className="primary-btn" onClick={handleCreateFlow}>
+          + New Flow
+        </button>
       </div>
 
     </div>
