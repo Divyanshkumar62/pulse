@@ -9,6 +9,7 @@ import AddEnvironmentModal from '../modals/AddEnvironmentModal';
 import ImportModal from '../modals/ImportModal';
 import UserProfileModal from '../modals/UserProfileModal';
 import CommitModal from '../modals/CommitModal';
+import CreateFlowModal from '../modals/CreateFlowModal';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useAppStore } from '../../stores/useAppStore';
 import { Toaster } from 'sonner';
@@ -19,7 +20,7 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const { isSettingsOpen, setSettingsOpen, sidebarVisible, isAddEnvironmentModalOpen, setAddEnvironmentModalOpen, isImportModalOpen, setImportModalOpen, isProfileOpen, setProfileOpen, isCommitModalOpen, setCommitModalOpen: setCommitModalOpenFn, commitModalStatus, commitModalPath } = useAppStore();
+  const { isSettingsOpen, setSettingsOpen, sidebarVisible, isAddEnvironmentModalOpen, setAddEnvironmentModalOpen, isImportModalOpen, setImportModalOpen, isProfileOpen, setProfileOpen, isCommitModalOpen, setCommitModalOpen: setCommitModalOpenFn, commitModalStatus, commitModalPath, isCreateFlowModalOpen, setCreateFlowModalOpen } = useAppStore();
   useKeyboardShortcuts();
 
   return (
@@ -46,6 +47,7 @@ export default function AppShell({ children }: AppShellProps) {
         status={commitModalStatus}
         workspacePath={commitModalPath}
       />
+      <CreateFlowModal isOpen={isCreateFlowModalOpen} onClose={() => setCreateFlowModalOpen(false)} />
       <Toaster theme="dark" position="bottom-right" />
     </div>
   );

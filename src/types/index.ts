@@ -162,8 +162,11 @@ export interface FlowNode {
   data: {
     name: string;
     requestId?: string;
+    url?: string;
+    method?: string;
     delayMs?: number;
     condition?: string;
+    headers?: { id: string; key: string; value: string; enabled: boolean }[];
     mappings?: FlowNodeMapping[];
     status?: 'idle' | 'running' | 'success' | 'error';
     lastResponse?: HttpResponse;
@@ -180,7 +183,11 @@ export interface FlowEdge {
 export interface Flow {
   id: string;
   name: string;
+  description?: string;
+  environmentId?: string;
   nodes: FlowNode[];
   edges: FlowEdge[];
   workspaceId: string;
+  createdAt?: number;
+  updatedAt?: number;
 }

@@ -18,6 +18,7 @@ interface AppStore {
   isAddEnvironmentModalOpen: boolean;
   isImportModalOpen: boolean;
   isCommitModalOpen: boolean;
+  isCreateFlowModalOpen: boolean;
   commitModalStatus: GitStatus | null;
   commitModalPath: string;
   
@@ -34,6 +35,7 @@ interface AppStore {
   setAddEnvironmentModalOpen: (open: boolean) => void;
   setImportModalOpen: (open: boolean) => void;
   setCommitModalOpen: (open: boolean, status?: GitStatus | null, path?: string) => void;
+  setCreateFlowModalOpen: (open: boolean) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -50,6 +52,7 @@ export const useAppStore = create<AppStore>((set) => ({
   isAddEnvironmentModalOpen: false,
   isImportModalOpen: false,
   isCommitModalOpen: false,
+  isCreateFlowModalOpen: false,
   commitModalStatus: null,
   commitModalPath: '',
   
@@ -70,4 +73,5 @@ export const useAppStore = create<AppStore>((set) => ({
     commitModalStatus: status ?? null,
     commitModalPath: path ?? ''
   }),
+  setCreateFlowModalOpen: (open) => set({ isCreateFlowModalOpen: open }),
 }));
