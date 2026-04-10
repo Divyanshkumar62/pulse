@@ -3,6 +3,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  MiniMap,
   Connection,
   addEdge,
   useNodesState,
@@ -11,14 +12,14 @@ import {
   Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Play, Square, Save, Zap, GitBranch, MousePointer2, Plus, ChevronRight, Maximize, Search } from 'lucide-react';
-
+import { Play, Square, Save, Plus, Maximize } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { RequestNode } from './nodes/RequestNode';
 import { LogicNode } from './nodes/LogicNode';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { FlowRunner } from '../../utils/flowRunner';
 import NodeConfigPanel from './NodeConfigPanel';
+import CreateNodeModal from '../modals/CreateNodeModal';
 
 const nodeTypes = {
   request: RequestNode,
@@ -28,17 +29,55 @@ const nodeTypes = {
 
 export default function FlowBuilder() {
   const { activeFlowId, flows, executionState, updateFlow, saveFlowsToDisk } = useFlowStore();
-  const activeFlow = useMemo(() => flows.find(f => f.id === activeFlowId), [flows, activeFlowId]);
+  const activeFlow = flows.find(f => f.id === activeFlowId);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<any>(activeFlow?.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>(activeFlow?.edges || []);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [showAddNodeModal, setShowAddNodeModal] = useState(false);
 
   const defaultEdgeOptions = {
     type: 'smoothstep',
     animated: false,
     style: { strokeWidth: 3 },
   };
+
+  const handleNodeAction = useCallback((action: string, nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    switch (action) {
+      case 'rename':
+        const newName = prompt('Enter new name:', node.data.name);
+        if (newName) {
+          setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, name: newName } } : n));
+        }
+        break;
+      case 'duplicate':
+        const newNode = {
+          ...node,
+          id: uuidv4(),
+          position: { x: node.position.x + 50, y: node.position.y + 50 },
+          data: { ...node.data, name: node.data.name + ' (copy)' },
+        };
+        setNodes(nds => [...nds, newNode]);
+        break;
+      case 'viewResponse':
+        setSelectedNodeId(nodeId);
+        break;
+    }
+  }, [nodes, setNodes]);
+
+  const handleAddNode = useCallback((newNode: any) => {
+    setNodes((nds) => [...nds, {
+      ...newNode,
+      data: {
+        ...newNode.data,
+        onAction: handleNodeAction,
+        onDoubleClick: () => setSelectedNodeId(newNode.id),
+      }
+    }]);
+  }, [setNodes, handleNodeAction]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -51,22 +90,31 @@ export default function FlowBuilder() {
 
       const type = event.dataTransfer.getData('application/reactflow');
       const requestId = event.dataTransfer.getData('requestId');
-      const name = event.dataTransfer.getData('name');
+      const name = event.dataTransfer.getData('requestName');
+      const requestMethod = event.dataTransfer.getData('requestMethod');
+      const requestUrl = event.dataTransfer.getData('requestUrl');
 
       if (!type) return;
 
-      const position = { x: event.clientX - 350, y: event.clientY - 150 };
+      const reactFlowBounds = (event.target as HTMLElement).closest('.react-flow')?.getBoundingClientRect();
+      const position = reactFlowBounds 
+        ? { x: event.clientX - reactFlowBounds.left - 280, y: event.clientY - reactFlowBounds.top - 100 }
+        : { x: event.clientX - 350, y: event.clientY - 150 };
 
       const newNode = {
         id: uuidv4(),
         type: type as any,
         position,
-        data: { 
+        data: {
           name: name || `${type.charAt(0).toUpperCase() + type.slice(1)} Node`,
-          requestId,
+          url: requestUrl || '',
+          method: requestMethod || 'GET',
           status: 'idle',
-          method: 'GET',
-          type: type // store the type in data for styling
+          type: type,
+          headers: [
+            { id: '1', key: 'Content-Type', value: 'application/json', enabled: true }
+          ],
+          mappings: [],
         },
       };
 
@@ -84,11 +132,12 @@ export default function FlowBuilder() {
 
   // Sync initial state when active flow changes
   useEffect(() => {
-    if (activeFlow) {
-      setNodes(activeFlow.nodes);
-      setEdges(activeFlow.edges);
+    const flow = flows.find(f => f.id === activeFlowId);
+    if (flow) {
+      setNodes(flow.nodes || []);
+      setEdges(flow.edges || []);
     }
-  }, [activeFlowId]);
+  }, [activeFlowId, flows, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true, type: 'smoothstep' }, eds)),
@@ -99,10 +148,15 @@ export default function FlowBuilder() {
     setSelectedNodeId(node.id);
   }, []);
 
+  const [logsPanelOpen, setLogsPanelOpen] = useState(true);
+  const [executionLogs, setExecutionLogs] = useState<any[]>([]);
+
   const handleRunFlow = async () => {
     if (!activeFlow) return;
+    setLogsPanelOpen(true);
     const runner = new FlowRunner(activeFlow);
-    await runner.run();
+    const logs = await runner.run();
+    setExecutionLogs(logs);
   };
 
   if (!activeFlowId) {
@@ -110,18 +164,17 @@ export default function FlowBuilder() {
       <div className="flow-workspace">
         <div className="flow-empty-state">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
-          <h2>No Flow Selected</h2>
-          <p>Create a new flow or select an existing one to get started</p>
+          <h2>Ready to Orchestrate?</h2>
+          <p>Create an automated API workflow by dragging requests from the left sidebar onto this canvas.</p>
         </div>
       </div>
     );
   }
 
-
   return (
-    <div className="h-full w-full bg-[#070b14] relative">
+    <div className="flow-workspace">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -135,61 +188,62 @@ export default function FlowBuilder() {
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
       >
-        <Background 
-          variant={BackgroundVariant.Dots} 
-          gap={24} 
-          size={1.5} 
-          color="rgba(255, 255, 255, 0.04)" 
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1.5}
+          color="rgba(255, 255, 255, 0.04)"
         />
-        
-        <Panel position="top-right" className="flex gap-2">
-          <div className="flex bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-xl p-1 shadow-2xl">
-            <button className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
-              <Search size={18} />
-            </button>
-            <div className="w-[1px] h-4 bg-white/10 my-auto mx-1" />
-            <button className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
+
+        <Panel position="top-right" className="flow-panel-group">
+          <div className="flow-toolbar">
+            <button 
+              onClick={() => setShowAddNodeModal(true)}
+              className="toolbar-btn"
+              title="Add node"
+            >
               <Plus size={18} />
             </button>
-            <button className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
+            <div className="toolbar-divider" />
+            <button className="toolbar-btn" title="Fit view">
               <Maximize size={18} />
             </button>
           </div>
 
           <button
             onClick={saveFlowsToDisk}
-            className="px-6 py-2 bg-slate-100 text-slate-900 rounded-xl font-bold text-sm hover:bg-white transition-all shadow-xl"
+            className="flow-save-btn"
           >
             Save
           </button>
-          
+
           <button
             onClick={handleRunFlow}
             disabled={executionState === 'running'}
-            className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-500 transition-all shadow-xl shadow-blue-500/20 flex items-center gap-2"
+            className={`flow-deploy-btn ${executionState === 'running' ? 'disabled' : ''}`}
           >
             {executionState === 'running' ? (
               <>
-                <Square size={14} fill="white" /> Stop
+                <Square size={14} fill="currentColor" /> Stop
               </>
             ) : (
               <>
-                <Play size={14} fill="white" /> Deploy
+                <Play size={14} fill="currentColor" /> Deploy
               </>
             )}
           </button>
         </Panel>
 
-        <Controls 
-          showInteractive={false} 
-          className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl" 
+        <Controls
+          showInteractive={false}
+          className="flow-controls"
         />
       </ReactFlow>
 
       {selectedNodeId && (
-        <NodeConfigPanel 
-          nodeId={selectedNodeId} 
-          onClose={() => setSelectedNodeId(null)} 
+        <NodeConfigPanel
+          nodeId={selectedNodeId}
+          onClose={() => setSelectedNodeId(null)}
         />
       )}
     </div>

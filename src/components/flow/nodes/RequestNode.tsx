@@ -1,75 +1,82 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Activity, CheckCircle, AlertCircle, Loader2, ArrowUpRight, MoreVertical } from 'lucide-react';
+import { MoreVertical, ArrowUpRight } from 'lucide-react';
 import '../../../styles/components/flow/flow-nodes.css';
 
-export function RequestNode({ data }: { data: any }) {
-  const getStatusIcon = () => {
-    switch (data.status) {
-      case 'running': return <Loader2 className="spinning text-blue-400" size={14} />;
-      case 'success': return <CheckCircle className="text-green-400" size={14} />;
-      case 'error': return <AlertCircle className="text-red-400" size={14} />;
-      default: return <Activity className="text-gray-400" size={14} />;
-    }
+interface RequestNodeProps {
+  data: any;
+  id: string;
+}
+
+export function RequestNode({ data, id }: RequestNodeProps) {
+  const [showMenu, setShowMenu] = useState(false);
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(!showMenu);
   };
 
-  const isActive = data.status === 'running' || data.status === 'success';
+  const statusClass = data.status || 'idle';
+  const statusLabel = data.status === 'success' ? '200 OK' : 
+                      data.status === 'error' ? 'Failed' : 
+                      data.status === 'running' ? 'Running...' : 'Pending';
 
   return (
-    <div className={`request-node-container ${data.status || 'idle'}`}>
-      <div className="node-status-bar" />
+    <div className="request-node-container" onDoubleClick={data.onDoubleClick}>
+      <Handle type="target" position={Position.Left} className="flow-handle" />
       
-      {isActive && (
-        <div className="request-node-active-tag">
-          Active Node
+      {/* HEADER: Molecule + Title + More */}
+      <div className="request-node-header">
+        <div className="header-left">
+          <div className="node-icon-wrapper">
+            {/* Molecule SVG Icon */}
+            <svg viewBox="0 0 24 24" className="molecule-icon" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.2" />
+              <circle cx="12" cy="12" r="3" />
+              <circle cx="19" cy="7" r="2" />
+              <circle cx="5" cy="7" r="2" />
+              <circle cx="12" cy="19" r="2" />
+              <line x1="12" y1="12" x2="19" y2="7" opacity="0.4" />
+              <line x1="12" y1="12" x2="5" y2="7" opacity="0.4" />
+              <line x1="12" y1="12" x2="12" y2="19" opacity="0.4" />
+            </svg>
+          </div>
+          <div className="node-title-group">
+            <span className="node-active-tag">Active Node</span>
+            <span className="node-name">{data.name || 'Request'}</span>
+          </div>
         </div>
-      )}
-
-      <div className="request-node-content">
-        <Handle type="target" position={Position.Left} className="flow-handle" />
         
-        <div className="request-node-header">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Activity size={18} className="text-blue-400" />
-            </div>
-            <div className="request-name">{data.name}</div>
-          </div>
-          <button className="p-1 hover:bg-white/5 rounded text-slate-500">
-            <MoreVertical size={16} />
-          </button>
-        </div>
-        
-        <div className="node-fields">
-          <div className="node-field">
-            <span className="node-field-label">Method</span>
-            <span className="method-badge">{data.method || 'GET'}</span>
-          </div>
-          
-          <div className="node-field">
-            <span className="node-field-label">Endpoint</span>
-            <span className="node-field-value text-slate-300">/v1/user/auth</span>
-          </div>
-
-          <div className="node-field">
-            <span className="node-field-label">Status</span>
-            <div className="flex items-center gap-2">
-              <span className={`node-field-value ${data.status === 'success' ? 'text-green-400' : 'text-slate-400'}`}>
-                {data.lastResponse?.status || 'Waiting...'}
-              </span>
-              {getStatusIcon()}
-            </div>
-          </div>
-        </div>
-
-        <Handle type="source" position={Position.Right} className="flow-handle" />
+        <button className="node-menu-btn" onClick={handleMenuClick}>
+          <MoreVertical size={16} />
+        </button>
       </div>
 
+      {/* BODY: Method & Status Only */}
+      <div className="request-node-body">
+        <div className="node-row">
+          <span className="node-label">Method</span>
+          <span className="method-badge">{data.method || 'GET'}</span>
+        </div>
+        
+        <div className="node-row">
+          <span className="node-label">Status</span>
+          <div className="status-indicator">
+            <div className={`status-dot ${statusClass}`} />
+            <span className="node-value">{statusLabel}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* FOOTER: View Response Action */}
       <div className="node-footer">
-        <div className="node-link">
-          View JSON Response <ArrowUpRight size={12} />
-        </div>
+        <button className="view-response-btn" onClick={() => data.onAction?.('viewResponse', id)}>
+          <span>View JSON Response</span>
+          <ArrowUpRight size={14} />
+        </button>
       </div>
+
+      <Handle type="source" position={Position.Right} className="flow-handle" />
     </div>
   );
 }

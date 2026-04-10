@@ -1,276 +1,352 @@
-/* Empty State */
+/* ──── FLOW WORKSPACE & EMPTY STATE ──── */
+
 .flow-workspace {
-  width: 100%;
-  height: 100%;
+  flex: 1;
+  height: 100vh;
+  background-color: #0f111a;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #080a13;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
 .flow-empty-state {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  color: white;
-  font-family: sans-serif;
+  justify-content: center;
+  text-align: center;
+  color: #9ca3af;
+  padding: 40px;
 }
 
 .flow-empty-state svg {
-  width: 48px;
-  height: 48px;
-  color: #3b82f6;
+  width: 64px;
+  height: 64px;
+  color: #3b82f6; /* Electric Blue */
+  margin-bottom: 24px;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.4));
 }
 
 .flow-empty-state h2 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
+  color: white;
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
 }
 
 .flow-empty-state p {
-  font-size: 14px;
-  color: #9ca3af;
-  margin: 0;
+  max-width: 440px;
+  font-size: 16px;
+  line-height: 1.6;
+  opacity: 0.7;
 }
 
+
+/* ──── APPLE GLASS NODE UI ──── */
+
 .request-node-container {
-  min-width: 240px;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
+  min-width: 280px;
+  background: rgba(13, 17, 26, 0.45);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
   overflow: hidden;
   color: white;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.1),
+    0 12px 40px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .request-node-container:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-}
-
-.node-status-bar {
-  height: 4px;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.request-node-container.running .node-status-bar {
-  background: #3b82f6;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-}
-
-.request-node-container.success .node-status-bar {
-  background: #22c55e;
-}
-
-.request-node-container.error .node-status-bar {
-  background: #ef4444;
-}
-
-.request-node-active-tag {
-  background: #3b82f6;
-  color: white;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  padding: 4px 12px;
-  text-transform: uppercase;
-}
-
-.request-node-content {
-  padding: 16px;
+  box-shadow: 
+    0 8px 12px rgba(0, 0, 0, 0.15),
+    0 20px 50px rgba(0, 0, 0, 0.4);
 }
 
 .request-node-header {
+  padding: 16px 20px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.request-name {
-  font-size: 16px;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.node-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.node-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.node-active-tag {
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #3b82f6;
+  opacity: 0.8;
+  margin-bottom: 2px;
+}
+
+.node-name {
+  font-size: 14px;
   font-weight: 700;
   color: white;
   letter-spacing: -0.01em;
 }
 
-.node-field {
+.node-menu-btn {
+  background: transparent;
+  border: none;
+  color: #636366;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.node-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.request-node-body {
+  padding: 16px 20px;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.node-row {
+  display: flex;
   align-items: center;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  justify-content: space-between;
 }
 
-.node-field-label {
-  font-size: 11px;
+.node-label {
+  font-size: 12px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
+  color: #8e8e93;
 }
 
-.node-field-value {
-  font-size: 11px;
+.node-value {
+  font-size: 13px;
   font-weight: 600;
+  color: white;
 }
 
 .method-badge {
-  font-size: 10px;
+  background: rgba(255, 255, 255, 0.05);
   padding: 2px 8px;
-  border-radius: 4px;
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
-  font-weight: 700;
-}
-
-.status-value {
-  color: #4ade80;
-}
-
-.node-footer {
-  padding: 12px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.node-link {
-  font-size: 10px;
-  font-weight: 700;
-  color: #60a5fa;
-  text-transform: uppercase;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0.05em;
+}
+
+.status-indicator {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.success { background: #34c759; box-shadow: 0 0 8px rgba(52, 199, 89, 0.4); }
+.status-dot.running { background: #007aff; box-shadow: 0 0 8px rgba(0, 122, 255, 0.4); }
+.status-dot.error { background: #ff3b30; box-shadow: 0 0 8px rgba(255, 59, 48, 0.4); }
+
+.node-footer {
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.view-response-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #3b82f6;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
   cursor: pointer;
   transition: opacity 0.2s;
 }
 
-.node-link:hover {
+.view-response-btn:hover {
   opacity: 0.8;
 }
+
+/* ──── LOGIC NODES ──── */
+
+.logic-node-container {
+  min-width: 180px;
+  background: rgba(13, 17, 26, 0.45);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ──── FLOW HANDLES ──── */
 
 .flow-handle {
   width: 10px !important;
   height: 10px !important;
   background: #3b82f6 !important;
   border: 2px solid #0f172a !important;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  transition: transform 0.2s;
 }
 
-.logic-node-container {
-  min-width: 140px;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(16px);
+.flow-handle:hover {
+  transform: scale(1.4);
+}
+
+.react-flow__handle-left { left: -6px !important; }
+.react-flow__handle-right { right: -6px !important; }
+
+/* ──── MOCKUP SPECIFIC ──── */
+
+.molecule-icon {
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.5));
+}
+
+/* ──── FLOW BUILDER TOOLBAR & PANELS ──── */
+
+.flow-panel-group {
+  display: flex !important;
+  gap: 12px !important;
+  margin: 16px !important;
+}
+
+.flow-toolbar {
+  display: flex;
+  background: rgba(30, 41, 59, 0.5);
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  padding: 12px 16px;
-  color: white;
+  padding: 4px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.toolbar-btn {
+  padding: 8px;
+  border-radius: 6px;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  justify-content: center;
 }
 
-.react-flow__edge-path {
-  stroke: #314a74 !important;
-  stroke-width: 3 !important;
-  transition: all 0.3s ease;
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
 }
 
-.react-flow__edge.selected .react-flow__edge-path,
-.react-flow__edge.animated .react-flow__edge-path {
-  stroke: #3b82f6 !important;
-  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+.toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: auto 4px;
 }
 
-.react-flow__edge.animated .react-flow__edge-path {
-  stroke-dasharray: 10;
-  animation: flow-edge-anim 1s linear infinite;
+.flow-save-btn {
+  padding: 8px 24px;
+  background: #f1f5f9;
+  color: #0f172a;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
 }
 
-@keyframes flow-edge-anim {
-  from { stroke-dashoffset: 20; }
-  to { stroke-dashoffset: 0; }
+.flow-save-btn:hover {
+  background: white;
+  transform: translateY(-1px);
 }
 
-/* ──── PREMIUM ENTRY UI ──── */
-
-.mesh-gradient-bg {
-  position: absolute;
-  inset: 0;
-  background-color: #080a13;
-  background-image: 
-    radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 80% 20%, rgba(96, 165, 250, 0.05) 0%, transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(29, 78, 216, 0.06) 0%, transparent 50%);
-  z-index: 0;
+.flow-deploy-btn {
+  padding: 8px 24px;
+  background: #2563eb;
+  color: white;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 0 20px rgba(37, 99, 235, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
 }
 
-.mesh-sphere {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-  animation: mesh-float 20s infinite alternate ease-in-out;
+.flow-deploy-btn:hover:not(.disabled) {
+  background: #3b82f6;
+  transform: translateY(-1px);
 }
 
-@keyframes mesh-float {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(100px, 50px) scale(1.2); }
+.flow-deploy-btn.disabled {
+  background: #64748b;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
-.glass-card-premium {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 
-    0 20px 50px rgba(0, 0, 0, 0.3),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+.flow-controls {
+  background-color: rgba(30, 41, 59, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  margin: 16px !important;
 }
-
-.molecule-glow {
-  filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.4));
-  animation: molecule-pulse 4s infinite ease-in-out;
-}
-
-@keyframes molecule-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-}
-
-.molecule-core-pulse {
-  animation: core-glow 2s infinite ease-in-out;
-}
-
-@keyframes core-glow {
-  0%, 100% { fill: #3b82f6; filter: brightness(1); }
-  50% { fill: #60a5fa; filter: brightness(1.5); }
-}
-
-.step-indicator-active {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
-}
-
-.text-glow-blue {
-  text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-}
-
-/* ──── NOISE OVERLAY ──── */
-.noise-overlay {
-  position: absolute;
-  inset: 0;
-  opacity: 0.02;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-}
-
