@@ -1,109 +1,165 @@
 import { Flow, FlowNode, HttpResponse } from '../types';
 import { useFlowStore } from '../stores/useFlowStore';
-import { useCollectionStore } from '../stores/useCollectionStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { sendRequest } from '../hooks/useTauri';
 
+interface ExecutionLog {
+  timestamp: number;
+  level: 'info' | 'success' | 'error' | 'warn';
+  message: string;
+  nodeId?: string;
+  nodeName?: string;
+  data?: any;
+}
+
 export class FlowRunner {
   private flow: Flow;
-  private visited: Set<string> = new Set();
   private flowState: Record<string, any> = {};
+  private visited: Set<string> = new Set();
+  private logs: ExecutionLog[] = [];
 
   constructor(flow: Flow) {
     this.flow = flow;
   }
 
-  async run() {
-    console.log(`[FlowRunner] Starting execution for flow: ${this.flow.name}`);
+  async run(): Promise<ExecutionLog[]> {
+    this.logs = [];
+    this.flowState = {};
+    this.visited = new Set();
+
+    this.log('info', `Starting flow: ${this.flow.name}`, undefined, { nodeCount: this.flow.nodes.length });
+    
     useFlowStore.getState().setExecutionState('running');
     useFlowStore.getState().resetFlowState();
-    this.flowState = {};
-
-    const startNode = this.flow.nodes.find(n => n.type === 'start') || this.flow.nodes[0];
-    if (!startNode) {
-      console.error('[FlowRunner] No start node found');
-      useFlowStore.getState().setExecutionState('error');
-      return;
-    }
 
     try {
-      await this.executeNode(startNode.id);
-      useFlowStore.getState().setExecutionState('done');
-      console.log('[FlowRunner] Flow execution complete');
-    } catch (error) {
-      console.error('[FlowRunner] Flow execution failed:', error);
-      useFlowStore.getState().setExecutionState('error');
-    }
-  }
-
-  private async executeNode(nodeId: string) {
-    if (this.visited.has(nodeId)) return;
-    this.visited.add(nodeId);
-
-    const node = this.flow.nodes.find(n => n.id === nodeId);
-    if (!node) return;
-
-    useFlowStore.getState().updateFlowNodeStatus(this.flow.id, nodeId, 'running');
-
-    try {
-      switch (node.type) {
-        case 'request':
-          await this.handleRequestNode(node);
+      const sortedNodes = this.topologicalSort();
+      
+      for (const node of sortedNodes) {
+        await this.executeNode(node);
+        
+        if (useFlowStore.getState().executionState === 'error') {
           break;
-        case 'delay':
-          await new Promise(resolve => setTimeout(resolve, node.data.delayMs || 1000));
-          break;
-        case 'logic':
-          // Simplified logic: execute both paths if they exist, or follow condition
-          break;
-        default:
-          break;
+        }
       }
 
-      useFlowStore.getState().updateFlowNodeStatus(this.flow.id, nodeId, 'success');
-
-      // Find next nodes
-      const nextEdges = this.flow.edges.filter(e => e.source === nodeId);
-      for (const edge of nextEdges) {
-        await this.executeNode(edge.target);
+      const finalState = useFlowStore.getState().executionState;
+      if (finalState !== 'error') {
+        useFlowStore.getState().setExecutionState('done');
+        this.log('success', 'Flow completed successfully');
       }
     } catch (error: any) {
-      useFlowStore.getState().updateFlowNodeStatus(this.flow.id, nodeId, 'error');
+      console.error('[FlowRunner] Flow execution failed:', error);
+      useFlowStore.getState().setExecutionState('error');
+      this.log('error', `Flow failed: ${error.message}`);
+    }
+
+    return this.logs;
+  }
+
+  private topologicalSort(): FlowNode[] {
+    const inDegree = new Map<string, number>();
+    const nodeMap = new Map<string, FlowNode>();
+
+    this.flow.nodes.forEach(node => {
+      inDegree.set(node.id, 0);
+      nodeMap.set(node.id, node);
+    });
+
+    this.flow.edges.forEach(edge => {
+      inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+    });
+
+    const queue: FlowNode[] = [];
+    this.flow.nodes.forEach(node => {
+      if ((inDegree.get(node.id) || 0) === 0) {
+        queue.push(node);
+      }
+    });
+
+    const sorted: FlowNode[] = [];
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      sorted.push(node);
+
+      this.flow.edges
+        .filter(e => e.source === node.id)
+        .forEach(edge => {
+          const newDegree = (inDegree.get(edge.target) || 0) - 1;
+          inDegree.set(edge.target, newDegree);
+          if (newDegree === 0) {
+            const nextNode = nodeMap.get(edge.target);
+            if (nextNode) queue.push(nextNode);
+          }
+        });
+    }
+
+    if (sorted.length !== this.flow.nodes.length) {
+      this.log('warn', 'Circular dependency detected, executing remaining nodes');
+      const remaining = this.flow.nodes.filter(n => !sorted.includes(n));
+      sorted.push(...remaining);
+    }
+
+    return sorted;
+  }
+
+  private async executeNode(node: FlowNode): Promise<void> {
+    if (this.visited.has(node.id)) return;
+    this.visited.add(node.id);
+
+    this.log('info', `Executing: ${node.data.name}`, node.id, { type: node.type });
+
+    useFlowStore.getState().updateFlowNodeStatus(this.flow.id, node.id, 'running');
+
+    try {
+      let response: HttpResponse | undefined;
+
+      switch (node.type) {
+        case 'request':
+          response = await this.executeRequestNode(node);
+          break;
+        case 'delay':
+          await this.executeDelayNode(node);
+          break;
+        case 'logic':
+          await this.executeLogicNode(node);
+          break;
+        default:
+          this.log('warn', `Unknown node type: ${node.type}`, node.id);
+      }
+
+      useFlowStore.getState().updateFlowNodeStatus(this.flow.id, node.id, 'success', response);
+      this.log('success', `Completed: ${node.data.name}`, node.id, { status: response?.status });
+
+    } catch (error: any) {
+      useFlowStore.getState().updateFlowNodeStatus(this.flow.id, node.id, 'error');
+      this.log('error', `Failed: ${node.data.name} - ${error.message}`, node.id);
+      useFlowStore.getState().setExecutionState('error');
       throw error;
     }
   }
 
-  private async handleRequestNode(node: FlowNode) {
-    if (!node.data.requestId) throw new Error('Request node missing requestId');
+  private async executeRequestNode(node: FlowNode): Promise<HttpResponse> {
+    const url = node.data.url || '';
+    const method = node.data.method || 'GET';
+    const headers: Record<string, string> = {};
 
-    // Find the request in collection store
-    const request = this.findRequest(node.data.requestId);
-    if (!request) throw new Error(`Request not found: ${node.data.requestId}`);
+    if (node.data.headers) {
+      node.data.headers
+        .filter(h => h.enabled)
+        .forEach(h => {
+          headers[h.key] = this.hydrateString(h.value);
+        });
+    }
 
+    const hydratedUrl = this.hydrateString(url);
+    const body = { type: 'none' as const, content: '' };
+    
     const settings = useSettingsStore.getState().settings;
-    if (!settings) throw new Error('User settings not found');
+    if (!settings) throw new Error('User settings not configured');
 
-    // 1. Hydrate variables in URL, Body, Headers
-    const hydratedUrl = this.hydrateString(request.url);
-    const hydratedHeaders: Record<string, string> = {};
-    request.headers.forEach((h: any) => {
-      if (h.enabled !== false) {
-        hydratedHeaders[h.key] = this.hydrateString(h.value);
-      }
-    });
+    const response = await sendRequest(method, hydratedUrl, headers, body, settings);
 
-    // 2. Execute request
-    const response = await sendRequest(
-      request.method,
-      hydratedUrl,
-      hydratedHeaders,
-      request.body, // In real world we should hydrate body too
-      settings
-    );
-
-    useFlowStore.getState().updateFlowNodeStatus(this.flow.id, node.id, 'success', response);
-
-    // 3. Process mappings (extract from response and save to flowState)
     if (node.data.mappings && response.body) {
       try {
         const bodyObj = JSON.parse(response.body);
@@ -112,44 +168,85 @@ export class FlowRunner {
           if (value !== undefined) {
             useFlowStore.getState().setFlowStateValue(mapping.targetVar, value);
             this.flowState[mapping.targetVar] = value;
+            this.log('info', `Extracted ${mapping.targetVar} = ${JSON.stringify(value)}`, node.id);
           }
         }
       } catch (e) {
-        console.warn('[FlowRunner] Failed to parse response body for mappings', e);
+        this.log('warn', 'Failed to parse response body for mappings', node.id);
       }
+    }
+
+    return response;
+  }
+
+  private async executeDelayNode(node: FlowNode): Promise<void> {
+    const delayMs = node.data.delayMs || 1000;
+    this.log('info', `Waiting ${delayMs}ms...`, node.id);
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+
+  private async executeLogicNode(node: FlowNode): Promise<void> {
+    const condition = node.data.condition || '';
+    
+    if (condition) {
+      const result = this.evaluateCondition(condition);
+      this.log('info', `Condition "${condition}" = ${result}`, node.id, { result });
+    }
+  }
+
+  private evaluateCondition(condition: string): boolean {
+    try {
+      const hydrated = this.hydrateString(condition);
+      
+      if (hydrated.includes('===') || hydrated.includes('==')) {
+        return new Function('return ' + hydrated)();
+      }
+      
+      return !!hydrated;
+    } catch (e) {
+      this.log('warn', 'Failed to evaluate condition: ' + condition);
+      return false;
     }
   }
 
   private hydrateString(str: string): string {
-    // Replace {{flow.varName}} or {{varName}} with values from flowState
-    return str.replace(/\{\{(?:flow\.)?([^}]+)\}\}/g, (match, key) => {
-      return this.flowState[key.trim()] ?? match;
+    return str.replace(/\{\{([^}]+)\}\}/g, (_match, key) => {
+      const trimmedKey = key.trim();
+      return this.flowState[trimmedKey] ?? _match;
     });
   }
 
-  private findRequest(requestId: string) {
-    const collections = useCollectionStore.getState().collections;
-    for (const collection of collections) {
-      const req = collection.requests.find(r => r.id === requestId);
-      if (req) return req;
-      
-      const findInFolders = (folders: any[]): any => {
-        for (const f of folders) {
-          const r = f.requests.find((r: any) => r.id === requestId);
-          if (r) return r;
-          if (f.folders) {
-            const found = findInFolders(f.folders);
-            if (found) return found;
-          }
-        }
-      };
-      const found = findInFolders(collection.folders);
-      if (found) return found;
+  private getValueByPath(obj: any, path: string): any {
+    const parts = path.split('.').filter(p => p.length > 0);
+    let current: any = obj;
+    
+    for (const part of parts) {
+      if (current === null || current === undefined) return undefined;
+      current = current[part];
     }
-    return null;
+    
+    return current;
   }
 
-  private getValueByPath(obj: any, path: string): any {
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  private log(level: ExecutionLog['level'], message: string, nodeId?: string, data?: any) {
+    const entry: ExecutionLog = {
+      timestamp: Date.now(),
+      level,
+      message,
+      nodeId,
+      nodeName: nodeId ? this.flow.nodes.find(n => n.id === nodeId)?.data.name : undefined,
+      data,
+    };
+    
+    this.logs.push(entry);
+    
+    const prefix = {
+      info: '[INFO]',
+      success: '[SUCCESS]',
+      error: '[ERROR]',
+      warn: '[WARN]',
+    }[level];
+    
+    console.log('[FlowRunner] ' + prefix + ' ' + message, data || '');
   }
 }

@@ -19,18 +19,19 @@ export function LogicNode({ data }: { data: any }) {
     <div className={`logic-node-container ${data.type || 'logic'}`}>
       <Handle type="target" position={Position.Left} className="flow-handle" />
       
-      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+      <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
         {getIcon()}
       </div>
 
       <div className="flex flex-col">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-          {data.type || 'Logic'}
+        <span className="node-active-tag">
+          {data.type || 'Logic'} Item
         </span>
-        <span className="text-xs font-semibold text-slate-200">
+        <span className="node-name">
           {isDelay ? `${data.delayMs || 1000}ms Wait` : data.name || 'Condition'}
         </span>
       </div>
+
 
       <Handle type="source" position={Position.Right} className="flow-handle" />
     </div>

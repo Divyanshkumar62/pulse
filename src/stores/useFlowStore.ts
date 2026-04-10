@@ -30,7 +30,11 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   executionState: 'idle',
   flowState: {},
 
-  addFlow: (flow: Flow) => set((state) => ({ flows: [...state.flows, flow] })),
+  addFlow: (flow: Flow) => {
+    console.log('[FlowStore] addFlow called with flow:', flow.id);
+    set((state) => ({ flows: [...state.flows, flow] }));
+    console.log('[FlowStore] flows after add:', get().flows.length);
+  },
 
   updateFlow: (id, updates) => set((state) => ({
     flows: state.flows.map((f) => (f.id === id ? { ...f, ...updates } : f))
@@ -41,7 +45,11 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     activeFlowId: state.activeFlowId === id ? null : state.activeFlowId
   })),
 
-  setActiveFlow: (id) => set({ activeFlowId: id }),
+  setActiveFlow: (id) => {
+    console.log('[FlowStore] setActiveFlow called with:', id);
+    set({ activeFlowId: id });
+    console.log('[FlowStore] activeFlowId is now:', get().activeFlowId);
+  },
 
   setExecutionState: (executionState) => set({ executionState }),
 

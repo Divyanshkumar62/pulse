@@ -83,11 +83,23 @@
   background: transparent;
   color: #9ca3af;
   border: none;
+  outline: none;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 14px;
   font-weight: 500;
   box-sizing: border-box;
+  box-shadow: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.nav-item:focus {
+  outline: none;
+  box-shadow: none;
+}
+.nav-item:focus-visible {
+  outline: none;
 }
 .nav-item svg {
   width: 16px;
@@ -97,10 +109,29 @@
 .nav-item.active {
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
+  outline: none;
+  box-shadow: none;
 }
 .nav-item:hover {
   background-color: rgba(255, 255, 255, 0.05);
   color: white;
+}
+
+/* Flow List */
+.flow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 8px;
+}
+.flow-item {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.flow-item .flow-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* HTTP Badges */
@@ -138,8 +169,10 @@
   cursor: pointer;
   margin-bottom: 16px;
   transition: background-color 0.2s;
+  pointer-events: auto;
 }
 .primary-btn:hover { background-color: #1d4ed8; }
+.primary-btn:focus { outline: none; }
 
 /* User Profile Row */
 .user-row {
