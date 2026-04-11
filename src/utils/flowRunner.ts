@@ -3,35 +3,26 @@ import { useFlowStore } from '../stores/useFlowStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { sendRequest } from '../hooks/useTauri';
 
-interface ExecutionLog {
-  timestamp: number;
-  level: 'info' | 'success' | 'error' | 'warn';
-  message: string;
-  nodeId?: string;
-  nodeName?: string;
-  data?: any;
-}
-
 export class FlowRunner {
   private flow: Flow;
   private flowState: Record<string, any> = {};
   private visited: Set<string> = new Set();
-  private logs: ExecutionLog[] = [];
 
   constructor(flow: Flow) {
     this.flow = flow;
   }
 
-  async run(): Promise<ExecutionLog[]> {
-    this.logs = [];
+  async run(): Promise<void> {
     this.flowState = {};
     this.visited = new Set();
 
-    this.log('info', `Starting flow: ${this.flow.name}`, undefined, { nodeCount: this.flow.nodes.length });
-    
-    useFlowStore.getState().setExecutionState('running');
-    useFlowStore.getState().resetFlowState();
+    const flowStore = useFlowStore.getState();
+    flowStore.clearLogs();
+    flowStore.setExecutionState('running');
+    flowStore.resetFlowState();
 
+    this.log('info', `Starting flow: ${this.flow.name}`);
+    
     try {
       const sortedNodes = this.topologicalSort();
       
@@ -43,18 +34,15 @@ export class FlowRunner {
         }
       }
 
-      const finalState = useFlowStore.getState().executionState;
-      if (finalState !== 'error') {
-        useFlowStore.getState().setExecutionState('done');
+      if (useFlowStore.getState().executionState !== 'error') {
+        flowStore.setExecutionState('done');
         this.log('success', 'Flow completed successfully');
       }
     } catch (error: any) {
       console.error('[FlowRunner] Flow execution failed:', error);
-      useFlowStore.getState().setExecutionState('error');
+      flowStore.setExecutionState('error');
       this.log('error', `Flow failed: ${error.message}`);
     }
-
-    return this.logs;
   }
 
   private topologicalSort(): FlowNode[] {
@@ -107,7 +95,8 @@ export class FlowRunner {
     if (this.visited.has(node.id)) return;
     this.visited.add(node.id);
 
-    this.log('info', `Executing: ${node.data.name}`, node.id, { type: node.type });
+    const startTime = Date.now();
+    this.log('info', `Executing: ${node.data.name}`, node.id);
 
     useFlowStore.getState().updateFlowNodeStatus(this.flow.id, node.id, 'running');
 
@@ -128,8 +117,9 @@ export class FlowRunner {
           this.log('warn', `Unknown node type: ${node.type}`, node.id);
       }
 
+      const latencyMs = Date.now() - startTime;
       useFlowStore.getState().updateFlowNodeStatus(this.flow.id, node.id, 'success', response);
-      this.log('success', `Completed: ${node.data.name}`, node.id, { status: response?.status });
+      this.log('success', `Completed: ${node.data.name}${response ? ` (${response.status} ${response.statusText})` : ''}`, node.id, latencyMs);
 
     } catch (error: any) {
       useFlowStore.getState().updateFlowNodeStatus(this.flow.id, node.id, 'error');
@@ -153,12 +143,23 @@ export class FlowRunner {
     }
 
     const hydratedUrl = this.hydrateString(url);
-    const body = { type: 'none' as const, content: '' };
+    const bodyContent = node.data.body || '';
+    const body = bodyContent ? { type: 'json' as const, content: this.hydrateString(bodyContent) } : { type: 'none' as const, content: '' };
     
+    // Process query params
+    let finalUrl = hydratedUrl;
+    if (node.data.params && node.data.params.length > 0) {
+      const urlObj = new URL(hydratedUrl.startsWith('http') ? hydratedUrl : `http://${hydratedUrl}`);
+      node.data.params.filter(p => p.enabled).forEach(p => {
+        urlObj.searchParams.append(p.key, this.hydrateString(p.value));
+      });
+      finalUrl = hydratedUrl.startsWith('http') ? urlObj.toString() : urlObj.toString().replace('http://', '');
+    }
+
     const settings = useSettingsStore.getState().settings;
     if (!settings) throw new Error('User settings not configured');
 
-    const response = await sendRequest(method, hydratedUrl, headers, body, settings);
+    const response = await sendRequest(method, finalUrl, headers, body, settings);
 
     if (node.data.mappings && response.body) {
       try {
@@ -168,7 +169,7 @@ export class FlowRunner {
           if (value !== undefined) {
             useFlowStore.getState().setFlowStateValue(mapping.targetVar, value);
             this.flowState[mapping.targetVar] = value;
-            this.log('info', `Extracted ${mapping.targetVar} = ${JSON.stringify(value)}`, node.id);
+            this.log('info', `Extracted ${mapping.targetVar} = ${typeof value === 'object' ? JSON.stringify(value) : value}`, node.id);
           }
         }
       } catch (e) {
@@ -190,7 +191,7 @@ export class FlowRunner {
     
     if (condition) {
       const result = this.evaluateCondition(condition);
-      this.log('info', `Condition "${condition}" = ${result}`, node.id, { result });
+      this.log('info', `Condition "${condition}" = ${result}`, node.id);
     }
   }
 
@@ -210,6 +211,7 @@ export class FlowRunner {
   }
 
   private hydrateString(str: string): string {
+    if (!str) return '';
     return str.replace(/\{\{([^}]+)\}\}/g, (_match, key) => {
       const trimmedKey = key.trim();
       return this.flowState[trimmedKey] ?? _match;
@@ -228,17 +230,17 @@ export class FlowRunner {
     return current;
   }
 
-  private log(level: ExecutionLog['level'], message: string, nodeId?: string, data?: any) {
-    const entry: ExecutionLog = {
-      timestamp: Date.now(),
+  private log(level: 'info' | 'success' | 'error' | 'warn', message: string, nodeId?: string, latencyMs?: number) {
+    const flowStore = useFlowStore.getState();
+    const nodeName = nodeId ? this.flow.nodes.find(n => n.id === nodeId)?.data.name : undefined;
+    
+    flowStore.addLog({
       level,
       message,
       nodeId,
-      nodeName: nodeId ? this.flow.nodes.find(n => n.id === nodeId)?.data.name : undefined,
-      data,
-    };
-    
-    this.logs.push(entry);
+      nodeName,
+      latencyMs
+    });
     
     const prefix = {
       info: '[INFO]',
@@ -247,6 +249,6 @@ export class FlowRunner {
       warn: '[WARN]',
     }[level];
     
-    console.log('[FlowRunner] ' + prefix + ' ' + message, data || '');
+    console.log('[FlowRunner] ' + prefix + ' ' + message);
   }
 }

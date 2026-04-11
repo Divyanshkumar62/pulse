@@ -44,6 +44,8 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
   );
 
   const handleAdd = () => {
+    console.log('[CreateNodeModal] handleAdd called, nodeType:', nodeType);
+    
     const nodeData: any = {
       id: uuidv4(),
       type: nodeType,
@@ -54,6 +56,8 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
         type: nodeType,
       },
     };
+
+    console.log('[CreateNodeModal] Created nodeData:', nodeData);
 
     if (nodeType === 'request') {
       if (selectedRequestId) {

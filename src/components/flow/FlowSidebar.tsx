@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { v4 as uuidv4 } from 'uuid';
+import { LayoutDashboard, Folder } from 'lucide-react';
 import '../../styles/components/flow/flow-sidebar.css';
+
+
 
 export default function FlowSidebar() {
   const [activeTab, setActiveTab] = useState('flows');
@@ -62,14 +65,19 @@ export default function FlowSidebar() {
     handleCloseMenu();
   };
 
-  const handleDragStart = (event: React.DragEvent, nodeType: string, requestName?: string, requestMethod?: string, requestUrl?: string) => {
+  const handleDragStart = (event: React.DragEvent, nodeType: string, requestName?: string, requestMethod?: string, requestUrl?: string, requestId?: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     if (requestName) {
       event.dataTransfer.setData('requestName', requestName);
     }
-    if (requestData) {
-      event.dataTransfer.setData('requestId', requestData.id);
-      event.dataTransfer.setData('name', requestData.name);
+    if (requestMethod) {
+      event.dataTransfer.setData('requestMethod', requestMethod);
+    }
+    if (requestUrl) {
+      event.dataTransfer.setData('requestUrl', requestUrl);
+    }
+    if (requestId) {
+      event.dataTransfer.setData('requestId', requestId);
     }
     event.dataTransfer.effectAllowed = 'move';
   };
@@ -85,7 +93,7 @@ export default function FlowSidebar() {
             className={`nav-item ${activeTab === 'flows' ? 'active' : ''}`}
             onClick={() => setActiveTab('flows')}
           >
-            <LayoutPanelTop size={16} />
+            <LayoutDashboard size={16} />
             <span>Flows</span>
           </button>
           <button 

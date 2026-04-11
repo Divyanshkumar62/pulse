@@ -2,11 +2,23 @@ import { create } from 'zustand';
 import { Flow, FlowNode, FlowEdge, HttpResponse } from '../types';
 import { useWorkspaceStore } from './useWorkspaceStore';
 
+export interface ExecutionLog {
+  id: string;
+  timestamp: number;
+  nodeId?: string;
+  nodeName?: string;
+  level: 'info' | 'success' | 'error' | 'warn';
+  message: string;
+  latencyMs?: number;
+  data?: any;
+}
+
 interface FlowStore {
   flows: Flow[];
   activeFlowId: string | null;
   executionState: 'idle' | 'running' | 'paused' | 'done' | 'error';
   flowState: Record<string, any>;
+  logs: ExecutionLog[];
   
   // Actions
   addFlow: (flow: Flow) => void;
@@ -19,6 +31,8 @@ interface FlowStore {
   updateFlowNodeStatus: (flowId: string, nodeId: string, status: FlowNode['data']['status'], response?: HttpResponse) => void;
   setFlowStateValue: (key: string, value: any) => void;
   resetFlowState: () => void;
+  addLog: (log: Omit<ExecutionLog, 'id' | 'timestamp'>) => void;
+  clearLogs: () => void;
   
   // Persistence
   saveFlowsToDisk: () => Promise<void>;
@@ -29,6 +43,7 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   activeFlowId: null,
   executionState: 'idle',
   flowState: {},
+  logs: [],
 
   addFlow: (flow: Flow) => {
     console.log('[FlowStore] addFlow called with flow:', flow.id);
@@ -69,7 +84,17 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     flowState: { ...state.flowState, [key]: value }
   })),
 
-  resetFlowState: () => set({ flowState: {}, executionState: 'idle' }),
+  addLog: (log) => set((state) => ({
+    logs: [...state.logs, {
+      ...log,
+      id: Math.random().toString(36).substring(7),
+      timestamp: Date.now()
+    }]
+  })),
+
+  clearLogs: () => set({ logs: [] }),
+
+  resetFlowState: () => set({ flowState: {}, executionState: 'idle', logs: [] }),
 
   saveFlowsToDisk: async () => {
     const activeWorkspace = useWorkspaceStore.getState().workspaces.find(

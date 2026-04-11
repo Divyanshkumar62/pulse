@@ -785,10 +785,10 @@ export default function CollectionTree() {
               <line x1="12" y1="11" x2="12" y2="17"/>
               <line x1="9" y1="14" x2="15" y2="14"/>
             </svg>
-            <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', fontSize: '13px', fontWeight: 500 }}>
+            <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', fontSize: '13px', fontWeight: 500 }}>
               {activeWorkspace ? 'No collections yet' : 'Initialising environment...'}
               {!activeWorkspace && <div className="loading-spinner" style={{ margin: '20px auto' }}></div>}
-            </p>
+            </div>
             <button 
               onClick={() => setIsCreatingCollection(true)}
               style={{

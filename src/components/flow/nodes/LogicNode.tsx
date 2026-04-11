@@ -1,9 +1,9 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Clock, GitBranch, Repeat, Settings2 } from 'lucide-react';
+import { Clock, GitBranch, Repeat, Settings2, Plus } from 'lucide-react';
 import '../../../styles/components/flow/flow-nodes.css';
 
-export function LogicNode({ data }: { data: any }) {
+export function LogicNode({ data, id }: { data: any, id: string }) {
   const isDelay = data.type === 'delay';
   const isBranch = data.type === 'logic';
   const isLoop = data.type === 'loop';
@@ -17,7 +17,18 @@ export function LogicNode({ data }: { data: any }) {
 
   return (
     <div className={`logic-node-container ${data.type || 'logic'}`}>
-      <Handle type="target" position={Position.Left} className="flow-handle" />
+      <Handle 
+        type="target" 
+        position={Position.Left} 
+        className="flow-handle flow-handle-left"
+      >
+        <div 
+          className="handle-plus-icon" 
+          onClick={(e) => { e.stopPropagation(); if (data.onAction) data.onAction('addFromNode_left', id); }}
+        >
+          <Plus size={10} strokeWidth={3} />
+        </div>
+      </Handle>
       
       <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
         {getIcon()}
@@ -32,8 +43,18 @@ export function LogicNode({ data }: { data: any }) {
         </span>
       </div>
 
-
-      <Handle type="source" position={Position.Right} className="flow-handle" />
+      <Handle 
+        type="source" 
+        position={Position.Right} 
+        className="flow-handle flow-handle-right"
+      >
+        <div 
+          className="handle-plus-icon" 
+          onClick={(e) => { e.stopPropagation(); if (data.onAction) data.onAction('addFromNode_right', id); }}
+        >
+          <Plus size={10} strokeWidth={3} />
+        </div>
+      </Handle>
     </div>
   );
 }

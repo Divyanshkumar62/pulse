@@ -31,10 +31,36 @@ export default function FlowBuilder() {
   const { activeFlowId, flows, executionState, updateFlow, saveFlowsToDisk } = useFlowStore();
   const activeFlow = flows.find(f => f.id === activeFlowId);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<any>(activeFlow?.nodes || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<any>(activeFlow?.edges || []);
+  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showAddNodeModal, setShowAddNodeModal] = useState(false);
+
+  // Ensure nodes from store have the onAction callback
+  useEffect(() => {
+    if (activeFlowId) {
+      const flowWithCallbacks = {
+        ...activeFlow,
+        nodes: (activeFlow?.nodes || []).map(node => ({
+          ...node,
+          data: {
+            ...node.data,
+            onAction: handleNodeAction,
+            onDoubleClick: () => setSelectedNodeId(node.id),
+          },
+        })),
+      };
+      setNodes(flowWithCallbacks.nodes || []);
+      setEdges(flowWithCallbacks.edges || []);
+    }
+  }, [activeFlowId, activeFlow?.nodes, activeFlow?.edges, handleNodeAction]);
+
+  // Save changes back to store
+  useEffect(() => {
+    if (activeFlowId && (nodes.length > 0 || edges.length > 0)) {
+      updateFlow(activeFlowId, { nodes, edges });
+    }
+  }, [nodes, edges, activeFlowId, updateFlow]);
 
   const defaultEdgeOptions = {
     type: 'smoothstep',

@@ -71,24 +71,27 @@ export default function NavSidebar() {
   return (
     <aside className="nav-sidebar">
       <div className="nav-top">
-        {primaryTabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`nav-btn ${sidebarTab === tab.id ? 'active' : ''}`}
-            onClick={() => {
-              if (sidebarTab === tab.id) {
-                toggleSidebar();
-              } else {
-                setSidebarTab(tab.id as any);
-                if (!sidebarVisible) toggleSidebar();
-              }
-            }}
-            title={tab.label}
-          >
-            {tab.icon}
-            <span className="nav-label">{tab.label}</span>
-          </button>
-        ))}
+      {primaryTabs.map((tab) => (
+        <button
+          key={tab.id}
+          className={`nav-btn ${sidebarTab === tab.id ? 'active' : ''}`}
+          onClick={(e) => {
+            console.log('[NavSidebar] Clicked tab:', tab.id, 'current sidebarTab:', sidebarTab, 'sidebarVisible:', sidebarVisible);
+            if (sidebarTab === tab.id) {
+              console.log('[NavSidebar] Toggling sidebar');
+              toggleSidebar();
+            } else {
+              console.log('[NavSidebar] Setting tab to:', tab.id);
+              setSidebarTab(tab.id as any);
+              if (!sidebarVisible) toggleSidebar();
+            }
+          }}
+          title={tab.label}
+        >
+          {tab.icon}
+          <span className="nav-label">{tab.label}</span>
+        </button>
+      ))}
       </div>
       
       <div className="nav-bottom">
