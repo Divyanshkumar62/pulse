@@ -36,32 +36,6 @@ export default function FlowBuilder() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showAddNodeModal, setShowAddNodeModal] = useState(false);
 
-  // Ensure nodes from store have the onAction callback
-  useEffect(() => {
-    if (activeFlowId) {
-      const flowWithCallbacks = {
-        ...activeFlow,
-        nodes: (activeFlow?.nodes || []).map(node => ({
-          ...node,
-          data: {
-            ...node.data,
-            onAction: handleNodeAction,
-            onDoubleClick: () => setSelectedNodeId(node.id),
-          },
-        })),
-      };
-      setNodes(flowWithCallbacks.nodes || []);
-      setEdges(flowWithCallbacks.edges || []);
-    }
-  }, [activeFlowId, activeFlow?.nodes, activeFlow?.edges, handleNodeAction]);
-
-  // Save changes back to store
-  useEffect(() => {
-    if (activeFlowId && (nodes.length > 0 || edges.length > 0)) {
-      updateFlow(activeFlowId, { nodes, edges });
-    }
-  }, [nodes, edges, activeFlowId, updateFlow]);
-
   const defaultEdgeOptions = {
     type: 'smoothstep',
     animated: false,
@@ -93,6 +67,29 @@ export default function FlowBuilder() {
         break;
     }
   }, [nodes, setNodes]);
+
+  // Sync nodes from store and add callbacks
+  useEffect(() => {
+    if (activeFlowId && activeFlow?.nodes) {
+      const nodesWithCallbacks = activeFlow.nodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          onAction: handleNodeAction,
+          onDoubleClick: () => setSelectedNodeId(node.id),
+        },
+      }));
+      setNodes(nodesWithCallbacks);
+      setEdges(activeFlow.edges || []);
+    }
+  }, [activeFlowId, activeFlow?.nodes, activeFlow?.edges, handleNodeAction]);
+
+  // Save changes back to store
+  useEffect(() => {
+    if (activeFlowId && (nodes.length > 0 || edges.length > 0)) {
+      updateFlow(activeFlowId, { nodes, edges });
+    }
+  }, [nodes, edges, activeFlowId, updateFlow]);
 
   const handleAddNode = useCallback((newNode: any) => {
     setNodes((nds) => [...nds, {
