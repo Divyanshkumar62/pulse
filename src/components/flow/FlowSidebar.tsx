@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { v4 as uuidv4 } from 'uuid';
-import { LayoutDashboard, Folder } from 'lucide-react';
+import { LayoutDashboard, Folder, ChevronDown, ChevronRight, Settings2, Clock, Globe, GitBranch } from 'lucide-react';
 import '../../styles/components/flow/flow-sidebar.css';
-
-
 
 export default function FlowSidebar() {
   const [activeTab, setActiveTab] = useState('flows');
+  const [isFlowsExpanded, setIsFlowsExpanded] = useState(true);
+  const [isCollectionsExpanded, setIsCollectionsExpanded] = useState(true);
+  const [isControlExpanded, setIsControlExpanded] = useState(true);
   const { addFlow, setActiveFlow, flows, activeFlowId, updateFlow, deleteFlow } = useFlowStore();
   const { setCreateFlowModalOpen } = useAppStore();
   
@@ -67,18 +68,10 @@ export default function FlowSidebar() {
 
   const handleDragStart = (event: React.DragEvent, nodeType: string, requestName?: string, requestMethod?: string, requestUrl?: string, requestId?: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
-    if (requestName) {
-      event.dataTransfer.setData('requestName', requestName);
-    }
-    if (requestMethod) {
-      event.dataTransfer.setData('requestMethod', requestMethod);
-    }
-    if (requestUrl) {
-      event.dataTransfer.setData('requestUrl', requestUrl);
-    }
-    if (requestId) {
-      event.dataTransfer.setData('requestId', requestId);
-    }
+    if (requestName) event.dataTransfer.setData('requestName', requestName);
+    if (requestMethod) event.dataTransfer.setData('requestMethod', requestMethod);
+    if (requestUrl) event.dataTransfer.setData('requestUrl', requestUrl);
+    if (requestId) event.dataTransfer.setData('requestId', requestId);
     event.dataTransfer.effectAllowed = 'move';
   };
 
@@ -107,47 +100,61 @@ export default function FlowSidebar() {
 
         {activeTab === 'flows' && (
           <div className="category-group">
-            <span className="category-title">Your Flows</span>
-            {flows.length === 0 ? (
-              <span style={{ padding: '8px 12px', color: 'var(--text-tertiary, #64748b)', fontSize: '13px' }}>
-                No flows yet. Create one to get started.
-              </span>
-            ) : (
-              flows.map((flow) => (
-                <div 
-                  key={flow.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}
-                >
-                  <button 
-                    className={`nav-item ${activeFlowId === flow.id ? 'active' : ''}`}
-                    onClick={() => handleFlowClick(flow.id)}
-                    style={{ flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}
-                  >
-                    <span style={{ fontWeight: 500 }}>{flow.name}</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary, #64748b)' }}>
-                      {flow.nodes?.length || 0} nodes
-                    </span>
-                  </button>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleFlowMenuClick(e, flow.id);
-                    }}
-                    style={{ 
-                      background: 'transparent', 
-                      border: 'none', 
-                      color: 'var(--text-tertiary, #64748b)', 
-                      cursor: 'pointer',
-                      padding: '8px',
-                      fontSize: '16px',
-                      borderRadius: '4px',
-                    }}
-                    title="More options"
-                  >
-                    ⋮
-                  </button>
-                </div>
-              ))
+            <div 
+              className="category-header" 
+              onClick={() => setIsFlowsExpanded(!isFlowsExpanded)}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <span className="category-title">Your Flows</span>
+              <div style={{ color: '#6b7280', paddingRight: '8px' }}>
+                {isFlowsExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </div>
+            </div>
+            
+            {isFlowsExpanded && (
+              <div className="expanded-list">
+                {flows.length === 0 ? (
+                  <span style={{ padding: '8px 12px', color: 'var(--text-tertiary, #64748b)', fontSize: '13px' }}>
+                    No flows yet. Create one to get started.
+                  </span>
+                ) : (
+                  flows.map((flow) => (
+                    <div 
+                      key={flow.id}
+                      style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}
+                    >
+                      <button 
+                        className={`nav-item ${activeFlowId === flow.id ? 'active' : ''}`}
+                        onClick={() => handleFlowClick(flow.id)}
+                        style={{ flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}
+                      >
+                        <span style={{ fontWeight: 500 }}>{flow.name}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary, #64748b)' }}>
+                          {flow.nodes?.length || 0} nodes
+                        </span>
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFlowMenuClick(e, flow.id);
+                        }}
+                        style={{ 
+                          background: 'transparent', 
+                          border: 'none', 
+                          color: 'var(--text-tertiary, #64748b)', 
+                          cursor: 'pointer',
+                          padding: '8px',
+                          fontSize: '16px',
+                          borderRadius: '4px',
+                        }}
+                        title="More options"
+                      >
+                        ⋮
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             )}
           </div>
         )}
@@ -155,76 +162,97 @@ export default function FlowSidebar() {
         {/* API Requests Group */}
         {activeTab === 'collections' && (
           <div className="category-group">
-            <span className="category-title">API Requests</span>
-            <button 
-              className="nav-item"
-              draggable={true}
-              onDragStart={(e) => handleDragStart(e, 'request', 'collect1', 'GET', 'https://api.example.com/collect1')}
+            <div 
+              className="category-header" 
+              onClick={() => setIsCollectionsExpanded(!isCollectionsExpanded)}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
             >
-              <span className="http-badge badge-get">GET</span>
-              <span>collect1</span>
-            </button>
-            <button 
-              className="nav-item"
-              draggable={true}
-              onDragStart={(e) => handleDragStart(e, 'request', 'POSTreq1', 'POST', 'https://api.example.com/POSTreq1')}
-            >
-              <span className="http-badge badge-post">POST</span>
-              <span>POSTreq1</span>
-            </button>
-            <button 
-              className="nav-item"
-              draggable={true}
-              onDragStart={(e) => handleDragStart(e, 'request', 'User Login', 'POST', 'https://api.example.com/auth/login')}
-            >
-              <span className="http-badge badge-post">POST</span>
-              <span>User Login</span>
-            </button>
-            <button 
-              className="nav-item"
-              draggable={true}
-              onDragStart={(e) => handleDragStart(e, 'request', 'Get Profile', 'GET', 'https://api.example.com/user/profile')}
-            >
-              <span className="http-badge badge-get">GET</span>
-              <span>Get Profile</span>
-            </button>
+              <span className="category-title">API Requests</span>
+              <div style={{ color: '#6b7280', paddingRight: '8px' }}>
+                {isCollectionsExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </div>
+            </div>
+
+            {isCollectionsExpanded && (
+              <div className="expanded-list">
+                <button 
+                  className="nav-item"
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, 'request', 'collect1', 'GET', 'https://api.example.com/collect1')}
+                >
+                  <span className="http-badge badge-get">GET</span>
+                  <span>collect1</span>
+                </button>
+                <button 
+                  className="nav-item"
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, 'request', 'POSTreq1', 'POST', 'https://api.example.com/POSTreq1')}
+                >
+                  <span className="http-badge badge-post">POST</span>
+                  <span>POSTreq1</span>
+                </button>
+                <button 
+                  className="nav-item"
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, 'request', 'User Login', 'POST', 'https://api.example.com/auth/login')}
+                >
+                  <span className="http-badge badge-post">POST</span>
+                  <span>User Login</span>
+                </button>
+                <button 
+                  className="nav-item"
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, 'request', 'Get Profile', 'GET', 'https://api.example.com/user/profile')}
+                >
+                  <span className="http-badge badge-get">GET</span>
+                  <span>Get Profile</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
         {/* Control Items */}
         <div className="category-group">
-          <span className="category-title">Control Items</span>
-          <button 
-            className="nav-item"
-            draggable={true}
-            onDragStart={(e) => handleDragStart(e, 'logic', 'Condition', 'LOGIC', '')}
+          <div 
+            className="category-header" 
+            onClick={() => setIsControlExpanded(!isControlExpanded)}
+            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M16 3h5v5M8 3H3v5M16 21h5v-5M8 21H3v-5M21 3l-9 9M3 21l9-9"/>
-            </svg>
-            <span>Condition</span>
-          </button>
-          <button 
-            className="nav-item"
-            draggable={true}
-            onDragStart={(e) => handleDragStart(e, 'delay', 'Delay', 'DELAY', '')}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            <span>Delay</span>
-          </button>
-          <button 
-            className="nav-item"
-            draggable={true}
-            onDragStart={(e) => handleDragStart(e, 'request', 'HTTP Request', 'REQUEST', '')}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"/>
-            </svg>
-            <span>HTTP Request</span>
-          </button>
+            <span className="category-title">Control Items</span>
+            <div style={{ color: '#6b7280', paddingRight: '8px' }}>
+              {isControlExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </div>
+          </div>
+
+          {isControlExpanded && (
+            <div className="expanded-list">
+              <button 
+                className="nav-item"
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, 'logic', 'Condition', 'LOGIC')}
+              >
+                <GitBranch size={16} className="text-purple-400" />
+                <span>Condition</span>
+              </button>
+              <button 
+                className="nav-item"
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, 'delay', 'Delay', 'DELAY')}
+              >
+                <Clock size={16} className="text-blue-400" />
+                <span>Delay</span>
+              </button>
+              <button 
+                className="nav-item"
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, 'request', 'HTTP Request', 'REQUEST')}
+              >
+                <Globe size={16} className="text-slate-400" />
+                <span>HTTP Request</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
