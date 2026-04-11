@@ -134,10 +134,14 @@ export default function FlowBuilder() {
           method: requestMethod || 'GET',
           status: 'idle',
           type: type,
+          delayMs: type === 'delay' ? 1000 : undefined,
+          condition: type === 'logic' ? 'true' : undefined,
           headers: [
             { id: '1', key: 'Content-Type', value: 'application/json', enabled: true }
           ],
           mappings: [],
+          onAction: handleNodeAction,
+          onDoubleClick: () => setSelectedNodeId(newNode.id),
         },
       };
 

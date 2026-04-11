@@ -15,8 +15,23 @@ export function LogicNode({ data, id }: { data: any, id: string }) {
     return <Settings2 size={16} className="text-slate-400" />;
   };
 
+  const getStatusColor = () => {
+    switch (data.status) {
+      case 'running': return '#3b82f6';
+      case 'success': return '#10b981';
+      case 'error': return '#ef4444';
+      default: return 'transparent';
+    }
+  };
+
   return (
-    <div className={`logic-node-container ${data.type || 'logic'}`}>
+    <div 
+      className={`logic-node-container ${data.type || 'logic'} ${data.status || 'idle'}`}
+      onDoubleClick={() => data.onDoubleClick?.()}
+      style={{
+        borderLeft: data.status && data.status !== 'idle' ? `3px solid ${getStatusColor()}` : undefined
+      }}
+    >
       <Handle 
         type="target" 
         position={Position.Left} 
@@ -30,16 +45,16 @@ export function LogicNode({ data, id }: { data: any, id: string }) {
         </div>
       </Handle>
       
-      <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+      <div className="logic-node-icon-wrapper">
         {getIcon()}
       </div>
 
-      <div className="flex flex-col">
+      <div className="logic-node-info">
         <span className="node-active-tag">
-          {data.type || 'Logic'} Item
+          {isDelay ? 'Delay' : isBranch ? 'Logic' : 'Control'}
         </span>
         <span className="node-name">
-          {isDelay ? `${data.delayMs || 1000}ms Wait` : data.name || 'Condition'}
+          {isDelay ? `${data.delayMs || 1000}ms Wait` : isBranch ? (data.condition || 'Condition') : data.name}
         </span>
       </div>
 

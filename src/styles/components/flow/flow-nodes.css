@@ -233,31 +233,65 @@
 /* ──── LOGIC / DELAY NODE ──── */
 
 .logic-node-container {
-  width: 100px;
-  height: 60px;
-  background: rgba(139, 92, 246, 0.2);
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  border-radius: 8px;
+  width: 180px;
+  min-height: 64px;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  padding: 10px 14px;
+  gap: 12px;
   color: white;
-  font-size: 11px;
-  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
 }
 
-.delay-node-container {
-  width: 100px;
-  height: 60px;
-  background: rgba(245, 158, 11, 0.2);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  border-radius: 8px;
+.logic-node-container:hover {
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.2);
+}
+
+.logic-node-container.delay {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.logic-node-container.delay:hover {
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.2);
+}
+
+.logic-node-container.running {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+.logic-node-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.logic-node-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.node-active-tag {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.5px;
 }
 
 /* ──── FLOW BUILDER TOOLBAR & PANELS ──── */
