@@ -32,6 +32,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     set((state) => ({
       collections: [...state.collections, { ...collection, _diskPath: path }]
     }));
+    get().saveAllCollectionsToDisk();
   },
 
   updateCollection: async (id: string, updates: Partial<Collection>, _path: string) => {
@@ -40,6 +41,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         c.id === id ? { ...c, ...updates } : c
       ),
     }));
+    get().saveAllCollectionsToDisk();
   },
 
   addFolder: async (collectionId: string, parentFolderId: string | null, folder: Folder) => {
@@ -66,6 +68,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         return { ...c, folders: updateFolders(c.folders) };
       }),
     }));
+    get().saveAllCollectionsToDisk();
   },
 
   addRequest: async (collectionId: string, folderId: string | null, request: Request) => {
@@ -92,6 +95,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         return { ...c, folders: updateFolders(c.folders) };
       }),
     }));
+    get().saveAllCollectionsToDisk();
   },
 
   updateRequest: async (collectionId: string, requestId: string, updates: Partial<Request>) => {
@@ -124,6 +128,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         return { ...c, folders: updateFolders(c.folders) };
       }),
     }));
+    get().saveAllCollectionsToDisk();
   },
 
   saveCollectionToDisk: async (id: string) => {
@@ -133,8 +138,12 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
       w => w.id === useWorkspaceStore.getState().activeWorkspaceId
     );
-    const workspacePath = activeWorkspace?.path;
-    if (!workspacePath) return;
+    let workspacePath = activeWorkspace?.path;
+
+    if (!workspacePath) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      workspacePath = await invoke<string>('create_data_dir');
+    }
 
     try {
       const { saveCollectionToDisk } = await import('../hooks/useTauri');
@@ -148,8 +157,12 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
       w => w.id === useWorkspaceStore.getState().activeWorkspaceId
     );
-    const workspacePath = activeWorkspace?.path;
-    if (!workspacePath) return;
+    let workspacePath = activeWorkspace?.path;
+
+    if (!workspacePath) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      workspacePath = await invoke<string>('create_data_dir');
+    }
 
     const { saveCollectionToDisk } = await import('../hooks/useTauri');
     const collections = get().collections;
@@ -170,8 +183,7 @@ useCollectionStore.subscribe((state, prevState) => {
   const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
     w => w.id === useWorkspaceStore.getState().activeWorkspaceId
   );
-  if (!activeWorkspace?.path || !activeWorkspace.isGitEnabled) return;
-
+  
   const hasChanged = state.collections !== prevState.collections;
   if (!hasChanged) return;
 
