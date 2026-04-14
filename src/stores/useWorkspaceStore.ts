@@ -30,7 +30,7 @@ const WORKSPACE_META_PATH = 'workspace-meta.json';
 async function loadWorkspaceMeta(): Promise<Record<string, { path?: string; isGitEnabled?: boolean }>> {
   try {
     const dataDir = await invoke<string>('create_data_dir');
-    const path = `${dataDir}/${WORKSPACE_META_PATH}`;
+    const path = `${dataDir}${navigator.userAgent.includes('Windows') ? '\\' : '/'}${WORKSPACE_META_PATH}`;
     const fs = await import('@tauri-apps/plugin-fs');
     const content = await fs.readTextFile(path);
     return JSON.parse(content);
@@ -42,7 +42,7 @@ async function loadWorkspaceMeta(): Promise<Record<string, { path?: string; isGi
 async function saveWorkspaceMeta(meta: Record<string, { path?: string; isGitEnabled?: boolean }>): Promise<void> {
   try {
     const dataDir = await invoke<string>('create_data_dir');
-    const path = `${dataDir}/${WORKSPACE_META_PATH}`;
+    const path = `${dataDir}${navigator.userAgent.includes('Windows') ? '\\' : '/'}${WORKSPACE_META_PATH}`;
     const fs = await import('@tauri-apps/plugin-fs');
     await fs.writeTextFile(path, JSON.stringify(meta, null, 2));
   } catch (e) {
@@ -105,19 +105,32 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         activeWorkspaceId: 'personal'
       });
 
-      // Step 4: If personal workspace has a path, load collections from it
-      if (personalWorkspace.path && personalWorkspace.isGitEnabled) {
-        try {
-          const workspaceCollections = await loadCollectionsFromWorkspace(personalWorkspace.path);
-          if (workspaceCollections.length > 0) {
-            const { useCollectionStore } = await import('./useCollectionStore');
-            for (const col of workspaceCollections) {
-              useCollectionStore.getState().addCollection(col, personalWorkspace.path);
-            }
-          }
-        } catch (e) {
-          console.warn('[Pulse] Failed to load workspace collections on init:', e);
+      // Step 4: Load workspace-specific data
+      const effectivePath = personalWorkspace.path || await invoke<string>('create_data_dir');
+      
+      try {
+        const workspaceCollections = await loadCollectionsFromWorkspace(effectivePath);
+        const { useCollectionStore } = await import('./useCollectionStore');
+        const colStore = useCollectionStore.getState();
+        
+        // Populate store from collections found in workspace
+        for (const col of workspaceCollections) {
+          colStore.addCollection(col, effectivePath);
         }
+
+        // Also add the default collections loaded in Step 2 if they aren't duplicates
+        for (const col of collections) {
+          if (!workspaceCollections.find(wc => wc.id === col.id)) {
+            colStore.addCollection(col, effectivePath);
+          }
+        }
+
+        // Load Flows
+        const { useFlowStore } = await import('./useFlowStore');
+        await useFlowStore.getState().loadFlowsFromDisk(effectivePath);
+        console.log(`[Pulse] Initialization complete. Loaded data from: ${effectivePath}`);
+      } catch (e) {
+        console.warn('[Pulse] Failed to load workspace data on init:', e);
       }
     } catch (e) {
       console.error('[Pulse] Critical failure in workspace initialization', e);
@@ -135,7 +148,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     
     // If switching to a workspace with a path, load its collections
     const workspace = get().workspaces.find(w => w.id === id);
-    if (workspace?.path && workspace.isGitEnabled) {
+    if (workspace?.path) {
       try {
         const workspaceCollections = await loadCollectionsFromWorkspace(workspace.path);
         if (workspaceCollections.length > 0) {
@@ -145,8 +158,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
             store.addCollection(col, workspace.path);
           }
         }
+
+        // Load Flows
+        const { useFlowStore } = await import('./useFlowStore');
+        await useFlowStore.getState().loadFlowsFromDisk(workspace.path);
       } catch (e) {
-        console.warn('[Pulse] Failed to load workspace collections:', e);
+        console.warn('[Pulse] Failed to load workspace data:', e);
       }
     }
   },

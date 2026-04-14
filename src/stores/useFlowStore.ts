@@ -36,6 +36,7 @@ interface FlowStore {
   
   // Persistence
   saveFlowsToDisk: () => Promise<void>;
+  loadFlowsFromDisk: (workspacePath: string) => Promise<void>;
 }
 
 export const useFlowStore = create<FlowStore>((set, get) => ({
@@ -100,16 +101,46 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
       w => w.id === useWorkspaceStore.getState().activeWorkspaceId
     );
-    const workspacePath = activeWorkspace?.path;
-    if (!workspacePath) return;
-
-    // Use a custom invoke for flows if we add it to the backend, 
-    // or for now we can bundle it into workspace.json
-    try {
+    let workspacePath = activeWorkspace?.path;
+    
+    if (!workspacePath) {
       const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('save_flows_to_disk', { workspacePath, flows: get().flows });
+      workspacePath = await invoke<string>('create_data_dir');
+    }
+
+    try {
+      const { saveFlowsToDisk } = await import('../hooks/useTauri');
+      await saveFlowsToDisk(workspacePath, get().flows);
     } catch (e) {
       console.error('[Pulse] Failed to save flows to disk:', e);
     }
+  },
+
+  loadFlowsFromDisk: async (workspacePath: string) => {
+    try {
+      const { loadFlowsFromWorkspace } = await import('../hooks/useTauri');
+      const flows = await loadFlowsFromWorkspace(workspacePath);
+      set({ flows });
+    } catch (e) {
+      console.error('[Pulse] Failed to load flows from disk:', e);
+    }
   }
 }));
+
+// Auto-save: debounce saves to disk whenever flows change
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+useFlowStore.subscribe((state, prevState) => {
+  const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
+    w => w.id === useWorkspaceStore.getState().activeWorkspaceId
+  );
+  
+  // We need a path to save. If no workspace path is set, we will eventually
+  // default to the internal data directory, but we need to resolve it.
+  const hasChanged = state.flows !== prevState.flows;
+  if (!hasChanged) return;
+
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(async () => {
+    await state.saveFlowsToDisk();
+  }, 1500);
+});
