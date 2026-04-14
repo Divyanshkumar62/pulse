@@ -186,3 +186,11 @@ export async function gitPull(path: string): Promise<void> {
 export async function gitAddRemote(path: string, remoteName: string, remoteUrl: string): Promise<void> {
   return invoke('git_add_remote', { path, remoteName, remoteUrl });
 }
+
+export async function saveFlowsToDisk(workspacePath: string, flows: any[]): Promise<void> {
+  return invoke('save_flows_to_disk', { workspacePath, flows });
+}
+
+export async function loadFlowsFromWorkspace(workspacePath: string): Promise<any[]> {
+  return invoke('load_flows_from_workspace', { workspacePath });
+}

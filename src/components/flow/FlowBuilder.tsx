@@ -10,9 +10,10 @@ import {
   useEdgesState,
   BackgroundVariant,
   Panel,
+  useReactFlow
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Play, Square, Save, Plus, Maximize } from 'lucide-react';
+import { Play, Square, Save, Plus, Maximize, ZoomIn, ZoomOut } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { RequestNode } from './nodes/RequestNode';
 import { LogicNode } from './nodes/LogicNode';
@@ -20,6 +21,32 @@ import { useFlowStore } from '../../stores/useFlowStore';
 import { FlowRunner } from '../../utils/flowRunner';
 import NodeConfigPanel from './NodeConfigPanel';
 import CreateNodeModal from '../modals/CreateNodeModal';
+
+const CustomToolbar = ({ setShowAddNodeModal }: { setShowAddNodeModal: (val: boolean) => void }) => {
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+
+  return (
+    <div className="flow-toolbar">
+      <button 
+        onClick={() => setShowAddNodeModal(true)}
+        className="toolbar-btn"
+        title="Add node"
+      >
+        <Plus size={18} />
+      </button>
+      <div className="toolbar-divider" />
+      <button className="toolbar-btn" title="Zoom In" onClick={() => zoomIn()}>
+        <ZoomIn size={18} />
+      </button>
+      <button className="toolbar-btn" title="Zoom Out" onClick={() => zoomOut()}>
+        <ZoomOut size={18} />
+      </button>
+      <button className="toolbar-btn" title="Fit view" onClick={() => fitView({ duration: 800 })}>
+        <Maximize size={18} />
+      </button>
+    </div>
+  );
+};
 
 const nodeTypes = {
   request: RequestNode,
@@ -84,9 +111,9 @@ export default function FlowBuilder() {
     }
   }, [activeFlowId, activeFlow?.nodes, activeFlow?.edges, handleNodeAction]);
 
-  // Save changes back to store
+  // Update store when local state changes
   useEffect(() => {
-    if (activeFlowId && (nodes.length > 0 || edges.length > 0)) {
+    if (activeFlowId) {
       updateFlow(activeFlowId, { nodes, edges });
     }
   }, [nodes, edges, activeFlowId, updateFlow]);
@@ -150,12 +177,6 @@ export default function FlowBuilder() {
     [setNodes]
   );
 
-  // Update store when local state changes
-  useEffect(() => {
-    if (activeFlowId) {
-      updateFlow(activeFlowId, { nodes, edges });
-    }
-  }, [nodes, edges, activeFlowId, updateFlow]);
 
   // Sync initial state when active flow changes
   useEffect(() => {
@@ -182,8 +203,8 @@ export default function FlowBuilder() {
     if (!activeFlow) return;
     setLogsPanelOpen(true);
     const runner = new FlowRunner(activeFlow);
-    const logs = await runner.run();
-    setExecutionLogs(logs);
+    await runner.run();
+    setExecutionLogs(useFlowStore.getState().logs);
   };
 
   if (!activeFlowId) {
@@ -223,19 +244,7 @@ export default function FlowBuilder() {
         />
 
         <Panel position="top-right" className="flow-panel-group">
-          <div className="flow-toolbar">
-            <button 
-              onClick={() => setShowAddNodeModal(true)}
-              className="toolbar-btn"
-              title="Add node"
-            >
-              <Plus size={18} />
-            </button>
-            <div className="toolbar-divider" />
-            <button className="toolbar-btn" title="Fit view">
-              <Maximize size={18} />
-            </button>
-          </div>
+          <CustomToolbar setShowAddNodeModal={setShowAddNodeModal} />
 
           <button
             onClick={saveFlowsToDisk}
@@ -271,6 +280,14 @@ export default function FlowBuilder() {
         <NodeConfigPanel
           nodeId={selectedNodeId}
           onClose={() => setSelectedNodeId(null)}
+        />
+      )}
+
+      {showAddNodeModal && (
+        <CreateNodeModal
+          isOpen={showAddNodeModal}
+          onClose={() => setShowAddNodeModal(false)}
+          onAddNode={handleAddNode}
         />
       )}
     </div>
