@@ -265,6 +265,16 @@ async fn save_workspace_to_disk(workspace_path: String, environments: Vec<Enviro
     collections::workspace::save_workspace_to_disk(workspace_path, environments).await
 }
 
+#[tauri::command]
+async fn save_flows_to_disk(workspace_path: String, flows: Vec<crate::collections::types::Flow>) -> Result<(), String> {
+    collections::workspace::save_flows_to_disk(workspace_path, flows).await
+}
+
+#[tauri::command]
+async fn load_flows_from_workspace(workspace_path: String) -> Result<Vec<crate::collections::types::Flow>, String> {
+    collections::workspace::load_flows_from_workspace(workspace_path).await
+}
+
 // Git Commands
 #[tauri::command]
 async fn git_init_repo(path: String) -> Result<(), String> {
@@ -470,6 +480,8 @@ pub fn run() {
             git_push_repo,
             git_pull_repo,
             git_add_remote,
+            save_flows_to_disk,
+            load_flows_from_workspace,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

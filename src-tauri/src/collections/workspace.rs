@@ -142,3 +142,42 @@ pub async fn save_workspace_to_disk(workspace_path: String, environments: Vec<En
     fs::write(path, json).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+pub async fn save_flows_to_disk(workspace_path: String, flows: Vec<crate::collections::types::Flow>) -> Result<(), String> {
+    let base_path = PathBuf::from(workspace_path);
+    let flows_dir = base_path.join("flows");
+    
+    if !flows_dir.exists() {
+        fs::create_dir_all(&flows_dir).map_err(|e| e.to_string())?;
+    }
+
+    // Save each flow as a separate JSON file
+    for flow in flows {
+        let filename = format!("{}.json", sanitize_filename(&flow.name));
+        let json = serde_json::to_string_pretty(&flow).map_err(|e| e.to_string())?;
+        fs::write(flows_dir.join(filename), json).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+pub async fn load_flows_from_workspace(workspace_path: String) -> Result<Vec<crate::collections::types::Flow>, String> {
+    let flows_dir = PathBuf::from(workspace_path).join("flows");
+    if !flows_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut flows = vec![];
+    for entry in fs::read_dir(flows_dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
+            let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+            let flow: crate::collections::types::Flow = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+            flows.push(flow);
+        }
+    }
+    
+    Ok(flows)
+}

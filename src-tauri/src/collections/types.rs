@@ -98,3 +98,71 @@ pub struct HistoryResponse {
     pub body: String,
     pub time_ms: u64,
 }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Flow {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub environment_id: Option<String>,
+    pub nodes: Vec<FlowNode>,
+    pub edges: Vec<FlowEdge>,
+    pub workspace_id: String,
+    pub created_at: Option<u64>,
+    pub updated_at: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlowNode {
+    pub id: String,
+    pub r#type: String,
+    pub position: Position,
+    pub data: FlowNodeData,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Position {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlowNodeData {
+    pub name: String,
+    pub request_id: Option<String>,
+    pub url: Option<String>,
+    pub method: Option<String>,
+    pub delay_ms: Option<u64>,
+    pub condition: Option<String>,
+    pub headers: Option<Vec<FlowHeader>>,
+    pub mappings: Option<Vec<FlowNodeMapping>>,
+    pub status: Option<String>,
+    pub last_response: Option<HistoryResponse>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlowHeader {
+    pub id: String,
+    pub key: String,
+    pub value: String,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlowNodeMapping {
+    pub source_path: String,
+    pub target_var: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlowEdge {
+    pub id: String,
+    pub source: String,
+    pub target: String,
+    pub animated: Option<bool>,
+}

@@ -55,7 +55,7 @@ pub fn create_team(
 }
 
 pub fn invite_to_team(
-    teams_path: &str,
+    _teams_path: &str,
     invitations_path: &str,
     team_id: String,
     team_name: String,
