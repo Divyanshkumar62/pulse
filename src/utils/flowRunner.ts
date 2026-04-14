@@ -119,7 +119,7 @@ export class FlowRunner {
 
       const latencyMs = Date.now() - startTime;
       useFlowStore.getState().updateFlowNodeStatus(this.flow.id, node.id, 'success', response);
-      this.log('success', `Completed: ${node.data.name}${response ? ` (${response.status} ${response.statusText})` : ''}`, node.id, latencyMs);
+      this.log('success', `Completed: ${node.data.name}${response ? ` (${response.status} ${response.status_text})` : ''}`, node.id, latencyMs);
 
     } catch (error: any) {
       useFlowStore.getState().updateFlowNodeStatus(this.flow.id, node.id, 'error');

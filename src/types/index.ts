@@ -167,7 +167,9 @@ export interface FlowNode {
     delayMs?: number;
     condition?: string;
     headers?: { id: string; key: string; value: string; enabled: boolean }[];
+    params?: { id: string; key: string; value: string; enabled: boolean }[];
     mappings?: FlowNodeMapping[];
+    body?: string;
     status?: 'idle' | 'running' | 'success' | 'error';
     lastResponse?: HttpResponse;
   };

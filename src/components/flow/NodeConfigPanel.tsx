@@ -218,8 +218,8 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
                 {headers.map((h, idx) => (
                   <div key={h.id} className="kv-row">
                     <input type="checkbox" checked={h.enabled} onChange={(e) => updateHeader(idx, { enabled: e.target.checked })} className="kv-checkbox" />
-                    <input type="text" value={h.key} onChange={(e) => updateHeader(idx, { key: h.target.value })} placeholder="Key" className="kv-input" />
-                    <input type="text" value={h.value} onChange={(e) => updateHeader(idx, { value: h.target.value })} placeholder="Value" className="kv-input" />
+                    <input type="text" value={h.key} onChange={(e) => updateHeader(idx, { key: e.target.value })} placeholder="Key" className="kv-input" />
+                    <input type="text" value={h.value} onChange={(e) => updateHeader(idx, { value: e.target.value })} placeholder="Value" className="kv-input" />
                     <button onClick={() => removeHeader(idx)} className="kv-delete">✕</button>
                   </div>
                 ))}
