@@ -11,6 +11,7 @@ import { useSettingsStore } from './stores/useSettingsStore';
 import { useWorkspaceStore } from './stores/useWorkspaceStore';
 import { useHistoryStore } from './stores/useHistoryStore';
 import { useAppStore } from './stores/useAppStore';
+import { ReactFlowProvider } from '@xyflow/react';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 
 export default function App() {
@@ -43,9 +44,11 @@ export default function App() {
         ) : showEnvironmentEditor ? (
           <EnvironmentVariableEditor />
         ) : showFlowBuilder ? (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
-            <FlowBuilder />
-          </div>
+          <ReactFlowProvider>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+              <FlowBuilder />
+            </div>
+          </ReactFlowProvider>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <TabBar />
