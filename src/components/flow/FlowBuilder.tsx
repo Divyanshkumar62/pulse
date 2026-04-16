@@ -62,6 +62,7 @@ export default function FlowBuilder() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showAddNodeModal, setShowAddNodeModal] = useState(false);
+  const isSyncingRef = React.useRef(false);
 
   const defaultEdgeOptions = {
     type: 'smoothstep',
@@ -97,7 +98,8 @@ export default function FlowBuilder() {
 
   // Sync nodes from store and add callbacks
   useEffect(() => {
-    if (activeFlowId && activeFlow?.nodes) {
+    if (activeFlowId && activeFlow?.nodes && !isSyncingRef.current) {
+      isSyncingRef.current = true;
       const nodesWithCallbacks = activeFlow.nodes.map(node => ({
         ...node,
         data: {
@@ -108,13 +110,16 @@ export default function FlowBuilder() {
       }));
       setNodes(nodesWithCallbacks);
       setEdges(activeFlow.edges || []);
+      setTimeout(() => { isSyncingRef.current = false; }, 0);
     }
-  }, [activeFlowId, activeFlow?.nodes, activeFlow?.edges, handleNodeAction]);
+  }, [activeFlowId, activeFlow?.nodes, activeFlow?.edges, handleNodeAction, setNodes, setEdges]);
 
-  // Update store when local state changes
+  // Update store when local state changes (but not during initial sync)
   useEffect(() => {
-    if (activeFlowId) {
+    if (activeFlowId && !isSyncingRef.current) {
+      isSyncingRef.current = true;
       updateFlow(activeFlowId, { nodes, edges });
+      setTimeout(() => { isSyncingRef.current = false; }, 0);
     }
   }, [nodes, edges, activeFlowId, updateFlow]);
 
