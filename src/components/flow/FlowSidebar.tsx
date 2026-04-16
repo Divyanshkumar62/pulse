@@ -142,13 +142,15 @@ export default function FlowSidebar() {
                         style={{ flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {flow.pinned && <span style={{ color: '#f59e0b' }}>📌</span>}
                           <span style={{ fontWeight: 500 }}>{flow.name}</span>
                         </div>
                         <span style={{ fontSize: '11px', color: 'var(--text-tertiary, #64748b)' }}>
                           {flow.nodes?.length || 0} nodes
                         </span>
                       </button>
+                      {flow.pinned && (
+                        <span style={{ color: '#8b5cf6', fontSize: '12px', marginRight: '2px' }} title="Pinned">★</span>
+                      )}
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
