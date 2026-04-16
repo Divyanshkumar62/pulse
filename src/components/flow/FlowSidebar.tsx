@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
 import { v4 as uuidv4 } from 'uuid';
-import { LayoutDashboard, Folder, ChevronDown, ChevronRight, Settings2, Clock, Globe, GitBranch } from 'lucide-react';
+import { LayoutDashboard, Folder, ChevronDown, ChevronRight, Clock, Globe, GitBranch } from 'lucide-react';
 import '../../styles/components/flow/flow-sidebar.css';
 
 export default function FlowSidebar() {
@@ -307,7 +307,7 @@ export default function FlowSidebar() {
             border: '1px solid var(--border-default, rgba(255,255,255,0.1))',
             borderRadius: '8px',
             boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-            zIndex: 1000,
+            zIndex: 20000,
             minWidth: '160px',
             overflow: 'hidden',
           }}
