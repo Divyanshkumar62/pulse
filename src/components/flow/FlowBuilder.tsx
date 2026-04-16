@@ -97,10 +97,15 @@ export default function FlowBuilder() {
     }
   }, [nodes, setNodes]);
 
-  // Sync nodes from store and add callbacks
+  // Sync nodes from store and add callbacks (single source of truth)
   useEffect(() => {
-    if (activeFlowId && activeFlow?.nodes && !isSyncingRef.current) {
-      isSyncingRef.current = true;
+    if (!activeFlowId || !activeFlow?.nodes) return;
+    
+    const hasNodesChanged = JSON.stringify(activeFlow.nodes) !== JSON.stringify(nodes);
+    const hasEdgesChanged = JSON.stringify(activeFlow.edges) !== JSON.stringify(edges);
+    
+    // Only sync if there's an actual change and we're not dragging
+    if (!isDraggingRef.current && (hasNodesChanged || hasEdgesChanged)) {
       const nodesWithCallbacks = activeFlow.nodes.map(node => ({
         ...node,
         data: {
@@ -111,18 +116,25 @@ export default function FlowBuilder() {
       }));
       setNodes(nodesWithCallbacks);
       setEdges(activeFlow.edges || []);
-      setTimeout(() => { isSyncingRef.current = false; }, 0);
     }
-  }, [activeFlowId, activeFlow?.nodes, activeFlow?.edges, handleNodeAction, setNodes, setEdges]);
+  }, [activeFlowId, activeFlow?.nodes, activeFlow?.edges, handleNodeAction, setNodes, setEdges, nodes, edges]);
 
-  // Update store when local state changes (but not during initial sync or drag)
-  useEffect(() => {
-    if (activeFlowId && !isSyncingRef.current && !isDraggingRef.current) {
-      isSyncingRef.current = true;
-      updateFlow(activeFlowId, { nodes, edges });
-      setTimeout(() => { isSyncingRef.current = false; }, 0);
+  // Update store when local state changes (only on explicit user actions, not during sync)
+  const handleNodesChange = useCallback((changes: any[]) => {
+    // Apply changes to local state first
+    onNodesChange(changes);
+    
+    // Only update store for position changes and after a short delay to avoid rapid updates
+    const positionChanges = changes.filter(c => c.type === 'position');
+    if (positionChanges.length > 0 && activeFlowId) {
+      isDraggingRef.current = true;
+      clearTimeout((window as any).__flowSyncTimeout);
+      (window as any).__flowSyncTimeout = setTimeout(() => {
+        isDraggingRef.current = false;
+        updateFlow(activeFlowId, { nodes, edges });
+      }, 100);
     }
-  }, [nodes, edges, activeFlowId, updateFlow]);
+  }, [onNodesChange, nodes, edges, activeFlowId, updateFlow]);
 
   const handleAddNode = useCallback((newNode: any) => {
     setNodes((nds) => [...nds, {
@@ -232,7 +244,7 @@ export default function FlowBuilder() {
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onDragOver={onDragOver}

@@ -313,22 +313,7 @@ export default function CollectionTree() {
       }
     });
 
-    // Sort only collections by pinned status while maintaining relative order of other items
-    const sortedCollections = [...collections]
-      .sort((a, b) => {
-        if (a.pinned && !b.pinned) return -1;
-        if (!a.pinned && b.pinned) return 1;
-        return 0;
-      })
-      .map(c => c.id);
-
-    const collectionsInOrder = allItems.filter(item => item.type === 'collection').sort((a, b) => {
-      return sortedCollections.indexOf(a.id) - sortedCollections.indexOf(b.id);
-    });
-    
-    const nonCollections = allItems.filter(item => item.type !== 'collection');
-    
-    return [...collectionsInOrder, ...nonCollections];
+    return allItems;
   }, [collections, expandedItems, creatingInline]);
 
   const handleContextMenu = (e: React.MouseEvent, type: 'collection' | 'folder' | 'request', data: any, fromDotButton = false) => {
@@ -803,7 +788,16 @@ export default function CollectionTree() {
           )
         ) : flattenedItems.length > 0 ? (
           <VirtualList
-            items={flattenedItems}
+            items={flattenedItems.sort((a, b) => {
+              // Sort collections by pinned status, keep other items in original order
+              if (a.type === 'collection' && b.type === 'collection') {
+                const aPinned = collections.find(c => c.id === a.id)?.pinned || false;
+                const bPinned = collections.find(c => c.id === b.id)?.pinned || false;
+                if (aPinned && !bPinned) return -1;
+                if (!aPinned && bPinned) return 1;
+              }
+              return 0;
+            })}
             height={containerHeight}
             itemHeight={34}
             renderItem={(item) => (
