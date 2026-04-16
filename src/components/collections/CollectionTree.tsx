@@ -268,22 +268,20 @@ export default function CollectionTree() {
   };
 
   const flattenedItems = useMemo(() => {
-    const items: TreeItem[] = [];
-    const collectionItems: TreeItem[] = [];
-    const requestItems: TreeItem[] = [];
+    const allItems: TreeItem[] = [];
 
     const processFolders = (folders: any[], level: number, collectionId: string) => {
       folders.forEach(folder => {
         const folderWithCollectionId = { ...folder, collectionId };
-        items.push({ type: 'folder', id: folder.id, name: folder.name, data: folderWithCollectionId, level, collectionId });
+        allItems.push({ type: 'folder', id: folder.id, name: folder.name, data: folderWithCollectionId, level, collectionId });
         
         if (creatingInline && creatingInline.parentId === folder.id && creatingInline.itemType === 'request') {
-          items.push({ type: 'creating', itemType: 'request', parentId: folder.id, parentType: 'folder', level: level + 1 });
+          allItems.push({ type: 'creating', itemType: 'request', parentId: folder.id, parentType: 'folder', level: level + 1 });
         }
         
         if (expandedItems.has(folder.id)) {
           folder.requests.forEach((req: any) => {
-            requestItems.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: { ...req, collectionId }, level: level + 1, collectionId });
+            allItems.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: { ...req, collectionId }, level: level + 1, collectionId });
           });
           
           if (folder.folders && folder.folders.length > 0) {
@@ -294,19 +292,19 @@ export default function CollectionTree() {
     };
 
     collections.forEach(collection => {
-      collectionItems.push({ type: 'collection', id: collection.id, name: collection.name, data: collection, level: 0 });
-      
       if (creatingInline && creatingInline.parentId === collection.id) {
         if (creatingInline.itemType === 'request') {
-          items.push({ type: 'creating', itemType: 'request', parentId: collection.id, parentType: 'collection', level: 1 });
+          allItems.push({ type: 'creating', itemType: 'request', parentId: collection.id, parentType: 'collection', level: 1 });
         } else {
-          items.push({ type: 'creating', itemType: 'folder', parentId: collection.id, parentType: 'collection', level: 1 });
+          allItems.push({ type: 'creating', itemType: 'folder', parentId: collection.id, parentType: 'collection', level: 1 });
         }
       }
       
+      allItems.push({ type: 'collection', id: collection.id, name: collection.name, data: collection, level: 0 });
+      
       if (expandedItems.has(collection.id)) {
         collection.requests.forEach(req => {
-          requestItems.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: { ...req, collectionId: collection.id }, level: 1, collectionId: collection.id });
+          allItems.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: { ...req, collectionId: collection.id }, level: 1, collectionId: collection.id });
         });
         
         if (collection.folders && collection.folders.length > 0) {
@@ -315,23 +313,22 @@ export default function CollectionTree() {
       }
     });
 
-    collectionItems.sort((a, b) => {
-      const aPinned = (a.type === 'collection' && collections.find(c => c.id === a.id)?.pinned) || false;
-      const bPinned = (b.type === 'collection' && collections.find(c => c.id === b.id)?.pinned) || false;
-      if (aPinned && !bPinned) return -1;
-      if (!aPinned && bPinned) return 1;
-      return 0;
-    });
+    // Sort only collections by pinned status while maintaining relative order of other items
+    const sortedCollections = [...collections]
+      .sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return 0;
+      })
+      .map(c => c.id);
 
-    requestItems.sort((a, b) => {
-      const aPinned = a.type === 'request' && a.data?.pinned || false;
-      const bPinned = b.type === 'request' && b.data?.pinned || false;
-      if (aPinned && !bPinned) return -1;
-      if (!aPinned && bPinned) return 1;
-      return 0;
+    const collectionsInOrder = allItems.filter(item => item.type === 'collection').sort((a, b) => {
+      return sortedCollections.indexOf(a.id) - sortedCollections.indexOf(b.id);
     });
-
-    return [...collectionItems, ...items, ...requestItems];
+    
+    const nonCollections = allItems.filter(item => item.type !== 'collection');
+    
+    return [...collectionsInOrder, ...nonCollections];
   }, [collections, expandedItems, creatingInline]);
 
   const handleContextMenu = (e: React.MouseEvent, type: 'collection' | 'folder' | 'request', data: any, fromDotButton = false) => {
@@ -489,10 +486,10 @@ export default function CollectionTree() {
             {item.name}
           </span>
           {item.type === 'collection' && collections.find(c => c.id === item.id)?.pinned && (
-            <span style={{ color: '#8b5cf6', marginRight: '4px', fontSize: '12px' }} title="Pinned">★</span>
+            <span style={{ color: '#06b6d4', marginRight: '4px', fontSize: '12px' }} title="Pinned">★</span>
           )}
           {item.type === 'folder' && item.data?.pinned && (
-            <span style={{ color: '#8b5cf6', marginRight: '4px', fontSize: '12px' }} title="Pinned">★</span>
+            <span style={{ color: '#06b6d4', marginRight: '4px', fontSize: '12px' }} title="Pinned">★</span>
           )}
           <button 
             className="tree-actions"

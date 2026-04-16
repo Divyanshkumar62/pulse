@@ -63,6 +63,7 @@ export default function FlowBuilder() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showAddNodeModal, setShowAddNodeModal] = useState(false);
   const isSyncingRef = React.useRef(false);
+  const isDraggingRef = React.useRef(false);
 
   const defaultEdgeOptions = {
     type: 'smoothstep',
@@ -114,9 +115,9 @@ export default function FlowBuilder() {
     }
   }, [activeFlowId, activeFlow?.nodes, activeFlow?.edges, handleNodeAction, setNodes, setEdges]);
 
-  // Update store when local state changes (but not during initial sync)
+  // Update store when local state changes (but not during initial sync or drag)
   useEffect(() => {
-    if (activeFlowId && !isSyncingRef.current) {
+    if (activeFlowId && !isSyncingRef.current && !isDraggingRef.current) {
       isSyncingRef.current = true;
       updateFlow(activeFlowId, { nodes, edges });
       setTimeout(() => { isSyncingRef.current = false; }, 0);
@@ -237,6 +238,14 @@ export default function FlowBuilder() {
         onDragOver={onDragOver}
         onDrop={onDrop}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodeDragStart={() => { isDraggingRef.current = true; }}
+        onNodeDragStop={() => { 
+          isDraggingRef.current = false;
+          // Force a sync after drag ends
+          if (activeFlowId) {
+            updateFlow(activeFlowId, { nodes, edges });
+          }
+        }}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
