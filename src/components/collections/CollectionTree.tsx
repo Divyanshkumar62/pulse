@@ -313,6 +313,14 @@ export default function CollectionTree() {
       }
     });
 
+    items.sort((a, b) => {
+      const aPinned = a.type === 'creating' ? false : (a.data?.pinned || (a.type === 'collection' && collections.find(c => c.id === a.id)?.pinned));
+      const bPinned = b.type === 'creating' ? false : (b.data?.pinned || (b.type === 'collection' && collections.find(c => c.id === b.id)?.pinned));
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
+
     return items;
   }, [collections, expandedItems, creatingInline]);
 
@@ -334,15 +342,31 @@ export default function CollectionTree() {
       items.push({ label: 'New Request', onClick: () => handleCreateRequest(data.id, null) });
       items.push({ label: 'New Folder', onClick: () => handleCreateFolder(data.id, null) });
       items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
+      items.push({ label: data.pinned ? 'Unpin' : 'Pin', onClick: () => { updateCollection(data.id, { pinned: !data.pinned }, ''); } });
       items.push({ label: 'Delete', danger: true, onClick: () => toast('Delete coming soon') });
     } else if (type === 'folder') {
       items.push({ label: 'New Request', onClick: () => handleCreateRequest(data.collectionId, data.id) });
       items.push({ label: 'New Folder', onClick: () => handleCreateFolder(data.collectionId, data.id) });
       items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
+      items.push({ label: data.pinned ? 'Unpin' : 'Pin', onClick: () => { 
+        const col = collections.find(c => c.id === data.collectionId);
+        if (col) {
+          const folder = col.folders?.find(f => f.id === data.id);
+          if (folder) {
+            updateCollection(data.collectionId, { folders: col.folders.map(f => f.id === data.id ? { ...f, pinned: !f.pinned } : f) }, '');
+          }
+        }
+      }});
       items.push({ label: 'Delete', danger: true, onClick: () => toast('Delete coming soon') });
     } else if (type === 'request') {
       items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
       items.push({ label: 'Duplicate', onClick: () => toast('Duplicate coming soon') });
+      items.push({ label: data.pinned ? 'Unpin' : 'Pin', onClick: () => { 
+        const col = collections.find(c => c.id === data.collectionId);
+        if (col) {
+          updateRequest(col.id, data.id, { pinned: !data.pinned });
+        }
+      }});
       items.push({ label: 'Delete', danger: true, onClick: () => toast('Delete coming soon') });
     }
     
@@ -451,7 +475,11 @@ export default function CollectionTree() {
               <line x1="9" y1="14" x2="15" y2="14"/>
             </svg>
           )}
-          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {item.type === 'collection' && collections.find(c => c.id === item.id)?.pinned && <span style={{ color: '#f59e0b', marginRight: '4px' }}>📌</span>}
+            {item.type === 'folder' && item.data?.pinned && <span style={{ color: '#f59e0b', marginRight: '4px' }}>📌</span>}
+            {item.name}
+          </span>
           <button 
             className="tree-actions"
             onClick={(e) => {

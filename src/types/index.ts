@@ -74,6 +74,7 @@ export interface Request {
   auth?: AuthConfig;
   preRequestScript?: string;
   testScript?: string;
+  pinned?: boolean;
 }
 
 export interface HttpRequest {
@@ -89,6 +90,7 @@ export interface Folder {
   name: string;
   requests: Request[];
   folders?: Folder[];
+  pinned?: boolean;
 }
 
 export interface Collection {
@@ -98,6 +100,7 @@ export interface Collection {
   requests: Request[];
   folders: Folder[];
   variables: KeyValuePair[];
+  pinned?: boolean;
 }
 
 export interface Environment {
@@ -192,4 +195,5 @@ export interface Flow {
   workspaceId: string;
   createdAt?: number;
   updatedAt?: number;
+  pinned?: boolean;
 }

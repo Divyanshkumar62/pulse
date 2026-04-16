@@ -47,6 +47,9 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   logs: [],
 
   addFlow: (flow: Flow) => {
+    const existing = get().flows.find(f => f.id === flow.id);
+    if (existing) return;
+    
     console.log('[FlowStore] addFlow called with flow:', flow.id);
     set((state) => ({ flows: [...state.flows, flow] }));
     console.log('[FlowStore] flows after add:', get().flows.length);

@@ -29,6 +29,9 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
   isLoading: false,
 
   addCollection: async (collection: Collection, path: string) => {
+    const existing = get().collections.find(c => c.id === collection.id);
+    if (existing) return;
+    
     set((state) => ({
       collections: [...state.collections, { ...collection, _diskPath: path }]
     }));

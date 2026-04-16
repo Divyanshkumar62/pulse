@@ -50,8 +50,17 @@ export default function FlowSidebar() {
         name: flow.name + ' (Copy)',
         nodes: [...flow.nodes],
         edges: [...flow.edges],
+        pinned: false,
       };
       addFlow(newFlow);
+    }
+    handleCloseMenu();
+  };
+
+  const handlePinFlow = (flowId: string) => {
+    const flow = flows.find(f => f.id === flowId);
+    if (flow) {
+      updateFlow(flowId, { pinned: !flow.pinned });
     }
     handleCloseMenu();
   };
@@ -118,7 +127,11 @@ export default function FlowSidebar() {
                     No flows yet. Create one to get started.
                   </span>
                 ) : (
-                  flows.map((flow) => (
+                  [...flows].sort((a, b) => {
+                    if (a.pinned && !b.pinned) return -1;
+                    if (!a.pinned && b.pinned) return 1;
+                    return 0;
+                  }).map((flow) => (
                     <div 
                       key={flow.id}
                       style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}
@@ -128,7 +141,10 @@ export default function FlowSidebar() {
                         onClick={() => handleFlowClick(flow.id)}
                         style={{ flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}
                       >
-                        <span style={{ fontWeight: 500 }}>{flow.name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {flow.pinned && <span style={{ color: '#f59e0b' }}>📌</span>}
+                          <span style={{ fontWeight: 500 }}>{flow.name}</span>
+                        </div>
                         <span style={{ fontSize: '11px', color: 'var(--text-tertiary, #64748b)' }}>
                           {flow.nodes?.length || 0} nodes
                         </span>
@@ -339,6 +355,29 @@ export default function FlowSidebar() {
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             🗑️ Delete
+          </button>
+          <button
+            onClick={() => {
+              const flow = flows.find(f => f.id === flowMenuAnchor.flowId);
+              handlePinFlow(flowMenuAnchor.flowId);
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-primary, white)',
+              fontSize: '13px',
+              textAlign: 'left',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface, #334155)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            {flows.find(f => f.id === flowMenuAnchor.flowId)?.pinned ? '📌 Unpin' : '📌 Pin'}
           </button>
         </div>
       )}
