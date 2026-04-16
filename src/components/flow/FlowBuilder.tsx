@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { RequestNode } from './nodes/RequestNode';
 import { LogicNode } from './nodes/LogicNode';
 import { useFlowStore } from '../../stores/useFlowStore';
+import { useCollectionStore } from '../../stores/useCollectionStore';
 import { FlowRunner } from '../../utils/flowRunner';
 import NodeConfigPanel from './NodeConfigPanel';
 import CreateNodeModal from '../modals/CreateNodeModal';
@@ -56,6 +57,7 @@ const nodeTypes = {
 
 export default function FlowBuilder() {
   const { activeFlowId, flows, executionState, updateFlow, saveFlowsToDisk } = useFlowStore();
+  const { collections } = useCollectionStore();
   const activeFlow = flows.find(f => f.id === activeFlowId);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
@@ -158,11 +160,35 @@ export default function FlowBuilder() {
 
       const type = event.dataTransfer.getData('application/reactflow');
       const requestId = event.dataTransfer.getData('requestId');
-      const name = event.dataTransfer.getData('requestName');
-      const requestMethod = event.dataTransfer.getData('requestMethod');
-      const requestUrl = event.dataTransfer.getData('requestUrl');
+      let name = event.dataTransfer.getData('requestName');
+      let requestMethod = event.dataTransfer.getData('requestMethod');
+      let requestUrl = event.dataTransfer.getData('requestUrl');
 
       if (!type) return;
+
+      // If we have a requestId, try to find the request in collections to get full details
+      if (requestId) {
+        for (const col of collections) {
+          const found = col.requests.find(r => r.id === requestId);
+          if (found) {
+            name = found.name;
+            requestMethod = found.method;
+            requestUrl = found.url;
+            break;
+          }
+          if (col.folders) {
+            for (const folder of col.folders) {
+              const inFolder = folder.requests.find(r => r.id === requestId);
+              if (inFolder) {
+                name = inFolder.name;
+                requestMethod = inFolder.method;
+                requestUrl = inFolder.url;
+                break;
+              }
+            }
+          }
+        }
+      }
 
       const reactFlowBounds = (event.target as HTMLElement).closest('.react-flow')?.getBoundingClientRect();
       const position = reactFlowBounds 
@@ -192,7 +218,7 @@ export default function FlowBuilder() {
 
       setNodes((nds) => nds.concat(newNode));
     },
-    [setNodes]
+    [setNodes, collections]
   );
 
 

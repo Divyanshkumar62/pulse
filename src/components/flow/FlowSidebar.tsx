@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useAppStore } from '../../stores/useAppStore';
+import { useCollectionStore } from '../../stores/useCollectionStore';
 import { v4 as uuidv4 } from 'uuid';
 import { LayoutDashboard, Folder, ChevronDown, ChevronRight, Settings2, Clock, Globe, GitBranch } from 'lucide-react';
 import '../../styles/components/flow/flow-sidebar.css';
@@ -11,9 +12,10 @@ export default function FlowSidebar() {
   const [isCollectionsExpanded, setIsCollectionsExpanded] = useState(true);
   const [isControlExpanded, setIsControlExpanded] = useState(true);
   const { addFlow, setActiveFlow, flows, activeFlowId, updateFlow, deleteFlow } = useFlowStore();
+  const { collections } = useCollectionStore();
   const { setCreateFlowModalOpen } = useAppStore();
-  
   const [flowMenuAnchor, setFlowMenuAnchor] = useState<{flowId: string, x: number, y: number} | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
 
   const handleOpenCreateModal = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -26,11 +28,14 @@ export default function FlowSidebar() {
 
   const handleFlowMenuClick = (e: React.MouseEvent, flowId: string) => {
     e.stopPropagation();
-    setFlowMenuAnchor({ flowId, x: e.clientX, y: e.clientY });
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setFlowMenuAnchor({ flowId, x: rect.left, y: rect.bottom });
+    setMenuPosition({ top: rect.bottom + 5, left: rect.left - 120 });
   };
 
   const handleCloseMenu = () => {
     setFlowMenuAnchor(null);
+    setMenuPosition(null);
   };
 
   const handleRenameFlow = (flowId: string) => {
@@ -193,38 +198,48 @@ export default function FlowSidebar() {
 
             {isCollectionsExpanded && (
               <div className="expanded-list">
-                <button 
-                  className="nav-item"
-                  draggable={true}
-                  onDragStart={(e) => handleDragStart(e, 'request', 'collect1', 'GET', 'https://api.example.com/collect1')}
-                >
-                  <span className="http-badge badge-get">GET</span>
-                  <span>collect1</span>
-                </button>
-                <button 
-                  className="nav-item"
-                  draggable={true}
-                  onDragStart={(e) => handleDragStart(e, 'request', 'POSTreq1', 'POST', 'https://api.example.com/POSTreq1')}
-                >
-                  <span className="http-badge badge-post">POST</span>
-                  <span>POSTreq1</span>
-                </button>
-                <button 
-                  className="nav-item"
-                  draggable={true}
-                  onDragStart={(e) => handleDragStart(e, 'request', 'User Login', 'POST', 'https://api.example.com/auth/login')}
-                >
-                  <span className="http-badge badge-post">POST</span>
-                  <span>User Login</span>
-                </button>
-                <button 
-                  className="nav-item"
-                  draggable={true}
-                  onDragStart={(e) => handleDragStart(e, 'request', 'Get Profile', 'GET', 'https://api.example.com/user/profile')}
-                >
-                  <span className="http-badge badge-get">GET</span>
-                  <span>Get Profile</span>
-                </button>
+                {collections.length === 0 ? (
+                  <span style={{ padding: '8px 12px', color: 'var(--text-tertiary, #64748b)', fontSize: '12px' }}>
+                    No collections yet. Create one in Collections tab.
+                  </span>
+                ) : (
+                  collections.map(col => (
+                    <div key={col.id}>
+                      <div style={{ padding: '4px 12px', fontSize: '10px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {col.name}
+                      </div>
+                      {col.requests.map(req => (
+                        <button 
+                          key={req.id}
+                          className="nav-item"
+                          draggable={true}
+                          onDragStart={(e) => handleDragStart(e, 'request', req.name, req.method, req.url, req.id)}
+                        >
+                          <span className={`http-badge badge-${req.method.toLowerCase()}`}>{req.method}</span>
+                          <span>{req.name}</span>
+                        </button>
+                      ))}
+                      {col.folders?.map(folder => (
+                        <div key={folder.id}>
+                          <div style={{ padding: '4px 12px', fontSize: '10px', color: '#475569' }}>
+                            📁 {folder.name}
+                          </div>
+                          {folder.requests.map(req => (
+                            <button 
+                              key={req.id}
+                              className="nav-item"
+                              draggable={true}
+                              onDragStart={(e) => handleDragStart(e, 'request', req.name, req.method, req.url, req.id)}
+                            >
+                              <span className={`http-badge badge-${req.method.toLowerCase()}`}>{req.method}</span>
+                              <span>{req.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -282,12 +297,12 @@ export default function FlowSidebar() {
       </div>
 
       {/* Context Menu for Flow Actions */}
-      {flowMenuAnchor && (
+      {flowMenuAnchor && menuPosition && (
         <div 
           style={{
             position: 'fixed',
-            top: flowMenuAnchor.y,
-            left: flowMenuAnchor.x,
+            top: menuPosition.top,
+            left: menuPosition.left,
             backgroundColor: 'var(--bg-elevated, #1e293b)',
             border: '1px solid var(--border-default, rgba(255,255,255,0.1))',
             borderRadius: '8px',
