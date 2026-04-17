@@ -476,7 +476,7 @@ export default function CollectionTree() {
           {item.type === 'folder' && item.data?.pinned && (
             <span style={{ color: '#06b6d4', marginRight: '4px', fontSize: '12px' }} title="Pinned">★</span>
           )}
-          <button 
+          <span 
             className="tree-actions"
             onClick={(e) => {
               e.stopPropagation();
@@ -495,7 +495,7 @@ export default function CollectionTree() {
             }}
           >
             ⋮
-          </button>
+          </span>
         </div>
       );
     }
