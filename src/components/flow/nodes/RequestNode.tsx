@@ -35,7 +35,6 @@ export function RequestNode({ data, id }: RequestNodeProps) {
   const handleActionClick = (action: string, e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    console.log('[RequestNode] Action clicked:', action, 'id:', id);
     if (data.onAction) {
       data.onAction(action, id);
     }
