@@ -75,13 +75,10 @@ export default function NavSidebar() {
         <button
           key={tab.id}
           className={`nav-btn ${sidebarTab === tab.id ? 'active' : ''}`}
-          onClick={(e) => {
-            console.log('[NavSidebar] Clicked tab:', tab.id, 'current sidebarTab:', sidebarTab, 'sidebarVisible:', sidebarVisible);
+          onClick={() => {
             if (sidebarTab === tab.id) {
-              console.log('[NavSidebar] Toggling sidebar');
               toggleSidebar();
             } else {
-              console.log('[NavSidebar] Setting tab to:', tab.id);
               setSidebarTab(tab.id as any);
               if (!sidebarVisible) toggleSidebar();
             }
