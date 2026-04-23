@@ -42,9 +42,7 @@ export default function AuthTab() {
           throw new Error('No access_token found in response');
         }
       } catch (e) {
-        // Fallback: If not JSON or missing access_token, just show raw response
         toast.error('Could not parse token response automatically', { id: 'oauth-flow' });
-        console.warn('Raw token response:', tokenResponse);
       }
     } catch (err: any) {
       toast.error('OAuth flow failed: ' + err.message, { id: 'oauth-flow' });
