@@ -18,16 +18,17 @@ export class VariableResolver {
   ): string {
     if (!text || typeof text !== 'string') return text;
 
-    // Combine variables, prioritizing collection over environment
-    // Consider variables enabled (default to true if undefined)
+    // Combine variables, prioritizing environment over collection
+    // Look at globals first (if we had them), then collection, then environment
     const variablesMap = new Map<string, string>();
     
-    (environmentVariables as Variable[])
+    // Lowest priority
+    collectionVariables
       .filter(v => v.enabled !== false && v.key?.trim().length > 0)
       .forEach(v => variablesMap.set(v.key, v.value));
 
-    // Collection variables overwrite environment variables
-    collectionVariables
+    // Higher priority: Environment variables overwrite collection variables
+    (environmentVariables as Variable[])
       .filter(v => v.enabled !== false && v.key?.trim().length > 0)
       .forEach(v => variablesMap.set(v.key, v.value));
 

@@ -67,6 +67,7 @@ pub struct EnvVariable {
     pub key: String,
     pub value: String,
     pub enabled: bool,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

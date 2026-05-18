@@ -39,11 +39,7 @@ export const useEnvStore = create<EnvStore>((set, get) => ({
       });
     } catch (error) {
       console.error('Failed to load environments:', error);
-      // Create defaults
-      const defaults: Environment[] = [
-        { id: 'global', name: 'Global', variables: [] },
-      ];
-      set({ environments: defaults, activeEnvId: 'global' });
+      set({ environments: [], activeEnvId: null });
     } finally {
       set({ isLoading: false });
     }

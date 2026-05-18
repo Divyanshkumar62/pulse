@@ -106,7 +106,7 @@ export interface Collection {
 export interface Environment {
   id: string;
   name: string;
-  variables: { key: string; value: string; enabled: boolean }[];
+  variables: Variable[];
 }
 
 export interface HistoryEntry {

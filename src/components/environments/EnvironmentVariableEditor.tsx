@@ -1,6 +1,7 @@
 import { useEnvStore } from '../../stores/useEnvStore';
 import { useAppStore } from '../../stores/useAppStore';
 import KeyValueTable from '../request/KeyValueTable';
+import '../../styles/components/environments.css';
 
 export default function EnvironmentVariableEditor() {
   const { environments, updateEnvironment } = useEnvStore();
@@ -18,41 +19,45 @@ export default function EnvironmentVariableEditor() {
   }
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      height: '100%',
-      padding: '20px',
-      gap: '16px'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="editor-container">
+      <div className="editor-header">
         <button 
           onClick={() => setSelectedEnvironmentId(null)}
           style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px' }}
         >
-          ← Back
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
         </button>
-        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>{selectedEnv.name}</h2>
+        <input
+          value={selectedEnv.name}
+          onChange={(e) => updateEnvironment(selectedEnv.id, { name: e.target.value })}
+          className="mono"
+          style={{ 
+            background: 'transparent', 
+            border: 'none', 
+            fontSize: '18px', 
+            fontWeight: 600, 
+            color: 'var(--text-primary)',
+            outline: 'none',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            width: '100%'
+          }}
+          placeholder="Environment Name"
+        />
       </div>
 
-      <div style={{ 
-        background: 'rgba(22, 27, 34, 0.7)',
-        backdropFilter: 'blur(40px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '12px',
-        padding: '16px',
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+      <div className="editor-card">
+        <p className="editor-help">
           Environment variables override Global variables. Use {'{{variable_name}}'} syntax in your requests.
         </p>
         
         <div style={{ flex: 1, overflowY: 'auto' }}>
           <KeyValueTable 
             items={selectedEnv.variables}
-            onChange={(newVars) => updateEnvironment(selectedEnv.id, { variables: newVars as { key: string; value: string; enabled: boolean }[] })}
+            onChange={(newVars) => updateEnvironment(selectedEnv.id, { variables: newVars as any[] })}
             keyPlaceholder="Variable Name"
             valuePlaceholder="Value"
           />

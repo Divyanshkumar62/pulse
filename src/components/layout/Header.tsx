@@ -1,11 +1,14 @@
 import { useAppStore } from '../../stores/useAppStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
+import { useEnvStore } from '../../stores/useEnvStore';
+import CustomSelect from '../ui/CustomSelect';
 import '../../styles/components/header.css';
 import GitSync from './GitSync';
 
 export default function Header() {
   const { setProfileOpen } = useAppStore();
   const { settings } = useSettingsStore();
+  const { environments, activeEnvId, setActiveEnvId } = useEnvStore();
   
   return (
     <header className="app-header" data-tauri-drag-region>
@@ -25,6 +28,19 @@ export default function Header() {
       </div>
 
       <div className="header-right">
+        <div style={{ width: '200px' }}>
+          <CustomSelect
+            value={activeEnvId || ''}
+            onChange={(val) => setActiveEnvId(val || null)}
+            options={[
+              { value: '', label: 'No Environment' },
+              ...environments.map(env => ({
+                value: env.id,
+                label: env.name
+              }))
+            ]}
+          />
+        </div>
         <div className="user-profile" onClick={() => setProfileOpen(true)}>
           {settings?.avatarUrl ? (
             <img src={settings.avatarUrl} alt="Profile" />

@@ -1,66 +1,56 @@
 import { useEnvStore } from '../../stores/useEnvStore';
 import { useAppStore } from '../../stores/useAppStore';
+import '../../styles/components/environments.css';
 
 export default function EnvironmentsPanel() {
   const { environments, activeEnvId, setActiveEnvId, deleteEnvironment } = useEnvStore();
   const { setAddEnvironmentModalOpen, setSelectedEnvironmentId } = useAppStore();
 
   return (
-    <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>Environments</h2>
+    <div className="environments-panel">
+      <div className="panel-header">
+        <h2 className="panel-title">Environments</h2>
         <button onClick={() => setAddEnvironmentModalOpen(true)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '12px' }}>
           + New
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div className="env-list">
         {environments.map(env => (
           <div 
             key={env.id}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              padding: '10px 12px', 
-              background: activeEnvId === env.id ? 'var(--accent-subtle)' : 'var(--bg-surface)',
-              border: `1px solid ${activeEnvId === env.id ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-              borderRadius: '8px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
+            className={`env-item ${activeEnvId === env.id ? 'active' : ''}`}
+            onClick={() => {
+              setActiveEnvId(env.id);
+              setSelectedEnvironmentId(env.id);
             }}
-            onClick={() => setActiveEnvId(env.id)}
           >
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ 
-                width: '12px', height: '12px', borderRadius: '50%', 
-                background: activeEnvId === env.id ? 'var(--accent-primary)' : 'transparent',
-                border: activeEnvId === env.id ? 'none' : '2px solid var(--border-subtle)'
-              }} />
-              <span style={{ fontSize: '13px', fontWeight: activeEnvId === env.id ? 600 : 500 }}>
-                {env.name} {env.variables.length > 0 && `(${env.variables.length})`}
-              </span>
-            </div>
+            <div className="env-indicator" style={{ 
+              background: activeEnvId === env.id ? 'var(--accent-primary)' : 'transparent',
+              border: activeEnvId === env.id ? 'none' : '1px solid var(--text-tertiary)'
+            }} />
+            <span className="env-name">{env.name}</span>
+            {env.variables.length > 0 && (
+              <span className="env-count">{env.variables.length}</span>
+            )}
             
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button 
-                onClick={(e) => { e.stopPropagation(); setSelectedEnvironmentId(env.id); }}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
-                title="Edit Variables"
-              >
-                🔧
-              </button>
+            <div className="env-actions">
               {environments.length > 1 && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); deleteEnvironment(env.id); }}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--error-color)', cursor: 'pointer', padding: '4px' }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '4px' }}
                   title="Delete"
                 >
-                  🗑️
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
                 </button>
               )}
             </div>
           </div>
         ))}
+...
 
         {environments.length === 0 && (
           <div style={{ marginTop: '20px', padding: '20px', textAlign: 'center', border: '1px dashed var(--border-subtle)', borderRadius: '12px' }}>
