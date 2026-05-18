@@ -1,84 +1,201 @@
 import { useState } from 'react';
-import { useEnvStore } from '../../stores/useEnvStore';
-import { v4 as uuidv4 } from 'uuid';
-import '../../styles/components/activity-panel.css';
-
-interface MockServer {
-  id: string;
-  name: string;
-  url: string;
-  status: 'active' | 'inactive';
-}
+import { useMockStore } from '../../stores/useMockStore';
+import { Play, Square, Trash2, Server } from 'lucide-react';
 
 export default function MockServerPanel() {
-  const { environments, addEnvironment } = useEnvStore();
-  const [mockServers, setMockServers] = useState<MockServer[]>([
-    { id: uuidv4(), name: 'Pulse Mock API', url: 'https://mock.pulse.api/v1', status: 'active' }
-  ]);
+  const { 
+    mockServers, 
+    activeMockServerId, 
+    addMockServer, 
+    setActiveMockServerId, 
+    deleteMockServer,
+    startMockServer,
+    stopMockServer
+  } = useMockStore();
 
-  const handleCreateEnv = () => {
-    addEnvironment({ id: uuidv4(), name: 'New Environment', variables: [] });
+  const [newMockName, setNewMockName] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  const handleCreateMock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMockName.trim()) return;
+
+    // Find next available port starting from 3000
+    const takenPorts = mockServers.map(s => s.port);
+    let nextPort = 3000;
+    while (takenPorts.includes(nextPort)) {
+      nextPort++;
+    }
+
+    await addMockServer(newMockName.trim(), nextPort);
+    setNewMockName('');
+    setShowAddForm(false);
   };
 
-  const handleCreateMock = () => {
-    const newMock: MockServer = {
-      id: uuidv4(),
-      name: 'New Mock Server',
-      url: `https://mock.pulse.api/${uuidv4().slice(0, 8)}`,
-      status: 'active'
-    };
-    setMockServers([...mockServers, newMock]);
+  const handleToggleServer = async (id: string, currentStatus: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (currentStatus === 'active') {
+        await stopMockServer(id);
+      } else {
+        await startMockServer(id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteServer = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Are you sure you want to delete this mock server?')) {
+      await deleteMockServer(id);
+    }
   };
 
   return (
-    <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
+    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 className="text-h2" style={{ margin: 0, fontSize: '14px' }}>Mock Servers</h2>
-        <button onClick={handleCreateMock} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '12px' }}>
-          + New Mock
+        <h2 className="text-h2" style={{ margin: 0, fontSize: '14px', letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+          Mock Servers
+        </h2>
+        <button 
+          onClick={() => setShowAddForm(!showAddForm)} 
+          className="btn-secondary" 
+          style={{ padding: '4px 8px', fontSize: '11px', fontWeight: 600 }}
+        >
+          {showAddForm ? 'Cancel' : '+ New Mock'}
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {mockServers.map(mock => (
-          <div 
-            key={mock.id}
+      {showAddForm && (
+        <form 
+          onSubmit={handleCreateMock} 
+          style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '8px', 
+            background: 'var(--bg-surface)', 
+            padding: '12px', 
+            borderRadius: '8px',
+            border: '1px solid var(--border-default)' 
+          }}
+        >
+          <input 
+            type="text" 
+            placeholder="Mock Server Name" 
+            value={newMockName}
+            onChange={(e) => setNewMockName(e.target.value)}
             style={{ 
-              padding: '12px', 
-              background: 'var(--bg-surface)', 
-              border: '1px solid var(--border-subtle)', 
-              borderRadius: '8px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
+              background: 'var(--bg-input)', 
+              border: '1px solid var(--border-default)', 
+              color: 'var(--text-primary)', 
+              padding: '6px 10px', 
+              fontSize: '12px', 
+              borderRadius: '4px',
+              outline: 'none'
             }}
+            autoFocus
+          />
+          <button 
+            type="submit" 
+            className="send-btn-premium" 
+            style={{ fontSize: '11px', padding: '6px', fontWeight: 600 }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600 }}>{mock.name}</span>
-              <span style={{ 
-                fontSize: '10px', 
-                padding: '2px 6px', 
-                borderRadius: '10px', 
-                background: mock.status === 'active' ? 'var(--status-success-subtle)' : 'var(--bg-overlay)',
-                color: mock.status === 'active' ? 'var(--status-success)' : 'var(--text-tertiary)',
-                fontWeight: 700
-              }}>
-                {mock.status.toUpperCase()}
-              </span>
-            </div>
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {mock.url}
-            </span>
-          </div>
-        ))}
+            Create Server
+          </button>
+        </form>
+      )}
 
-        {environments.length === 0 && (
-          <div style={{ marginTop: '20px', padding: '20px', textAlign: 'center', border: '1px dashed var(--border-subtle)', borderRadius: '12px' }}>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>No environments found</p>
-            <button onClick={handleCreateEnv} className="send-btn-premium" style={{ fontSize: '12px' }}>
-              Add Environment
-            </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
+        {mockServers.length === 0 ? (
+          <div style={{ marginTop: '20px', padding: '24px', textAlign: 'center', border: '1px dashed var(--border-subtle)', borderRadius: '12px' }}>
+            <Server size={32} style={{ color: 'var(--text-tertiary)', marginBottom: '8px', opacity: 0.7 }} />
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>No mock servers found</p>
+            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>Create one to mock APIs locally.</p>
           </div>
+        ) : (
+          mockServers.map(mock => {
+            const isActive = activeMockServerId === mock.id;
+            return (
+              <div 
+                key={mock.id}
+                onClick={() => setActiveMockServerId(mock.id)}
+                style={{ 
+                  padding: '12px', 
+                  background: isActive ? 'var(--accent-subtle)' : 'var(--bg-surface)', 
+                  border: `1px solid ${isActive ? 'var(--accent-border)' : 'var(--border-subtle)'}`, 
+                  borderRadius: '10px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {mock.name}
+                  </span>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button 
+                      onClick={(e) => handleToggleServer(mock.id, mock.status, e)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: mock.status === 'active' ? 'var(--status-error)' : 'var(--status-success)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        borderRadius: '4px',
+                        transition: 'background 150ms ease'
+                      }}
+                      title={mock.status === 'active' ? 'Stop Server' : 'Start Server'}
+                    >
+                      {mock.status === 'active' ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
+                    </button>
+
+                    <button 
+                      onClick={(e) => handleDeleteServer(mock.id, e)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-tertiary)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        borderRadius: '4px'
+                      }}
+                      title="Delete Mock Server"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    Port: {mock.port}
+                  </span>
+                  
+                  <span style={{ 
+                    fontSize: '9px', 
+                    padding: '2px 6px', 
+                    borderRadius: '8px', 
+                    background: mock.status === 'active' ? 'var(--status-success-subtle)' : 'var(--bg-overlay)',
+                    color: mock.status === 'active' ? 'var(--status-success)' : 'var(--text-tertiary)',
+                    fontWeight: 700
+                  }}>
+                    {mock.status.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

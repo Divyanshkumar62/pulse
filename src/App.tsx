@@ -11,8 +11,10 @@ import { useSettingsStore } from './stores/useSettingsStore';
 import { useWorkspaceStore } from './stores/useWorkspaceStore';
 import { useHistoryStore } from './stores/useHistoryStore';
 import { useAppStore } from './stores/useAppStore';
+import { useMockStore } from './stores/useMockStore';
 import { ReactFlowProvider } from '@xyflow/react';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import MockServerEditor from './components/mock/MockServerEditor';
 
 export default function App() {
   const initEnvStore = useEnvStore(state => state.initialize);
@@ -20,21 +22,26 @@ export default function App() {
   const initTeamStore = useTeamStore(state => state.initialize);
   const initWorkspaceStore = useWorkspaceStore(state => state.initialize);
   const initHistoryStore = useHistoryStore(state => state.initialize);
+  const initMockStore = useMockStore(state => state.initialize);
   const { sidebarTab, selectedMonitorId, selectedEnvironmentId } = useAppStore();
+  const activeMockServerId = useMockStore(state => state.activeMockServerId);
 
   useEffect(() => {
     initSettingsStore().then(() => {
       initTeamStore().then(() => {
-        initWorkspaceStore();
+        initWorkspaceStore().then(() => {
+          initMockStore();
+        });
       });
     });
     initEnvStore();
     initHistoryStore();
-  }, [initEnvStore, initSettingsStore, initTeamStore, initWorkspaceStore, initHistoryStore]);
+  }, [initEnvStore, initSettingsStore, initTeamStore, initWorkspaceStore, initHistoryStore, initMockStore]);
 
   const showMonitorDashboard = sidebarTab === 'monitor' && selectedMonitorId;
   const showEnvironmentEditor = sidebarTab === 'environments' && selectedEnvironmentId;
   const showFlowBuilder = sidebarTab === 'flows';
+  const showMockServerEditor = sidebarTab === 'mock-servers' && activeMockServerId;
 
   return (
     <ErrorBoundary>
@@ -49,6 +56,8 @@ export default function App() {
               <FlowBuilder />
             </div>
           </ReactFlowProvider>
+        ) : showMockServerEditor ? (
+          <MockServerEditor />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <TabBar />

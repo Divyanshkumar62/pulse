@@ -197,3 +197,20 @@ export interface Flow {
   updatedAt?: number;
   pinned?: boolean;
 }
+
+export interface MockRoute {
+  id: string;
+  path: string;
+  method: string;
+  statusCode: number;
+  responseBody: string;
+  headers: KeyValuePair[];
+}
+
+export interface MockServer {
+  id: string;
+  name: string;
+  port: number;
+  routes: MockRoute[];
+  status: 'active' | 'inactive';
+}

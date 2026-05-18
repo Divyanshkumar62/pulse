@@ -1,6 +1,7 @@
 mod oauth;
 mod collections;
 mod http;
+mod mock_server;
 
 #[tauri::command]
 async fn start_oauth_flow(
@@ -83,6 +84,7 @@ use collections::types::{Environment, HistoryEntry, RequestBody, Collection};
 use collections::export;
 use http::client::send_request;
 use http::types::HttpResponse;
+use mock_server::{start_mock_server, stop_mock_server, load_mock_servers, save_mock_servers, get_running_mock_servers, save_workspace_mock_servers, load_workspace_mock_servers};
 use url::Url;
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -482,6 +484,13 @@ pub fn run() {
             git_add_remote,
             save_flows_to_disk,
             load_flows_from_workspace,
+            start_mock_server,
+            stop_mock_server,
+            load_mock_servers,
+            save_mock_servers,
+            get_running_mock_servers,
+            save_workspace_mock_servers,
+            load_workspace_mock_servers,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
