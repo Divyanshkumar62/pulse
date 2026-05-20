@@ -69,6 +69,14 @@ pub fn import_postman(path: impl AsRef<Path>) -> Result<Collection, Box<dyn std:
     })
 }
 
+pub fn import_openapi(path: impl AsRef<Path>) -> Result<Collection, Box<dyn std::error::Error>> {
+    let content = fs::read_to_string(path)?;
+    crate::collections::openapi::import_openapi(&content).map_err(|e| {
+        Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+            as Box<dyn std::error::Error>
+    })
+}
+
 pub fn load_all_collections<P: AsRef<Path>>(dir: P) -> Result<Vec<Collection>, Box<dyn std::error::Error>> {
     let mut collections = Vec::new();
     if !dir.as_ref().exists() {

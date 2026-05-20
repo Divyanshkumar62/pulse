@@ -7,6 +7,14 @@ edition = "2021"
 name = "pulse_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[[bin]]
+name = "pulse"
+path = "src/main.rs"
+
+[[bin]]
+name = "pulse-cli"
+path = "src/bin/pulse-cli.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -34,6 +42,8 @@ env_logger = "0.10"
 open = "5.3.3"
 boa_engine = "0.19"
 fake = "2.9.2"
+clap = { version = "4", features = ["derive"] }
+openapiv3 = "2"
 
 [profile.release]
 panic = "abort"

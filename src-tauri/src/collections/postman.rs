@@ -115,6 +115,7 @@ fn request_from_postman(req: PostmanRequest) -> Request {
         },
         auth: None,
         pre_request_script: None,
+        test_script: None,
         protocol: None,
     }
 }
@@ -136,6 +137,7 @@ fn extract_items(items: Vec<PostmanItem>) -> (Vec<Request>, Vec<Folder>) {
                     id: folder_id.clone(),
                     name: folder.name,
                     requests: folder_requests,
+                    folders: None,
                 });
                 folders.extend(subfolders);
             }

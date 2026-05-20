@@ -1,8 +1,8 @@
 mod oauth;
-mod collections;
+pub mod collections;
 mod http;
 mod mock_server;
-mod script_runner;
+pub mod script_runner;
 
 #[tauri::command]
 async fn start_oauth_flow(
@@ -247,6 +247,11 @@ fn import_postman_collection(path: String) -> Result<collections::types::Collect
 }
 
 #[tauri::command]
+fn import_openapi_spec(path: String) -> Result<collections::types::Collection, String> {
+    loader::import_openapi(&path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn export_collection(collection: Collection, format: String) -> Result<serde_json::Value, String> {
     match format.as_str() {
         "postman" => Ok(export::to_postman_v21(&collection)),
@@ -466,6 +471,7 @@ pub fn run() {
             load_history,
             save_history,
             import_postman_collection,
+            import_openapi_spec,
             get_user_settings,
             save_user_settings,
             create_team,

@@ -1,9 +1,7 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Instant;
 
 use reqwest::Client;
-use once_cell::sync::Lazy;
 
 use crate::http::error::HttpError;
 use crate::http::types::{Header, HttpResponse};
