@@ -42,6 +42,59 @@ pub struct TestResult {
     pub message: Option<String>,
 }
 
+const SHIM: &str = r#"
+    pm.expect = function(val) {
+        const assertion = {
+            to: {
+                be: {
+                    a: function(type) {
+                        if (typeof val !== type) throw new Error(`Expected ${val} to be a ${type}`);
+                        return assertion;
+                    },
+                    eql: function(other) {
+                        if (JSON.stringify(val) !== JSON.stringify(other)) throw new Error(`Expected ${JSON.stringify(val)} to equal ${JSON.stringify(other)}`);
+                        return assertion;
+                    }
+                },
+                have: {
+                    status: function(code) {
+                        if (!pm.response) throw new Error("No response available for status check");
+                        if (pm.response.code !== code) throw new Error(`Expected status ${code} but got ${pm.response.code}`);
+                        return assertion;
+                    }
+                },
+                include: function(item) {
+                    if (Array.isArray(val) || typeof val === 'string') {
+                        if (!val.includes(item)) throw new Error(`Expected ${JSON.stringify(val)} to include ${JSON.stringify(item)}`);
+                    } else {
+                        throw new Error("include() expects an array or string");
+                    }
+                    return assertion;
+                }
+            },
+            not: {
+                to: {
+                    be: {
+                        eql: function(other) {
+                            if (JSON.stringify(val) === JSON.stringify(other)) throw new Error(`Expected ${JSON.stringify(val)} NOT to equal ${JSON.stringify(other)}`);
+                            return assertion;
+                        }
+                    }
+                }
+            }
+        };
+        return assertion;
+    };
+"#;
+
+#[tauri::command]
+pub fn run_script(
+    script: String,
+    context: ScriptContext,
+) -> Result<ScriptExecutionResult, String> {
+    execute_js(script, context)
+}
+
 pub fn execute_js(
     script: String,
     context_data: ScriptContext,
@@ -52,7 +105,6 @@ pub fn execute_js(
     let logs = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let logs_clone = logs.clone();
 
-    // Use unsafe from_closure since we capture Arc (not Copy)
     let console_log_fn = unsafe {
         NativeFunction::from_closure(move |_this, args, _context| {
             let mut logs = logs_clone.lock().unwrap();
@@ -169,6 +221,25 @@ pub fn execute_js(
         }
         let headers_obj = headers_builder.build();
 
+        let json_fn = unsafe {
+            NativeFunction::from_closure(move |_this, _args, context| {
+                let body = context.global_object()
+                    .get(JsString::from("pm"), context)?
+                    .as_object().unwrap()
+                    .get(JsString::from("response"), context)?
+                    .as_object().unwrap()
+                    .get(JsString::from("body"), context)?
+                    .as_string().unwrap()
+                    .to_std_string_escaped();
+                
+                if let Ok(_json) = serde_json::from_str::<serde_json::Value>(&body) {
+                    Ok(JsValue::undefined()) 
+                } else {
+                    Ok(JsValue::undefined())
+                }
+            })
+        };
+
         Some(
             ObjectInitializer::new(&mut context)
                 .property(
@@ -182,6 +253,7 @@ pub fn execute_js(
                     Attribute::all(),
                 )
                 .property(JsString::from("headers"), headers_obj, Attribute::all())
+                .function(json_fn, JsString::from("json"), 0)
                 .build(),
         )
     } else {
@@ -240,6 +312,11 @@ pub fn execute_js(
 
     let pm = pm_init.build();
     context.register_global_property(JsString::from("pm"), pm, Attribute::all());
+
+    // Execute Shim
+    context
+        .eval(Source::from_bytes(SHIM.as_bytes()))
+        .map_err(|e| format!("Shim Error: {}", e))?;
 
     // Execute Script
     context

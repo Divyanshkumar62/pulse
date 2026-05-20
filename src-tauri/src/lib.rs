@@ -1,8 +1,8 @@
 mod oauth;
 mod collections;
 mod http;
-
-use log::{info, error};
+mod mock_server;
+mod script_runner;
 
 #[tauri::command]
 async fn start_oauth_flow(
@@ -85,6 +85,7 @@ use collections::types::{Environment, HistoryEntry, RequestBody, Collection};
 use collections::export;
 use http::client::send_request;
 use http::types::HttpResponse;
+use mock_server::{start_mock_server, stop_mock_server, load_mock_servers, save_mock_servers, get_running_mock_servers, save_workspace_mock_servers, load_workspace_mock_servers};
 use url::Url;
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -96,7 +97,7 @@ static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 fn get_data_dir() -> &'static PathBuf {
     DATA_DIR.get_or_init(|| {
         let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        let mut path = home.join(".pulse");
+        let path = home.join(".pulse");
         if !path.exists() {
             if let Err(e) = std::fs::create_dir_all(&path) {
                 eprintln!("Warning: Failed to create data directory: {}", e);
@@ -110,6 +111,7 @@ fn get_data_dir() -> &'static PathBuf {
 pub struct UserSettings {
     pub email: String,
     pub name: String,
+    pub avatar_url: Option<String>,
     pub default_timeout_secs: u64,
     pub follow_redirects: bool,
     pub verify_ssl: bool,
@@ -121,6 +123,7 @@ impl Default for UserSettings {
         Self {
             email: "user@example.com".to_string(),
             name: "User".to_string(),
+            avatar_url: None,
             default_timeout_secs: 30,
             follow_redirects: true,
             verify_ssl: true,
@@ -185,6 +188,7 @@ fn default_environments() -> Vec<Environment> {
                     key: "base_url".to_string(),
                     value: "http://localhost:3000".to_string(),
                     enabled: true,
+                    description: None,
                 },
             ],
         },
@@ -196,6 +200,7 @@ fn default_environments() -> Vec<Environment> {
                     key: "base_url".to_string(),
                     value: "https://staging.api.com".to_string(),
                     enabled: true,
+                    description: None,
                 },
             ],
         },
@@ -207,6 +212,7 @@ fn default_environments() -> Vec<Environment> {
                     key: "base_url".to_string(),
                     value: "https://api.com".to_string(),
                     enabled: true,
+                    description: None,
                 },
             ],
         },
@@ -247,6 +253,63 @@ fn export_collection(collection: Collection, format: String) -> Result<serde_jso
         "openapi" => Ok(export::to_openapi_v3(&collection)),
         _ => Err(format!("Unsupported export format: {}", format)),
     }
+}
+
+// Workspace Sync Commands
+#[tauri::command]
+async fn save_collection_to_disk(workspace_path: String, collection: Collection) -> Result<(), String> {
+    collections::workspace::save_collection_to_disk(workspace_path, collection).await
+}
+
+#[tauri::command]
+async fn load_collections_from_workspace(workspace_path: String) -> Result<Vec<Collection>, String> {
+    collections::workspace::load_collections_from_workspace(workspace_path).await
+}
+
+#[tauri::command]
+async fn save_workspace_to_disk(workspace_path: String, environments: Vec<Environment>) -> Result<(), String> {
+    collections::workspace::save_workspace_to_disk(workspace_path, environments).await
+}
+
+#[tauri::command]
+async fn save_flows_to_disk(workspace_path: String, flows: Vec<crate::collections::types::Flow>) -> Result<(), String> {
+    collections::workspace::save_flows_to_disk(workspace_path, flows).await
+}
+
+#[tauri::command]
+async fn load_flows_from_workspace(workspace_path: String) -> Result<Vec<crate::collections::types::Flow>, String> {
+    collections::workspace::load_flows_from_workspace(workspace_path).await
+}
+
+// Git Commands
+#[tauri::command]
+async fn git_init_repo(path: String) -> Result<(), String> {
+    collections::git::git_init(&path)
+}
+
+#[tauri::command]
+async fn get_git_status(path: String) -> Result<collections::git::GitStatus, String> {
+    collections::git::git_status(&path)
+}
+
+#[tauri::command]
+async fn git_commit_changes(path: String, message: String) -> Result<(), String> {
+    collections::git::git_commit(&path, &message)
+}
+
+#[tauri::command]
+async fn git_push_repo(path: String) -> Result<bool, String> {
+    collections::git::git_push(&path)
+}
+
+#[tauri::command]
+async fn git_pull_repo(path: String) -> Result<(), String> {
+    collections::git::git_pull(&path)
+}
+
+#[tauri::command]
+async fn git_add_remote(path: String, remote_name: String, remote_url: String) -> Result<(), String> {
+    collections::git::git_add_remote(&path, &remote_name, &remote_url)
 }
 
 #[tauri::command]
@@ -414,6 +477,25 @@ pub fn run() {
             decline_invitation,
             load_collections,
             create_data_dir,
+            save_collection_to_disk,
+            load_collections_from_workspace,
+            save_workspace_to_disk,
+            git_init_repo,
+            get_git_status,
+            git_commit_changes,
+            git_push_repo,
+            git_pull_repo,
+            git_add_remote,
+            save_flows_to_disk,
+            load_flows_from_workspace,
+            start_mock_server,
+            stop_mock_server,
+            load_mock_servers,
+            save_mock_servers,
+            get_running_mock_servers,
+            save_workspace_mock_servers,
+            load_workspace_mock_servers,
+            script_runner::run_script,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

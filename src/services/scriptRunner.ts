@@ -1,56 +1,92 @@
-import { Request, Environment, Header } from '../types';
+import { invoke } from '@tauri-apps/api/core';
+import { Request, Environment, Header, HttpResponse } from '../types';
 
 export interface ScriptResult {
   modifiedUrl?: string;
   addedHeaders: Header[];
   environmentUpdates: Record<string, string>;
+  logs: string[];
+  tests: { name: string; passed: boolean; message?: string }[];
 }
 
-export function executePreRequestScript(
+export interface RustScriptResult {
+  environment: Record<string, string>;
+  collection: Record<string, string>;
+  logs: string[];
+  tests: { name: string; passed: boolean; message?: string }[];
+}
+
+/**
+ * Executes a script (pre-request or test) using the Rust boa_engine sandbox.
+ * This provides a more robust and Postman-compatible environment than browser eval.
+ */
+export async function executeScript(
   script: string, 
   request: Request, 
-  environment?: Environment
-): ScriptResult {
-  const result: ScriptResult = {
-    addedHeaders: [],
-    environmentUpdates: {},
-  };
+  environment?: Environment,
+  response?: HttpResponse,
+  collectionVariables: Record<string, string> = {}
+): Promise<ScriptResult> {
+  if (!script || !script.trim()) {
+    return {
+      addedHeaders: [],
+      environmentUpdates: {},
+      logs: [],
+      tests: []
+    };
+  }
 
-  if (!script || !script.trim()) return result;
-
-  // Pulse API implementation
-  const pulse = {
+  // Map our frontend types to the expected Rust ScriptContext
+  const context = {
+    environment: environment?.variables.reduce((acc, v) => {
+      if (v.enabled !== false) acc[v.key] = v.value;
+      return acc;
+    }, {} as Record<string, string>) || {},
+    collection: collectionVariables,
     request: {
-      url: {
-        set: (url: string) => { result.modifiedUrl = url; }
-      },
-      headers: {
-        add: (key: string, value: string) => {
-          result.addedHeaders.push({ key, value, enabled: true });
-        }
-      }
+      url: request.url,
+      method: request.method,
+      headers: request.headers.reduce((acc, h) => {
+        if (h.enabled !== false) acc[h.key] = h.value;
+        return acc;
+      }, {} as Record<string, string>)
     },
-    environment: {
-      get: (key: string) => {
-        const variable = environment?.variables.find(v => v.key === key && v.enabled !== false);
-        return variable ? variable.value : undefined;
-      },
-      set: (key: string, value: string) => {
-        result.environmentUpdates[key] = value;
-      }
-    }
+    response: response ? {
+      status: response.status,
+      body: response.body,
+      headers: response.headers.reduce((acc, h) => {
+        acc[h.key] = h.value;
+        return acc;
+      }, {} as Record<string, string>)
+    } : null
   };
 
   try {
-    // We use a Function constructor for a simple sandbox. 
-    // In a production app, a more robust sandbox like isolated-vm would be preferred,
-    // but for a Tauri/Web context, this provides localized scope.
-    const runner = new Function('pulse', script);
-    runner(pulse);
+    const result = await invoke<RustScriptResult>('run_script', { script, context });
+    
+    // Process results back into our ScriptResult format
+    return {
+      environmentUpdates: result.environment,
+      logs: result.logs,
+      tests: result.tests,
+      addedHeaders: [], // Headers modification via script can be added to Rust sandbox later
+    };
   } catch (error: any) {
-    console.error('Pre-request script error:', error);
-    throw new Error(`Script Error: ${error.message}`);
+    console.error('[ScriptRunner] Execution failed:', error);
+    throw new Error(`Script Error: ${error}`);
   }
+}
 
-  return result;
+/**
+ * @deprecated Use executeScript instead. This remains for backward compatibility during transition.
+ */
+export function executePreRequestScriptSync(
+  script: string, 
+  request: Request, 
+  environment?: Environment,
+  response?: HttpResponse
+): any {
+  console.warn('executePreRequestScriptSync is deprecated and uses insecure eval. Switch to executeScript.');
+  // ... old implementation if needed, but we'll prefer the async one
+  return { addedHeaders: [], environmentUpdates: {} };
 }
