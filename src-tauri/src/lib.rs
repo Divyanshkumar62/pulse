@@ -492,6 +492,8 @@ pub fn run() {
             git_push_repo,
             git_pull_repo,
             git_add_remote,
+            collections::git::get_git_diff,
+            collections::git::git_discard_changes,
             save_flows_to_disk,
             load_flows_from_workspace,
             start_mock_server,

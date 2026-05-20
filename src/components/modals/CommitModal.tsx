@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { gitCommit, gitPush } from '../../hooks/useTauri';
-import { Send, CheckCircle, X, Database, FileText } from 'lucide-react';
+import { Send, CheckCircle, X, Database, FileText, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import GitDiffModal from './GitDiffModal';
 
 interface CommitModalProps {
   isOpen: boolean;
   onClose: () => void;
   status: { modified: string[]; untracked: string[] } | null;
   workspacePath: string;
+  refreshStatus?: () => void;
 }
 
-export default function CommitModal({ isOpen, onClose, status, workspacePath }: CommitModalProps) {
+export default function CommitModal({ isOpen, onClose, status, workspacePath, refreshStatus }: CommitModalProps) {
   const [message, setMessage] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [synced, setSynced] = useState(false);
+  const [diffFile, setDiffFile] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -102,9 +105,18 @@ export default function CommitModal({ isOpen, onClose, status, workspacePath }: 
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.1em' }}>CHANGELOG PREVIEW</div>
             <div style={{ maxHeight: '120px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {status?.modified.map(f => (
-                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(37,99,235,0.1)', color: 'var(--accent-primary)' }}>
-                  <FileText size={12} />
-                  <span>{f}</span>
+                <div key={f} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(37,99,235,0.1)', color: 'var(--accent-primary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileText size={12} />
+                    <span>{f}</span>
+                  </div>
+                  <button 
+                    onClick={() => setDiffFile(f)}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+                    title="View Diff"
+                  >
+                    <Eye size={12} />
+                  </button>
                 </div>
               ))}
               {status?.untracked.map(f => (
@@ -192,6 +204,14 @@ export default function CommitModal({ isOpen, onClose, status, workspacePath }: 
           </form>
         </div>
       </div>
+
+      <GitDiffModal 
+        isOpen={!!diffFile} 
+        onClose={() => setDiffFile(null)} 
+        workspacePath={workspacePath} 
+        filePath={diffFile || ''}
+        onDiscardSuccess={refreshStatus}
+      />
     </div>
   );
 }

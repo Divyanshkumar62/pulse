@@ -20,7 +20,17 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const { isSettingsOpen, setSettingsOpen, sidebarVisible, isAddEnvironmentModalOpen, setAddEnvironmentModalOpen, isImportModalOpen, setImportModalOpen, isProfileOpen, setProfileOpen, isCommitModalOpen, setCommitModalOpen: setCommitModalOpenFn, commitModalStatus, commitModalPath, isCreateFlowModalOpen, setCreateFlowModalOpen } = useAppStore();
+  const { 
+    isSettingsOpen, setSettingsOpen, 
+    sidebarVisible, 
+    isAddEnvironmentModalOpen, 
+    isImportModalOpen, setImportModalOpen, 
+    isProfileOpen, setProfileOpen, 
+    isCommitModalOpen, setCommitModalOpen: setCommitModalOpenFn, 
+    commitModalStatus, commitModalPath, commitModalRefresh,
+    isCreateFlowModalOpen, setCreateFlowModalOpen 
+  } = useAppStore();
+  
   useKeyboardShortcuts();
 
   return (
@@ -46,9 +56,10 @@ export default function AppShell({ children }: AppShellProps) {
         onClose={() => setCommitModalOpenFn(false)}
         status={commitModalStatus}
         workspacePath={commitModalPath}
+        refreshStatus={commitModalRefresh || undefined}
       />
       <CreateFlowModal isOpen={isCreateFlowModalOpen} onClose={() => setCreateFlowModalOpen(false)} />
-      <Toaster theme="dark" position="bottom-right" />
+      <Toaster position="bottom-right" richColors theme="dark" />
     </div>
   );
 }

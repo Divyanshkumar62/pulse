@@ -9,6 +9,12 @@ pub struct GitStatus {
     pub modified: Vec<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DiffLine {
+    pub r#type: String, // "added", "removed", "equal"
+    pub content: String,
+}
+
 fn has_remote(path: &str) -> bool {
     Command::new("git")
         .args(["remote"])
@@ -196,6 +202,62 @@ pub fn git_add_remote(path: &str, remote_name: &str, remote_url: &str) -> Result
         if !output.status.success() {
             return Err(String::from_utf8_lossy(&output.stderr).to_string());
         }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_git_diff(path: String, file_path: String) -> Result<Vec<DiffLine>, String> {
+    let output = Command::new("git")
+        .args(["show", &format!("HEAD:{}", file_path)])
+        .current_dir(&path)
+        .output();
+
+    let old_content = if let Ok(o) = output {
+        if o.status.success() {
+            String::from_utf8_lossy(&o.stdout).to_string()
+        } else {
+            "".to_string()
+        }
+    } else {
+        "".to_string()
+    };
+
+    let new_content = std::fs::read_to_string(std::path::Path::new(&path).join(&file_path))
+        .map_err(|e| format!("Failed to read current file: {}", e))?;
+
+    let mut diff_lines = vec![];
+
+    for result in diff::lines(&old_content, &new_content) {
+        match result {
+            diff::Result::Left(l) => diff_lines.push(DiffLine {
+                r#type: "removed".to_string(),
+                content: l.to_string(),
+            }),
+            diff::Result::Both(l, _) => diff_lines.push(DiffLine {
+                r#type: "equal".to_string(),
+                content: l.to_string(),
+            }),
+            diff::Result::Right(r) => diff_lines.push(DiffLine {
+                r#type: "added".to_string(),
+                content: r.to_string(),
+            }),
+        }
+    }
+
+    Ok(diff_lines)
+}
+
+#[tauri::command]
+pub async fn git_discard_changes(path: String, file_path: String) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["checkout", "--", &file_path])
+        .current_dir(&path)
+        .output()
+        .map_err(|e| format!("Failed to run git checkout: {}", e))?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
     }
     Ok(())
 }

@@ -73,7 +73,7 @@ export default function GitSync() {
 
   const openCommitModal = async () => {
     const freshStatus = await getGitStatus(activeWorkspace?.path || '');
-    setCommitModalOpen(true, freshStatus, activeWorkspace?.path || '');
+    setCommitModalOpen(true, freshStatus, activeWorkspace?.path || '', refreshStatus);
   };
 
   if (!activeWorkspace?.path) return null;

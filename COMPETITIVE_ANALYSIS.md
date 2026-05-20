@@ -67,5 +67,5 @@ To differentiate Pulse and improve its competitive standing, consider the follow
 1.  **[DONE] Enhance the Scripting Sandbox:** Expand the `boa_engine` integration to support a wider array of `pm.*` functions (especially assertions and async requests) to ensure seamless migration of Postman collections.
 2.  **[DONE] Develop a CLI Runner:** Create a companion CLI tool (like Newman) to allow Pulse collections to be executed in GitHub Actions or Jenkins.
 3.  **[DONE] OpenAPI/Swagger Integration:** Add the ability to import OpenAPI specs and automatically generate collections and mock routes.
-4.  **Capitalize on GitOps:** Pulse's native Git sync is a strong feature. Enhance this by adding visual diffing for collections and conflict resolution directly in the UI.
+4.  **[DONE] Capitalize on GitOps:** Pulse's native Git sync is a strong feature. Added visual diffing for collections and ability to discard changes directly in the UI.
 5.  **[DONE] Dynamic Mocking:** Upgrade the Mock Server to support dynamic data generation (using a Rust port of Faker) to compete with Apidog.
