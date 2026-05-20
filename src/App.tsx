@@ -2,37 +2,68 @@ import { useEffect } from 'react';
 import AppShell from './components/layout/AppShell';
 import TabBar from './components/tabs/TabBar';
 import TabContent from './components/tabs/TabContent';
+import MonitorDashboard from './components/monitor/MonitorDashboardView';
+import EnvironmentVariableEditor from './components/environments/EnvironmentVariableEditor';
+import FlowBuilder from './components/flow/FlowBuilder';
 import { useEnvStore } from './stores/useEnvStore';
 import { useTeamStore } from './stores/useTeamStore';
 import { useSettingsStore } from './stores/useSettingsStore';
 import { useWorkspaceStore } from './stores/useWorkspaceStore';
+import { useHistoryStore } from './stores/useHistoryStore';
+import { useAppStore } from './stores/useAppStore';
+import { useMockStore } from './stores/useMockStore';
+import { ReactFlowProvider } from '@xyflow/react';
 import ErrorBoundary from './components/ui/ErrorBoundary';
+import MockServerEditor from './components/mock/MockServerEditor';
 
 export default function App() {
   const initEnvStore = useEnvStore(state => state.initialize);
   const initSettingsStore = useSettingsStore(state => state.initialize);
   const initTeamStore = useTeamStore(state => state.initialize);
   const initWorkspaceStore = useWorkspaceStore(state => state.initialize);
+  const initHistoryStore = useHistoryStore(state => state.initialize);
+  const initMockStore = useMockStore(state => state.initialize);
+  const { sidebarTab, selectedMonitorId, selectedEnvironmentId } = useAppStore();
+  const activeMockServerId = useMockStore(state => state.activeMockServerId);
 
   useEffect(() => {
-    // Initialize required stores on boot
     initSettingsStore().then(() => {
-      // Teams need settings for email/name
       initTeamStore().then(() => {
-        // Workspaces need teams for team workspaces
-        initWorkspaceStore();
+        initWorkspaceStore().then(() => {
+          initMockStore();
+        });
       });
     });
     initEnvStore();
-  }, [initEnvStore, initSettingsStore, initTeamStore, initWorkspaceStore]);
+    initHistoryStore();
+  }, [initEnvStore, initSettingsStore, initTeamStore, initWorkspaceStore, initHistoryStore, initMockStore]);
+
+  const showMonitorDashboard = sidebarTab === 'monitor' && selectedMonitorId;
+  const showEnvironmentEditor = sidebarTab === 'environments' && selectedEnvironmentId;
+  const showFlowBuilder = sidebarTab === 'flows';
+  const showMockServerEditor = sidebarTab === 'mock-servers' && activeMockServerId;
 
   return (
     <ErrorBoundary>
       <AppShell>
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <TabBar />
-          <TabContent />
-        </div>
+        {showMonitorDashboard ? (
+          <MonitorDashboard />
+        ) : showEnvironmentEditor ? (
+          <EnvironmentVariableEditor />
+        ) : showFlowBuilder ? (
+          <ReactFlowProvider>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+              <FlowBuilder />
+            </div>
+          </ReactFlowProvider>
+        ) : showMockServerEditor ? (
+          <MockServerEditor />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <TabBar />
+            <TabContent />
+          </div>
+        )}
       </AppShell>
     </ErrorBoundary>
   );

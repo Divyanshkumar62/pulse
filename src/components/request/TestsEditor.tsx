@@ -10,7 +10,7 @@ export default function TestsEditor() {
     <div className="tests-editor" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            TEST SCRIPT
+            Test Script
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
             Executes after the response is received

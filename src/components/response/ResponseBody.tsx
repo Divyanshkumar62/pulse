@@ -33,7 +33,10 @@ export default function ResponseBody({ content, contentType }: { content: string
         oneDark,
         EditorState.readOnly.of(true),
         EditorView.theme({
-          "&": { height: "100%", fontSize: "12px", fontFamily: "var(--font-mono)" },
+          "&": { height: "100%", fontSize: "12px", fontFamily: "var(--font-mono)", backgroundColor: "#0b0f16 !important" },
+          ".cm-gutters": { backgroundColor: "#0b0f16 !important", border: "none", color: "var(--text-tertiary)" },
+          ".cm-activeLineGutter": { backgroundColor: "#0b0f16" },
+          ".cm-activeLine": { backgroundColor: "#0b0f16" }
         })
       ]
     });
@@ -51,5 +54,5 @@ export default function ResponseBody({ content, contentType }: { content: string
     };
   }, [content, contentType]);
 
-  return <div ref={editorRef} style={{ height: '100%', overflow: 'hidden', borderRadius: '4px' }} />;
+  return <div ref={editorRef} style={{ height: '100%', overflow: 'hidden', borderRadius: '4px', backgroundColor: '#0b0f16' }} />;
 }

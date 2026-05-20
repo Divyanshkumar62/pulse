@@ -3,6 +3,7 @@ import { useTabStore } from '../../stores/useTabStore';
 import { AuthConfig } from '../../types';
 import { toast } from 'sonner';
 import { startOAuthFlow, exchangeOAuthToken } from '../../hooks/useTauri';
+import CustomSelect from '../ui/CustomSelect';
 
 export default function AuthTab() {
   const { tabs, activeTabId, updateActiveTabRequest } = useTabStore();
@@ -41,9 +42,7 @@ export default function AuthTab() {
           throw new Error('No access_token found in response');
         }
       } catch (e) {
-        // Fallback: If not JSON or missing access_token, just show raw response
         toast.error('Could not parse token response automatically', { id: 'oauth-flow' });
-        console.warn('Raw token response:', tokenResponse);
       }
     } catch (err: any) {
       toast.error('OAuth flow failed: ' + err.message, { id: 'oauth-flow' });
@@ -67,18 +66,15 @@ export default function AuthTab() {
     <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', overflowY: 'auto' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <label style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontWeight: 500 }}>Auth Type</label>
-        <select 
-          value={auth.type} 
-          onChange={(e) => handleTypeChange(e.target.value as any)}
-          style={{ 
-            padding: '8px', background: 'var(--bg-deep)', border: '1px solid var(--border-default)', 
-            borderRadius: '4px', color: 'var(--text-primary)', outline: 'none' 
-          }}
-        >
-          <option value="none">No Auth</option>
-          <option value="bearer">Bearer Token</option>
-          <option value="oauth2">OAuth 2.0</option>
-        </select>
+        <CustomSelect 
+          value={auth.type}
+          onChange={(val) => handleTypeChange(val as any)}
+          options={[
+            { value: 'none', label: 'No Auth' },
+            { value: 'bearer', label: 'Bearer Token' },
+            { value: 'oauth2', label: 'OAuth 2.0' },
+          ]}
+        />
       </div>
 
       <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '20px' }}>

@@ -7,7 +7,7 @@ export interface KeyValuePair {
 
 export type Header = KeyValuePair;
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS' | 'WS';
 
 export interface GraphQLConfig {
   query: string;
@@ -55,6 +55,13 @@ export interface HttpResponse {
   time_ms: number;
 }
 
+export interface Variable {
+  key: string;
+  value: string;
+  enabled?: boolean;
+  description?: string;
+}
+
 export interface Request {
   id: string;
   name: string;
@@ -66,6 +73,8 @@ export interface Request {
   body: RequestBody;
   auth?: AuthConfig;
   preRequestScript?: string;
+  testScript?: string;
+  pinned?: boolean;
 }
 
 export interface HttpRequest {
@@ -80,6 +89,8 @@ export interface Folder {
   id: string;
   name: string;
   requests: Request[];
+  folders?: Folder[];
+  pinned?: boolean;
 }
 
 export interface Collection {
@@ -89,12 +100,13 @@ export interface Collection {
   requests: Request[];
   folders: Folder[];
   variables: KeyValuePair[];
+  pinned?: boolean;
 }
 
 export interface Environment {
   id: string;
   name: string;
-  variables: { key: string; value: string; enabled: boolean }[];
+  variables: Variable[];
 }
 
 export interface HistoryEntry {
@@ -140,3 +152,65 @@ export interface Invitation {
 }
 
 export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired';
+
+export interface FlowNodeMapping {
+  sourcePath: string;
+  targetVar: string;
+}
+
+export interface FlowNode {
+  id: string;
+  type: 'request' | 'logic' | 'delay' | 'start' | 'end';
+  position: { x: number; y: number };
+  data: {
+    name: string;
+    requestId?: string;
+    url?: string;
+    method?: string;
+    delayMs?: number;
+    condition?: string;
+    headers?: { id: string; key: string; value: string; enabled: boolean }[];
+    params?: { id: string; key: string; value: string; enabled: boolean }[];
+    mappings?: FlowNodeMapping[];
+    body?: string;
+    status?: 'idle' | 'running' | 'success' | 'error';
+    lastResponse?: HttpResponse;
+  };
+}
+
+export interface FlowEdge {
+  id: string;
+  source: string;
+  target: string;
+  animated?: boolean;
+}
+
+export interface Flow {
+  id: string;
+  name: string;
+  description?: string;
+  environmentId?: string;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  workspaceId: string;
+  createdAt?: number;
+  updatedAt?: number;
+  pinned?: boolean;
+}
+
+export interface MockRoute {
+  id: string;
+  path: string;
+  method: string;
+  statusCode: number;
+  responseBody: string;
+  headers: KeyValuePair[];
+}
+
+export interface MockServer {
+  id: string;
+  name: string;
+  port: number;
+  routes: MockRoute[];
+  status: 'active' | 'inactive';
+}

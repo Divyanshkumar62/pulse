@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface ContextMenuItem {
   label: string;
@@ -44,7 +45,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
 
   if (items.length === 0) return null;
 
-  return (
+  return createPortal(
     <div 
       ref={menuRef}
       style={{
@@ -56,7 +57,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
         borderRadius: '6px',
         padding: '4px',
         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-        zIndex: 10000,
+        zIndex: 20000,
         minWidth: '160px',
         display: 'flex',
         flexDirection: 'column'
@@ -91,6 +92,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
           {item.label}
         </button>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }

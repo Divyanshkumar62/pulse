@@ -5,6 +5,11 @@ import ActivityPanel from './ActivityPanel';
 import StatusBar from './StatusBar';
 import CommandPalette from '../modals/CommandPalette';
 import SettingsModal from '../modals/SettingsModal';
+import AddEnvironmentModal from '../modals/AddEnvironmentModal';
+import ImportModal from '../modals/ImportModal';
+import UserProfileModal from '../modals/UserProfileModal';
+import CommitModal from '../modals/CommitModal';
+import CreateFlowModal from '../modals/CreateFlowModal';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useAppStore } from '../../stores/useAppStore';
 import { Toaster } from 'sonner';
@@ -15,7 +20,7 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const { isSettingsOpen, setSettingsOpen } = useAppStore();
+  const { isSettingsOpen, setSettingsOpen, sidebarVisible, isAddEnvironmentModalOpen, setAddEnvironmentModalOpen, isImportModalOpen, setImportModalOpen, isProfileOpen, setProfileOpen, isCommitModalOpen, setCommitModalOpen: setCommitModalOpenFn, commitModalStatus, commitModalPath, isCreateFlowModalOpen, setCreateFlowModalOpen } = useAppStore();
   useKeyboardShortcuts();
 
   return (
@@ -24,7 +29,7 @@ export default function AppShell({ children }: AppShellProps) {
         <Header />
         <div className="layout-body">
           <NavSidebar />
-          <ActivityPanel />
+          {sidebarVisible && <ActivityPanel />}
           <main className="main-content">
             {children}
           </main>
@@ -33,6 +38,16 @@ export default function AppShell({ children }: AppShellProps) {
       </div>
       <CommandPalette />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
+      <AddEnvironmentModal />
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setImportModalOpen(false)} />
+      <UserProfileModal isOpen={isProfileOpen} onClose={() => setProfileOpen(false)} />
+      <CommitModal
+        isOpen={isCommitModalOpen}
+        onClose={() => setCommitModalOpenFn(false)}
+        status={commitModalStatus}
+        workspacePath={commitModalPath}
+      />
+      <CreateFlowModal isOpen={isCreateFlowModalOpen} onClose={() => setCreateFlowModalOpen(false)} />
       <Toaster theme="dark" position="bottom-right" />
     </div>
   );

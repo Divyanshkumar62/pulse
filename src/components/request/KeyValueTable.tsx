@@ -9,30 +9,27 @@ interface KeyValueTableProps {
 }
 
 export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key', valuePlaceholder = 'Value' }: KeyValueTableProps) {
-  // Ensure we always have at least one empty row to type into
-  const displayItems = items.length === 0 ? [{ key: '', value: '' }] : items;
+  const displayItems = items.length === 0 ? [{ key: '', value: '', enabled: true }] : items;
   
   const handleChange = (index: number, field: string, value: string | boolean) => {
     const newItems = [...displayItems];
     newItems[index] = { ...newItems[index], [field]: value };
     
-    // Auto-add new row if we're typing in the last row
     if (index === displayItems.length - 1 && typeof value === 'string' && value.length > 0) {
-      newItems.push({ key: '', value: '' });
+      newItems.push({ key: '', value: '', enabled: true });
     }
     
-    // Filter out completely empty rows unless it's the last one
     const cleanItems = newItems.filter((item, i) => {
       if (i === newItems.length - 1) return true;
-      return item.key || item.value || item.description;
+      return item.key || item.value;
     });
     
-    onChange(cleanItems.filter(item => item.key || item.value || item.description));
+    onChange(cleanItems);
   };
 
   const handleDelete = (index: number) => {
     let newItems = displayItems.filter((_, i) => i !== index);
-    if (newItems.length === 0) newItems = [];
+    if (newItems.length === 0) newItems = [{ key: '', value: '', enabled: true }];
     onChange(newItems);
   };
 

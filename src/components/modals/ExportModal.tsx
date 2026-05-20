@@ -46,7 +46,7 @@ export default function ExportModal({ collection, onClose }: ExportModalProps) {
     <div className="modal-overlay" onClick={onClose} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)'
+      justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(4px)'
     }}>
       <div className="modal-content" onClick={e => e.stopPropagation()} style={{
         backgroundColor: 'var(--bg-default)', padding: '24px', borderRadius: '12px',
@@ -59,7 +59,7 @@ export default function ExportModal({ collection, onClose }: ExportModalProps) {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Format</label>
+          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)' }}>Format</label>
           <div 
             onClick={() => setFormat('postman')}
             style={{

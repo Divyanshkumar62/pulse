@@ -1,41 +1,35 @@
 .kv-table {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
+  width: 100%;
 }
 
 .kv-row {
   display: flex;
+  width: 100%;
   align-items: center;
-  gap: var(--space-2);
-  padding: 4px;
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-fast);
-  border: 1px solid transparent;
-}
-
-.kv-row:hover {
-  background: rgba(255, 255, 255, 0.02);
-  border-color: var(--border-subtle);
+  gap: 16px;
+  padding: 4px 8px;
+  transition: background 0.2s ease;
 }
 
 .kv-check-wrapper {
-  width: 24px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
 .kv-checkbox {
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border: 1.5px solid var(--border-default);
-  border-radius: 3px;
+  border-radius: 4px;
   background: transparent;
   cursor: pointer;
   position: relative;
-  transition: all var(--transition-fast);
+  transition: all 0.2s;
 }
 
 .kv-checkbox:checked {
@@ -44,39 +38,42 @@
 }
 
 .kv-checkbox:checked::after {
-  content: '';
+  content: '✓';
   position: absolute;
-  left: 3px;
-  top: 1px;
-  width: 6px;
-  height: 9px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+  left: 2px;
+  top: -1px;
+  font-size: 11px;
+  color: white;
 }
 
 .kv-input-group {
   flex: 1;
   display: flex;
-  gap: var(--space-2);
+  gap: 12px;
+  width: 100%;
 }
 
 .kv-input {
   flex: 1;
-  background: var(--bg-input);
+  background: rgba(255, 255, 255, 0.05); /* Lighter frosted background */
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  border-radius: var(--radius-lg);
   font-size: 13px;
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
+  min-width: 0; /* Prevents overflow */
+}
+
+.kv-input::placeholder {
+  color: rgba(255, 255, 255, 0.4); /* Visible placeholder */
 }
 
 .kv-input:focus {
-  border-color: var(--accent-primary);
-  background: var(--bg-surface);
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-subtle);
+  border-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
 }
 
 .kv-input.mono {
@@ -85,6 +82,7 @@
 }
 
 .kv-delete-btn {
+  flex-shrink: 0;
   width: 28px;
   height: 28px;
   display: flex;
@@ -94,10 +92,13 @@
   border: none;
   border-radius: var(--radius-md);
   color: var(--text-tertiary);
-  transition: all var(--transition-fast);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all 0.2s;
 }
 
 .kv-delete-btn:hover {
+  opacity: 1;
   background: var(--status-error-subtle);
   color: var(--status-error);
 }
