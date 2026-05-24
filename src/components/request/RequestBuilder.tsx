@@ -14,6 +14,7 @@ import { VariableResolver } from '../../services/variableResolver';
 import { useEnvStore } from '../../stores/useEnvStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { useHistoryStore } from '../../stores/useHistoryStore';
+import { useGlobalStore } from '../../stores/useGlobalStore';
 import { toast } from 'sonner';
 import type { HttpRequest } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -185,7 +186,7 @@ export default function RequestBuilder() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, isWebSocket, environments, activeEnvId, updateEnvironment, setTabResponse, settings]);
+  }, [activeTab, isWebSocket, environments, activeEnvId, updateEnvironment, setTabResponse, settings, globalVariables]);
 
   useEffect(() => {
     const onSendRequest = () => handleSend();

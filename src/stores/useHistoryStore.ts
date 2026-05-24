@@ -28,7 +28,7 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
 
   addEntry: async (entry) => {
     const { history } = get();
-    const newHistory = [entry, ...history].slice(0, 100);
+    const newHistory = [entry, ...history].slice(0, 500);
     set({ history: newHistory });
     await saveHistory(newHistory);
   },
