@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { X, Check, Undo } from 'lucide-react';
+import { X, Check, Undo, ArrowLeft, ArrowRight, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { createPortal } from 'react-dom';
+import { resolveGitConflict } from '../../hooks/useTauri';
 
 interface DiffLine {
   type: 'added' | 'removed' | 'equal';
@@ -14,11 +16,13 @@ interface GitDiffModalProps {
   workspacePath: string;
   filePath: string;
   onDiscardSuccess?: () => void;
+  mode?: 'view' | 'resolve';
 }
 
-export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath, onDiscardSuccess }: GitDiffModalProps) {
+export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath, onDiscardSuccess, mode = 'view' }: GitDiffModalProps) {
   const [diffLines, setDiffLines] = useState<DiffLine[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
 
   useEffect(() => {
     if (isOpen && workspacePath && filePath) {
@@ -53,9 +57,23 @@ export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath,
     }
   };
 
+  const handleResolve = async (strategy: 'ours' | 'theirs') => {
+    setIsResolving(true);
+    try {
+      await resolveGitConflict(workspacePath, filePath, strategy);
+      toast.success(`Resolved using ${strategy === 'ours' ? 'current' : 'incoming'} version`);
+      onDiscardSuccess?.();
+      onClose();
+    } catch (e) {
+      toast.error('Failed to resolve conflict: ' + String(e));
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -64,7 +82,8 @@ export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 11000
+        zIndex: 11000,
+        backdropFilter: 'blur(4px)'
       }}
       onClick={onClose}
     >
@@ -85,30 +104,77 @@ export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath,
       >
         <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-default)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>Review Changes</h2>
+            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              {mode === 'resolve' ? 'Resolve Conflict' : 'Review Changes'}
+            </h2>
             <code style={{ fontSize: '11px', color: 'var(--accent-primary)', background: 'rgba(37,99,235,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{filePath}</code>
           </div>
           
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={handleDiscard}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.2)',
-                borderRadius: '6px',
-                color: '#ef4444',
-                fontSize: '13px',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              <Undo size={14} />
-              Discard
-            </button>
+            {mode === 'resolve' ? (
+              <>
+                <button
+                  disabled={isResolving}
+                  onClick={() => handleResolve('theirs')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    background: 'rgba(16,185,129,0.1)',
+                    border: '1px solid rgba(16,185,129,0.2)',
+                    borderRadius: '6px',
+                    color: '#10b981',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <ArrowDown size={14} />
+                  Accept Incoming
+                </button>
+                <button
+                  disabled={isResolving}
+                  onClick={() => handleResolve('ours')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    background: 'rgba(37,99,235,0.1)',
+                    border: '1px solid rgba(37,99,235,0.2)',
+                    borderRadius: '6px',
+                    color: 'var(--accent-primary)',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <Check size={14} />
+                  Keep Current
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleDiscard}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  borderRadius: '6px',
+                  color: '#ef4444',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Undo size={14} />
+                Discard
+              </button>
+            )}
             <button
               onClick={onClose}
               style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
@@ -152,6 +218,7 @@ export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath,
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

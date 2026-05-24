@@ -88,7 +88,7 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
-          {item.icon && <span style={{ width: '16px', textAlign: 'center' }}>{item.icon}</span>}
+          {item.icon ? <span style={{ width: '16px', textAlign: 'center' }}>{item.icon}</span> : null}
           {item.label}
         </button>
       ))}

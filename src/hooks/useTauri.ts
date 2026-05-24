@@ -161,6 +161,8 @@ export interface GitStatus {
   has_changes: boolean;
   untracked: string[];
   modified: string[];
+  conflicted: string[];
+  is_rebasing: boolean;
 }
 
 export async function gitInit(path: string): Promise<void> {
@@ -185,6 +187,18 @@ export async function gitPull(path: string): Promise<void> {
 
 export async function gitAddRemote(path: string, remoteName: string, remoteUrl: string): Promise<void> {
   return invoke('git_add_remote', { path, remoteName, remoteUrl });
+}
+
+export async function resolveGitConflict(path: string, filePath: string, resolution: 'ours' | 'theirs'): Promise<void> {
+  return invoke('git_resolve_conflict', { path, filePath, resolution });
+}
+
+export async function gitRebaseContinue(path: string): Promise<void> {
+  return invoke('git_rebase_continue', { path });
+}
+
+export async function gitRebaseAbort(path: string): Promise<void> {
+  return invoke('git_rebase_abort', { path });
 }
 
 export async function saveFlowsToDisk(workspacePath: string, flows: any[]): Promise<void> {

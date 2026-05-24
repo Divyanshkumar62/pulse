@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '../../stores/useAppStore';
 import { useEnvStore } from '../../stores/useEnvStore';
 import { v4 as uuidv4 } from 'uuid';
+import { createPortal } from 'react-dom';
 
 export default function AddEnvironmentModal() {
   const { isAddEnvironmentModalOpen, setAddEnvironmentModalOpen, setSelectedEnvironmentId } = useAppStore();
@@ -34,7 +35,7 @@ export default function AddEnvironmentModal() {
     setAddEnvironmentModalOpen(false);
   };
 
-  return (
+  return createPortal(
     <div 
       style={{ 
         position: 'fixed', 
@@ -43,7 +44,8 @@ export default function AddEnvironmentModal() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center', 
-        zIndex: 10000 
+        zIndex: 10000,
+        backdropFilter: 'blur(4px)'
       }} 
       onClick={() => setAddEnvironmentModalOpen(false)}
     >
@@ -104,6 +106,7 @@ export default function AddEnvironmentModal() {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

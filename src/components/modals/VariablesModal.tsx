@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Collection, Variable } from '../../types';
 import { useCollectionStore } from '../../stores/useCollectionStore';
 import KeyValueTable from '../request/KeyValueTable';
+import { createPortal } from 'react-dom';
 
 interface VariablesModalProps {
   collection: Collection;
@@ -21,13 +22,13 @@ export default function VariablesModal({ collection, onClose }: VariablesModalPr
   }, [onClose]);
 
   const handleSave = () => {
-    // Only save variables that have at least a key
-    const filtered = variables.filter(v => v.key.trim().length > 0);
+    // Only save variables that have data
+    const filtered = variables.filter(v => v.key.trim().length > 0 || v.value.trim().length > 0);
     updateCollection(collection.id, { variables: filtered }, 'pulse.json');
     onClose();
   };
 
-  return (
+  return createPortal(
     <div 
       style={{ 
         position: 'fixed', 
@@ -91,6 +92,7 @@ export default function VariablesModal({ collection, onClose }: VariablesModalPr
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

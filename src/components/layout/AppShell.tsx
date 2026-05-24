@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import React, { useState } from 'react';
 import Header from './Header';
 import NavSidebar from './NavSidebar';
 import ActivityPanel from './ActivityPanel';
@@ -8,6 +8,7 @@ import SettingsModal from '../modals/SettingsModal';
 import AddEnvironmentModal from '../modals/AddEnvironmentModal';
 import ImportModal from '../modals/ImportModal';
 import UserProfileModal from '../modals/UserProfileModal';
+import GlobalVariablesModal from '../modals/GlobalVariablesModal';
 import CommitModal from '../modals/CommitModal';
 import CreateFlowModal from '../modals/CreateFlowModal';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
@@ -16,17 +17,17 @@ import { Toaster } from 'sonner';
 import '../../styles/components/layout.css';
 
 interface AppShellProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export default function AppShell({ children }: AppShellProps) {
   const { 
     isSettingsOpen, setSettingsOpen, 
     sidebarVisible, 
-    isAddEnvironmentModalOpen, 
     isImportModalOpen, setImportModalOpen, 
     isProfileOpen, setProfileOpen, 
     isCommitModalOpen, setCommitModalOpen: setCommitModalOpenFn, 
+    isGlobalVariablesModalOpen, setGlobalVariablesModalOpen,
     commitModalStatus, commitModalPath, commitModalRefresh,
     isCreateFlowModalOpen, setCreateFlowModalOpen 
   } = useAppStore();
@@ -46,11 +47,14 @@ export default function AppShell({ children }: AppShellProps) {
         </div>
         <StatusBar />
       </div>
+      
+      {/* Modals are now moved outside main layout for better isolation, many use Portals anyway */}
       <CommandPalette />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
       <AddEnvironmentModal />
       <ImportModal isOpen={isImportModalOpen} onClose={() => setImportModalOpen(false)} />
       <UserProfileModal isOpen={isProfileOpen} onClose={() => setProfileOpen(false)} />
+      <GlobalVariablesModal isOpen={isGlobalVariablesModalOpen} onClose={() => setGlobalVariablesModalOpen(false)} />
       <CommitModal
         isOpen={isCommitModalOpen}
         onClose={() => setCommitModalOpenFn(false)}

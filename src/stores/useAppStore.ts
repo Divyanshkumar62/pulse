@@ -18,6 +18,7 @@ interface AppStore {
   isAddEnvironmentModalOpen: boolean;
   isImportModalOpen: boolean;
   isCommitModalOpen: boolean;
+  isGlobalVariablesModalOpen: boolean;
   isCreateFlowModalOpen: boolean;
   commitModalStatus: GitStatus | null;
   commitModalPath: string;
@@ -35,6 +36,7 @@ interface AppStore {
   setSelectedEnvironmentId: (id: string | null) => void;
   setAddEnvironmentModalOpen: (open: boolean) => void;
   setImportModalOpen: (open: boolean) => void;
+  setGlobalVariablesModalOpen: (open: boolean) => void;
   setCommitModalOpen: (open: boolean, status?: GitStatus | null, path?: string, refresh?: () => void) => void;
   setCreateFlowModalOpen: (open: boolean) => void;
 }
@@ -53,6 +55,7 @@ export const useAppStore = create<AppStore>((set) => ({
   isAddEnvironmentModalOpen: false,
   isImportModalOpen: false,
   isCommitModalOpen: false,
+  isGlobalVariablesModalOpen: false,
   isCreateFlowModalOpen: false,
   commitModalStatus: null,
   commitModalPath: '',
@@ -70,6 +73,7 @@ export const useAppStore = create<AppStore>((set) => ({
   setSelectedEnvironmentId: (id) => set({ selectedEnvironmentId: id }),
   setAddEnvironmentModalOpen: (open) => set({ isAddEnvironmentModalOpen: open }),
   setImportModalOpen: (open) => set({ isImportModalOpen: open }),
+  setGlobalVariablesModalOpen: (open) => set({ isGlobalVariablesModalOpen: open }),
   setCommitModalOpen: (open, status, path, refresh) => set({
     isCommitModalOpen: open,
     commitModalStatus: status ?? null,

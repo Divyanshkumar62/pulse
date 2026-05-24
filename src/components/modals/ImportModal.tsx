@@ -7,6 +7,7 @@ import { CurlParser } from '../../services/curl';
 import { Request, Collection } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
+import { createPortal } from 'react-dom';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -62,18 +63,14 @@ export default function ImportModal({ isOpen, onClose }: ImportModalProps) {
       
       let newCollection: Collection;
       if (selected.endsWith('.json')) {
-        // Try Postman first, if it fails, try Pulse format
-        // For simplicity, we'll use our ImportService which handles Postman
         const fs = await import('@tauri-apps/plugin-fs');
         const text = await fs.readTextFile(selected);
         try {
             newCollection = await ImportService.importPostmanCollection(text);
         } catch (e) {
-            // If it's not Postman, maybe it's OpenAPI JSON
             newCollection = await ImportService.importOpenAPISpec(selected);
         }
       } else {
-        // Must be YAML/YML, assume OpenAPI
         newCollection = await ImportService.importOpenAPISpec(selected);
       }
 
@@ -374,7 +371,7 @@ export default function ImportModal({ isOpen, onClose }: ImportModalProps) {
     </div>
   );
 
-  return (
+  return createPortal(
     <div 
       style={{ 
         position: 'fixed', 
@@ -406,6 +403,7 @@ export default function ImportModal({ isOpen, onClose }: ImportModalProps) {
         {mode === 'curl' && renderCurlImport()}
         {mode === 'edit' && renderEditRequest()}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

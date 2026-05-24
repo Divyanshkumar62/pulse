@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
 import { useAppStore } from '../../stores/useAppStore';
 import ResponseBody from './ResponseBody';
+import ResponseHistory from './ResponseHistory';
 import '../../styles/components/response-viewer.css';
 
-type ResponseTab = 'body' | 'preview' | 'headers' | 'test-results' | 'console';
+type ResponseTab = 'body' | 'preview' | 'headers' | 'test-results' | 'history' | 'console';
 
 export default function ResponseViewer() {
   const { activeTabId, tabs } = useTabStore();
@@ -19,6 +20,7 @@ export default function ResponseViewer() {
     { id: 'preview', label: 'Preview' },
     { id: 'headers', label: 'Headers' },
     { id: 'test-results', label: 'Test Results' },
+    { id: 'history', label: 'History' },
     { id: 'console', label: 'Console' },
   ];
 
@@ -83,6 +85,8 @@ export default function ResponseViewer() {
                 </div>
               ))}
             </div>
+          ) : activeTab === 'history' ? (
+            <ResponseHistory />
           ) : (
             <div className="placeholder-view">
               <div className="placeholder-icon">🛠️</div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { getGitStatus, gitPull, gitAddRemote, GitStatus } from '../../hooks/useTauri';
-import { GitBranch, RefreshCw, CheckCircle, ArrowUp, Settings, X, Link2 } from 'lucide-react';
+import { GitBranch, RefreshCw, CheckCircle, ArrowUp, Settings, X, Link2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import '../../styles/components/git-sync.css';
 
@@ -47,6 +47,10 @@ export default function GitSync() {
       const errMsg = String(e?.message || e);
       if (errMsg.includes('No remote configured') || errMsg.includes('Remote') || errMsg.includes('origin')) {
         setShowRemoteModal(true);
+      } else if (errMsg.includes('CONFLICT')) {
+        toast.error('Pull failed: Merge conflicts detected.');
+        const freshStatus = await getGitStatus(activeWorkspace.path);
+        setCommitModalOpen(true, freshStatus, activeWorkspace.path, refreshStatus);
       } else {
         toast.error('Pull failed: ' + errMsg);
       }
@@ -78,16 +82,27 @@ export default function GitSync() {
 
   if (!activeWorkspace?.path) return null;
 
+  const isRebasing = !!status?.is_rebasing;
+
   return (
     <>
       <div className="git-sync-widget">
         <div className="git-branch-info">
-          <GitBranch size={14} className="icon-blue" />
+          <GitBranch size={14} className={isRebasing ? "icon-red" : "icon-blue"} />
           <span className="branch-name">{status?.branch || 'main'}</span>
         </div>
 
         <div className="git-status-actions">
-          {status?.has_changes ? (
+          {isRebasing ? (
+              <button 
+              className="git-btn git-btn-dirty" 
+              onClick={openCommitModal}
+              title="Conflict Resolution in Progress"
+            >
+              <AlertTriangle size={14} color="#ef4444" />
+              <span>Resolve</span>
+            </button>
+          ) : status?.has_changes ? (
             <button 
               className="git-btn git-btn-dirty" 
               onClick={openCommitModal}

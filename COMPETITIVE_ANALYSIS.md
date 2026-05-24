@@ -69,3 +69,48 @@ To differentiate Pulse and improve its competitive standing, consider the follow
 3.  **[DONE] OpenAPI/Swagger Integration:** Add the ability to import OpenAPI specs and automatically generate collections and mock routes.
 4.  **[DONE] Capitalize on GitOps:** Pulse's native Git sync is a strong feature. Added visual diffing for collections and ability to discard changes directly in the UI.
 5.  **[DONE] Dynamic Mocking:** Upgrade the Mock Server to support dynamic data generation (using a Rust port of Faker) to compete with Apidog.
+
+
+Final Gap Analysis (Post-Implementation)
+
+  1. Network & Protocol Layer (The "Giant" Standard)
+   * Cookie Management (Missing): Established clients have a "Cookie Jar" that persists session cookies across requests in a
+     collection. Currently, Pulse is stateless; each request is isolated.
+   * Proxy Support (Missing): Professional environments often require global or per-request proxy configurations
+     (HTTP/HTTPS/SOCKS5) which are not yet exposed in the UI.
+   * Advanced Auth (Limited): You have Bearer and OAuth2. The giants support AWS Signature, Digest Auth, Hawk, and NTLM,
+     which are critical for enterprise and legacy APIs.
+   * Protocol Diversity: While you have REST, GraphQL, and WebSockets, you lack gRPC and MQTT, which are now standard in
+     modern API clients.
+
+  2. Scripting & Automation (The "Expert" Standard)
+   * Async Scripting: Pulse's boa_engine implementation is synchronous. Postman allows pm.sendRequest() inside scripts to
+     chain complex multi-step logic within a single pre-request script.
+   * Standard Libraries: Giants bundle lodash, moment, and crypto-js into the sandbox. Pulse currently requires manual
+     implementation of these in the JS shim.
+   * Collection Runner UI: We added the CLI (Pointer 2), but a visual runner inside the desktop app—where users can run a
+     whole folder, see real-time pass/fail charts, and export a test report—is still missing.
+
+  3. Design & Documentation (The "Apidog" Standard)
+   * Design-First Workflow: Pulse is "Request-First". Apidog excels by allowing users to define a JSON Schema first and then
+     automatically validating the request/response against it.
+   * Documentation Generation: Giants generate hosted or local HTML/Markdown documentation from collections. Pulse is
+     currently just a workspace tool, not a documentation provider.
+
+  4. Developer Experience (The "UX" Standard)
+   * Global Variables: You have Environment and Collection variables, but a "Global" scope that spans across all workspaces
+     is a standard feature for things like API keys used everywhere.
+   * Response History: You have a general history, but "per-request history" (seeing the last 5 responses for this specific
+     endpoint) is a highly-valued productivity feature.
+
+  Conclusion: Where Pulse Stands
+  Pulse has reached Level 3 (Professional Tool). You have surpassed basic clients (like curl or simple browser extensions)
+  and reached the level of a functional IDE for individual developers.
+
+  To reach Level 4 (Industry Giant), the next logical steps are:
+   1. Implement a Cookie Jar in the Rust backend to support stateful session testing.
+   2. Expand Auth Types to include Basic and Digest (low-hanging fruit with high value).
+   3. Add a Visual Collection Runner to make the testing experience more interactive.
+
+  Pulse is currently the fastest and most lightweight of the group due to its Rust core, which is a major competitive
+  advantage you should continue to exploit.

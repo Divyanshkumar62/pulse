@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::process::Command;
+use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GitStatus {
@@ -7,6 +8,8 @@ pub struct GitStatus {
     pub has_changes: bool,
     pub untracked: Vec<String>,
     pub modified: Vec<String>,
+    pub conflicted: Vec<String>,
+    pub is_rebasing: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -85,23 +88,33 @@ pub fn git_status(path: &str) -> Result<GitStatus, String> {
     let status_str = String::from_utf8_lossy(&status_output.stdout);
     let mut untracked = vec![];
     let mut modified = vec![];
+    let mut conflicted = vec![];
 
     for line in status_str.lines() {
         if line.len() > 3 {
+            let status_code = &line[0..2];
             let file = line[3..].to_string();
-            if line.starts_with("??") {
+            
+            if matches!(status_code, "UU" | "AA" | "DD" | "AU" | "UA" | "DU" | "UD") {
+                conflicted.push(file);
+            } else if status_code == "??" {
                 untracked.push(file);
             } else {
                 modified.push(file);
             }
         }
     }
+    
+    let is_rebasing = Path::new(path).join(".git").join("rebase-merge").exists() || 
+                      Path::new(path).join(".git").join("rebase-apply").exists();
 
     Ok(GitStatus {
         branch,
         has_changes: !status_str.is_empty(),
         untracked,
         modified,
+        conflicted,
+        is_rebasing,
     })
 }
 
@@ -168,6 +181,11 @@ pub fn git_pull(path: &str) -> Result<(), String> {
 
     if !output.status.success() {
         let err = String::from_utf8_lossy(&output.stderr).to_string();
+        
+        if err.contains("CONFLICT") || err.contains("Resolve all conflicts manually") {
+            return Err("CONFLICT: Merge conflicts detected. Please resolve them.".to_string());
+        }
+        
         if err.contains("Could not read from remote repository")
             || err.contains("does not appear to be a git repository")
         {
@@ -255,6 +273,66 @@ pub async fn git_discard_changes(path: String, file_path: String) -> Result<(), 
         .current_dir(&path)
         .output()
         .map_err(|e| format!("Failed to run git checkout: {}", e))?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn git_resolve_conflict(path: String, file_path: String, resolution: String) -> Result<(), String> {
+    let strategy = match resolution.as_str() {
+        "ours" => "--ours",
+        "theirs" => "--theirs",
+        _ => return Err("Invalid resolution strategy. Use 'ours' or 'theirs'.".to_string()),
+    };
+
+    let checkout_output = Command::new("git")
+        .args(["checkout", strategy, &file_path])
+        .current_dir(&path)
+        .output()
+        .map_err(|e| format!("Failed to checkout {}: {}", strategy, e))?;
+
+    if !checkout_output.status.success() {
+        return Err(String::from_utf8_lossy(&checkout_output.stderr).to_string());
+    }
+
+    let add_output = Command::new("git")
+        .args(["add", &file_path])
+        .current_dir(&path)
+        .output()
+        .map_err(|e| format!("Failed to git add resolved file: {}", e))?;
+
+    if !add_output.status.success() {
+        return Err(String::from_utf8_lossy(&add_output.stderr).to_string());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn git_rebase_continue(path: String) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["rebase", "--continue"])
+        .env("GIT_EDITOR", "true")
+        .current_dir(&path)
+        .output()
+        .map_err(|e| format!("Failed to run git rebase --continue: {}", e))?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn git_rebase_abort(path: String) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["rebase", "--abort"])
+        .current_dir(&path)
+        .output()
+        .map_err(|e| format!("Failed to run git rebase --abort: {}", e))?;
 
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
