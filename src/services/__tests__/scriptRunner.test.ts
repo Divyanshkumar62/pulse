@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { executePreRequestScript } from '../scriptRunner';
+import { executePreRequestScriptSync as executePreRequestScript } from '../scriptRunner';
 import { Request, Environment, HttpResponse } from '../../types';
 
 describe('scriptRunner', () => {

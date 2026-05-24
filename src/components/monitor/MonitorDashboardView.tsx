@@ -152,11 +152,46 @@ export default function MonitorDashboard() {
           </div>
         </div>
         
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button 
+            onClick={() => updateMonitor(selectedCheck.id, { isActive: !selectedCheck.isActive })}
+            style={{ 
+              padding: '10px 16px', 
+              borderRadius: '6px', 
+              background: selectedCheck.isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)', 
+              border: `1px solid ${selectedCheck.isActive ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.1)'}`,
+              color: selectedCheck.isActive ? '#10b981' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: selectedCheck.isActive ? '#10b981' : 'var(--text-tertiary)' }} />
+            {selectedCheck.isActive ? 'Polling Active' : 'Polling Paused'}
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-input)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>Interval:</span>
+            <select
+              value={selectedCheck.interval || 5}
+              onChange={(e) => updateMonitor(selectedCheck.id, { interval: parseInt(e.target.value) })}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, outline: 'none', cursor: 'pointer' }}
+            >
+              <option value={1}>1 min</option>
+              <option value={5}>5 mins</option>
+              <option value={15}>15 mins</option>
+              <option value={30}>30 mins</option>
+              <option value={60}>1 hour</option>
+            </select>
+          </div>
+
           <button 
             onClick={handleRunCheck}
             className="btn-primary"
-            style={{ padding: '10px 24px', fontSize: '13px', fontWeight: 600 }}
+            style={{ padding: '10px 24px', fontSize: '13px', fontWeight: 600, marginLeft: 'auto' }}
             disabled={isChecking}
           >
             {isChecking ? 'Checking...' : 'Run Check Now'}
@@ -239,7 +274,7 @@ export default function MonitorDashboard() {
         <div style={{ flex: 1, overflowY: 'auto', marginRight: '-8px', paddingRight: '8px' }}>
           {runs.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-tertiary)', fontSize: '14px' }}>
-              No check history found. Automated checks will appear here every 5 minutes.
+              No check history found. Automated checks will appear here every {selectedCheck.interval || 5} minutes.
             </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>

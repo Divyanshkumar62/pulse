@@ -63,10 +63,10 @@ export default function RequestBuilder() {
       const { method, url, headers, body, auth, preRequestScript, testScript } = activeTab.request;
       
       const activeCollection = collections.find(c => c.id === activeTab.collectionId);
-      const collectionVariables = activeCollection?.variables.reduce((acc, v) => {
+      const collectionVariables = (activeCollection?.variables || []).reduce((acc, v) => {
         if (v.enabled !== false) acc[v.key] = v.value;
         return acc;
-      }, {} as Record<string, string>) || {};
+      }, {} as Record<string, string>);
 
       // 1. Execute Pre-request Script
       let finalUrl = url;
@@ -151,6 +151,7 @@ export default function RequestBuilder() {
       await addEntry({
         id: uuidv4(),
         requestId: activeTab.request.id,
+        requestName: activeTab.request.name,
         timestamp: new Date().toISOString(),
         method: activeTab.request.method,
         url: finalUrl,

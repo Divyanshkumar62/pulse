@@ -113,6 +113,7 @@ export interface Environment {
 export interface HistoryEntry {
   id: string;
   requestId?: string;
+  requestName?: string;
   timestamp: string;
   method: HttpMethod;
   url: string;

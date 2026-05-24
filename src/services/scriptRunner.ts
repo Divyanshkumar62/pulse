@@ -37,16 +37,17 @@ export async function executeScript(
   }
 
   // Map our frontend types to the expected Rust ScriptContext
+  // Added safety checks for .reduce calls to prevent crashes if arrays are undefined
   const context = {
-    environment: environment?.variables.reduce((acc, v) => {
+    environment: (environment?.variables || []).reduce((acc, v) => {
       if (v.enabled !== false) acc[v.key] = v.value;
       return acc;
-    }, {} as Record<string, string>) || {},
+    }, {} as Record<string, string>),
     collection: collectionVariables,
     request: {
       url: request.url,
       method: request.method,
-      headers: request.headers.reduce((acc, h) => {
+      headers: (request.headers || []).reduce((acc, h) => {
         if (h.enabled !== false) acc[h.key] = h.value;
         return acc;
       }, {} as Record<string, string>)
@@ -54,7 +55,7 @@ export async function executeScript(
     response: response ? {
       status: response.status,
       body: response.body,
-      headers: response.headers.reduce((acc, h) => {
+      headers: (response.headers || []).reduce((acc, h) => {
         acc[h.key] = h.value;
         return acc;
       }, {} as Record<string, string>)

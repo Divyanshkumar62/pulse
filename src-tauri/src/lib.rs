@@ -457,9 +457,11 @@ pub fn run() {
     let _ = get_data_dir();
     
     tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
+
             send_http_request,
             start_oauth_flow,
             exchange_oauth_token,

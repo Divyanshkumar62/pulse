@@ -10,6 +10,8 @@ export interface MonitorCheck {
   responseTime: number | null;
   statusCode: number | null;
   lastCheck: string | null;
+  interval: number; // in minutes
+  isActive: boolean;
 }
 
 export interface CheckRun {

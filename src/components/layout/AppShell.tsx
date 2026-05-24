@@ -11,6 +11,7 @@ import UserProfileModal from '../modals/UserProfileModal';
 import GlobalVariablesModal from '../modals/GlobalVariablesModal';
 import CommitModal from '../modals/CommitModal';
 import CreateFlowModal from '../modals/CreateFlowModal';
+import MonitorEngine from '../monitor/MonitorEngine';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useAppStore } from '../../stores/useAppStore';
 import { Toaster } from 'sonner';
@@ -50,6 +51,7 @@ export default function AppShell({ children }: AppShellProps) {
       
       {/* Modals are now moved outside main layout for better isolation, many use Portals anyway */}
       <CommandPalette />
+      <MonitorEngine />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
       <AddEnvironmentModal />
       <ImportModal isOpen={isImportModalOpen} onClose={() => setImportModalOpen(false)} />

@@ -7,7 +7,7 @@ export default function MonitorSidebar() {
   const { selectedMonitorId, setSelectedMonitorId } = useAppStore();
   const { monitors, addMonitor } = useMonitorStore();
   const [isAdding, setIsAdding] = useState(false);
-  const [newCheck, setNewCheck] = useState<Omit<MonitorCheck, 'id' | 'status' | 'responseTime' | 'statusCode' | 'lastCheck'>>({
+  const [newCheck, setNewCheck] = useState<Omit<MonitorCheck, 'id' | 'status' | 'responseTime' | 'statusCode' | 'lastCheck' | 'interval' | 'isActive'>>({
     name: '',
     url: '',
     method: 'GET'
@@ -18,7 +18,7 @@ export default function MonitorSidebar() {
       toast.error('Name and URL are required');
       return;
     }
-    addMonitor(newCheck);
+    addMonitor({ ...newCheck, interval: 5, isActive: true } as any);
     setIsAdding(false);
     setNewCheck({ name: '', url: '', method: 'GET' });
     toast.success('Monitor created');
@@ -74,14 +74,34 @@ export default function MonitorSidebar() {
     );
   }
 
+  const healthyCount = monitors.filter(m => m.status === 'healthy').length;
+  const failingCount = monitors.filter(m => m.status === 'failing').length;
+  const pendingCount = monitors.filter(m => m.status === 'pending').length;
+
   return (
     <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>Monitoring</h2>
-        <button onClick={() => setIsAdding(true)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '12px' }}>
+        <button onClick={() => setIsAdding(true)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '8px' }}>
           + New
         </button>
       </div>
+
+      {monitors.length > 0 && (
+        <div style={{ 
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px',
+          background: 'rgba(0,0,0,0.15)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-subtle)'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: '#22c55e' }}>{healthyCount}</span>
+            <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Healthy</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: failingCount > 0 ? '#ef4444' : 'var(--text-secondary)' }}>{failingCount}</span>
+            <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Failing</span>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
         {monitors.length === 0 ? (

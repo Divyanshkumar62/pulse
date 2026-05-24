@@ -19,7 +19,7 @@ export default function ActivityFeed() {
 
   const filteredHistory = useMemo(() => {
     return history.filter(entry => {
-      const name = entry.request.headers.find(h => h.key.toLowerCase() === 'x-request-name')?.value || '';
+      const name = entry.requestName || '';
       const matchesSearch = entry.url.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            entry.method.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -55,12 +55,10 @@ export default function ActivityFeed() {
   const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
   const handleRestore = (entry: any) => {
-    // History saves the HttpRequest which might not have all fields of a standard Request
-    // But openTab expects a full Request object.
     const restoredRequest = {
         ...entry.request,
         id: entry.requestId || entry.id,
-        name: entry.request.headers.find((h: any) => h.key.toLowerCase() === 'x-request-name')?.value || `Restored: ${new URL(entry.url).pathname}`,
+        name: entry.requestName || `Restored: ${new URL(entry.url).pathname}`,
         url: entry.url,
         method: entry.method,
         headers: entry.request.headers || [],
@@ -168,7 +166,7 @@ export default function ActivityFeed() {
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {entries.map(entry => {
-                            const name = entry.request.headers.find(h => h.key.toLowerCase() === 'x-request-name')?.value;
+                            const name = entry.requestName;
                             return (
                                 <div 
                                     key={entry.id} 
