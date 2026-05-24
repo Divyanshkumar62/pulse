@@ -14,20 +14,26 @@ export class VariableResolver {
   static resolve(
     text: string, 
     collectionVariables: Variable[] = [], 
-    environmentVariables: EnvVariable[] | Variable[] = []
+    environmentVariables: EnvVariable[] | Variable[] = [],
+    globalVariables: Variable[] = []
   ): string {
     if (!text || typeof text !== 'string') return text;
 
-    // Combine variables, prioritizing environment over collection
-    // Look at globals first (if we had them), then collection, then environment
+    // Combine variables, prioritizing correctly
+    // Priority (High to Low): Environment > Collection > Global
     const variablesMap = new Map<string, string>();
     
-    // Lowest priority
+    // 1. Global (Lowest priority)
+    globalVariables
+      .filter(v => v.enabled !== false && v.key?.trim().length > 0)
+      .forEach(v => variablesMap.set(v.key, v.value));
+
+    // 2. Collection (Medium priority)
     collectionVariables
       .filter(v => v.enabled !== false && v.key?.trim().length > 0)
       .forEach(v => variablesMap.set(v.key, v.value));
 
-    // Higher priority: Environment variables overwrite collection variables
+    // 3. Environment (Highest priority)
     (environmentVariables as Variable[])
       .filter(v => v.enabled !== false && v.key?.trim().length > 0)
       .forEach(v => variablesMap.set(v.key, v.value));
@@ -47,7 +53,8 @@ export class VariableResolver {
   static resolveObject<T extends Record<string, any>>(
     obj: T,
     collectionVariables: Variable[] = [],
-    environmentVariables: Variable[] = []
+    environmentVariables: Variable[] = [],
+    globalVariables: Variable[] = []
   ): T {
     if (!obj) return obj;
     
@@ -55,18 +62,18 @@ export class VariableResolver {
     
     for (const key in result) {
       if (typeof result[key] === 'string') {
-        result[key] = this.resolve(result[key] as string, collectionVariables, environmentVariables) as any;
+        result[key] = this.resolve(result[key] as string, collectionVariables, environmentVariables, globalVariables) as any;
       } else if (Array.isArray(result[key])) {
          result[key] = (result[key] as any[]).map(item => {
            if (typeof item === 'string') {
-             return this.resolve(item, collectionVariables, environmentVariables);
+             return this.resolve(item, collectionVariables, environmentVariables, globalVariables);
            } else if (typeof item === 'object' && item !== null) {
-             return this.resolveObject(item, collectionVariables, environmentVariables);
+             return this.resolveObject(item, collectionVariables, environmentVariables, globalVariables);
            }
            return item;
          }) as any;
       } else if (typeof result[key] === 'object' && result[key] !== null) {
-         result[key] = this.resolveObject(result[key], collectionVariables, environmentVariables) as any;
+         result[key] = this.resolveObject(result[key], collectionVariables, environmentVariables, globalVariables) as any;
       }
     }
     

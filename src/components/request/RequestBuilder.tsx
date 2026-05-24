@@ -27,6 +27,7 @@ export default function RequestBuilder() {
   const { settings } = useSettingsStore();
   const { environments, activeEnvId, updateEnvironment } = useEnvStore();
   const { collections } = useCollectionStore();
+  const { globalVariables } = useGlobalStore();
   const { addEntry } = useHistoryStore();
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('params');
   const [isLoading, setIsLoading] = useState(false);
@@ -114,16 +115,14 @@ export default function RequestBuilder() {
       // Resolve variables in URL and headers before sending
       const activeEnv = environments.find(e => e.id === activeEnvId);
       const envVars = activeEnv?.variables?.filter(v => v.enabled !== false && v.key) || [];
-      
-      const activeCollection = collections.find(c => c.id === activeTab.collectionId);
       const collectionVars = activeCollection?.variables?.filter(v => v.enabled !== false && v.key) || [];
       
-      finalUrl = VariableResolver.resolve(finalUrl, collectionVars, envVars);
+      finalUrl = VariableResolver.resolve(finalUrl, collectionVars, envVars, globalVariables);
       
       // Resolve variables in header values
       const resolvedHeaders: Record<string, string> = {};
       Object.entries(headerRecord).forEach(([key, value]) => {
-        resolvedHeaders[key] = VariableResolver.resolve(value, collectionVars, envVars);
+        resolvedHeaders[key] = VariableResolver.resolve(value, collectionVars, envVars, globalVariables);
       });
       
       // Resolve variables in body content if it's a string
@@ -131,7 +130,7 @@ export default function RequestBuilder() {
       if (body && typeof body === 'object' && 'content' in body && typeof body.content === 'string') {
         resolvedBody = {
           ...body,
-          content: VariableResolver.resolve(body.content, collectionVars, envVars)
+          content: VariableResolver.resolve(body.content, collectionVars, envVars, globalVariables)
         };
       }
       
@@ -150,6 +149,7 @@ export default function RequestBuilder() {
       };
       await addEntry({
         id: uuidv4(),
+        requestId: activeTab.request.id,
         timestamp: new Date().toISOString(),
         method: activeTab.request.method,
         url: finalUrl,

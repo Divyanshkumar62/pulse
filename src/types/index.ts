@@ -107,10 +107,12 @@ export interface Environment {
   id: string;
   name: string;
   variables: Variable[];
+  pinned?: boolean;
 }
 
 export interface HistoryEntry {
   id: string;
+  requestId?: string;
   timestamp: string;
   method: HttpMethod;
   url: string;

@@ -9,27 +9,34 @@ interface KeyValueTableProps {
 }
 
 export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key', valuePlaceholder = 'Value' }: KeyValueTableProps) {
-  const displayItems = items.length === 0 ? [{ key: '', value: '', enabled: true }] : items;
+  // Always ensure there is at least one empty row at the end if the last row is filled
+  const displayItems = [...items];
+  const lastItem = displayItems[displayItems.length - 1];
+  
+  if (!lastItem || lastItem.key || lastItem.value) {
+    displayItems.push({ key: '', value: '', enabled: true });
+  }
   
   const handleChange = (index: number, field: string, value: string | boolean) => {
     const newItems = [...displayItems];
     newItems[index] = { ...newItems[index], [field]: value };
     
-    if (index === displayItems.length - 1 && typeof value === 'string' && value.length > 0) {
-      newItems.push({ key: '', value: '', enabled: true });
-    }
-    
+    // Filter out rows that are empty and NOT the last row
     const cleanItems = newItems.filter((item, i) => {
+      // Keep if it has data
+      if (item.key || item.value) return true;
+      // Keep only one empty row at the very end
       if (i === newItems.length - 1) return true;
-      return item.key || item.value;
+      return false;
     });
     
+    // We only send items with data or the very last empty row to the parent
+    // but the parent might want to filter the final empty row before saving.
     onChange(cleanItems);
   };
 
   const handleDelete = (index: number) => {
-    let newItems = displayItems.filter((_, i) => i !== index);
-    if (newItems.length === 0) newItems = [{ key: '', value: '', enabled: true }];
+    const newItems = displayItems.filter((_, i) => i !== index);
     onChange(newItems);
   };
 

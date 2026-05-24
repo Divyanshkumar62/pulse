@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Environment } from '../types';
 import { loadEnvironments, saveEnvironments } from '../hooks/useTauri';
+import { v4 as uuidv4 } from 'uuid';
 
 interface EnvStore {
   environments: Environment[];
@@ -12,6 +13,9 @@ interface EnvStore {
   addEnvironment: (env: Environment) => Promise<void>;
   updateEnvironment: (id: string, updates: Partial<Environment>) => Promise<void>;
   deleteEnvironment: (id: string) => Promise<void>;
+  duplicateEnvironment: (id: string) => Promise<void>;
+  renameEnvironment: (id: string, newName: string) => Promise<void>;
+  togglePinEnvironment: (id: string) => Promise<void>;
 }
 
 const getWorkspacePath = async () => {
@@ -22,6 +26,15 @@ const getWorkspacePath = async () => {
   } catch {
     return null;
   }
+};
+
+const syncToStorage = async (envs: Environment[]) => {
+    await saveEnvironments(envs);
+    const workspacePath = await getWorkspacePath();
+    if (workspacePath) {
+      const { saveWorkspaceToDisk } = await import('../hooks/useTauri');
+      await saveWorkspaceToDisk(workspacePath, envs);
+    }
 };
 
 export const useEnvStore = create<EnvStore>((set, get) => ({
@@ -50,28 +63,13 @@ export const useEnvStore = create<EnvStore>((set, get) => ({
   addEnvironment: async (env) => {
     const newEnvs = [...get().environments, env];
     set({ environments: newEnvs });
-    
-    // Global Pulse settings sync
-    await saveEnvironments(newEnvs);
-
-    // Workspace sync
-    const workspacePath = await getWorkspacePath();
-    if (workspacePath) {
-      const { saveWorkspaceToDisk } = await import('../hooks/useTauri');
-      await saveWorkspaceToDisk(workspacePath, newEnvs);
-    }
+    await syncToStorage(newEnvs);
   },
 
   updateEnvironment: async (id, updates) => {
     const newEnvs = get().environments.map((e) => e.id === id ? { ...e, ...updates } : e);
     set({ environments: newEnvs });
-    await saveEnvironments(newEnvs);
-
-    const workspacePath = await getWorkspacePath();
-    if (workspacePath) {
-      const { saveWorkspaceToDisk } = await import('../hooks/useTauri');
-      await saveWorkspaceToDisk(workspacePath, newEnvs);
-    }
+    await syncToStorage(newEnvs);
   },
 
   deleteEnvironment: async (id) => {
@@ -81,12 +79,40 @@ export const useEnvStore = create<EnvStore>((set, get) => ({
       environments: newEnvs,
       activeEnvId: activeEnvId === id ? (newEnvs[0]?.id || null) : activeEnvId
     });
-    await saveEnvironments(newEnvs);
+    await syncToStorage(newEnvs);
+  },
 
-    const workspacePath = await getWorkspacePath();
-    if (workspacePath) {
-      const { saveWorkspaceToDisk } = await import('../hooks/useTauri');
-      await saveWorkspaceToDisk(workspacePath, newEnvs);
-    }
+  duplicateEnvironment: async (id) => {
+    const { environments } = get();
+    const env = environments.find(e => e.id === id);
+    if (!env) return;
+
+    const duplicatedEnv: Environment = {
+        ...env,
+        id: uuidv4(),
+        name: `${env.name} (Copy)`,
+        pinned: false
+    };
+
+    const newEnvs = [...environments, duplicatedEnv];
+    set({ environments: newEnvs });
+    await syncToStorage(newEnvs);
+  },
+
+  renameEnvironment: async (id, newName) => {
+    const newEnvs = get().environments.map(e => e.id === id ? { ...e, name: newName } : e);
+    set({ environments: newEnvs });
+    await syncToStorage(newEnvs);
+  },
+
+  togglePinEnvironment: async (id) => {
+    const newEnvs = get().environments.map(e => e.id === id ? { ...e, pinned: !e.pinned } : e);
+    // Sort so pinned are first
+    const sortedEnvs = [...newEnvs].sort((a, b) => {
+        if (a.pinned === b.pinned) return 0;
+        return a.pinned ? -1 : 1;
+    });
+    set({ environments: sortedEnvs });
+    await syncToStorage(sortedEnvs);
   }
 }));

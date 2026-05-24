@@ -18,6 +18,12 @@ export default function EnvironmentVariableEditor() {
     );
   }
 
+  const handleVariablesChange = (newVars: any[]) => {
+    // Filter out the last empty row before saving to store if it has no data
+    const cleanedVars = newVars.filter(v => v.key || v.value);
+    updateEnvironment(selectedEnv.id, { variables: cleanedVars });
+  };
+
   return (
     <div className="editor-container">
       <div className="editor-header">
@@ -57,7 +63,7 @@ export default function EnvironmentVariableEditor() {
         <div style={{ flex: 1, overflowY: 'auto' }}>
           <KeyValueTable 
             items={selectedEnv.variables}
-            onChange={(newVars) => updateEnvironment(selectedEnv.id, { variables: newVars as any[] })}
+            onChange={handleVariablesChange}
             keyPlaceholder="Variable Name"
             valuePlaceholder="Value"
           />

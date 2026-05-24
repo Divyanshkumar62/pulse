@@ -83,6 +83,47 @@
   opacity: 1;
 }
 
+.env-rename-input {
+  background: var(--bg-deep);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 2px 8px;
+  width: 100%;
+  outline: none;
+}
+
+.env-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.env-action-btn:hover {
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+}
+
+.rounded-md {
+  border-radius: var(--radius-md) !important;
+}
+
+.icon-red {
+  color: #ef4444;
+}
+
+.icon-blue {
+  color: var(--accent-primary);
+}
+
 .editor-container {
   display: flex;
   flex-direction: column;
