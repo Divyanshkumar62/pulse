@@ -13,8 +13,10 @@
     "fs:allow-write",
     "fs:allow-exists",
     "fs:allow-mkdir",
-    "notification:default",
     "notification:allow-request-permission",
+    "notification:allow-is-permission-granted",
+    "notification:allow-notify",
+    "notification:default",
     {
       "identifier": "fs:scope",
       "allow": ["$APPDATA/**", "$DOCUMENT/**", "$HOME/**"]

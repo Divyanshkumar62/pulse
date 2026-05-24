@@ -20,6 +20,7 @@ interface TabStore {
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateActiveTabRequest: (updates: Partial<Request>) => void;
+  updateTabRequestName: (requestId: string, newName: string) => void;
   setTabResponse: (id: string, response: HttpResponse) => void;
   addWsMessage: (tabId: string, message: WebSocketMessage) => void;
   setWsStatus: (tabId: string, status: WebSocketStatus) => void;
@@ -62,6 +63,17 @@ export const useTabStore = create<TabStore>()(
   },
 
   setActiveTab: (id) => set({ activeTabId: id }),
+
+  updateTabRequestName: (requestId, newName) => {
+    const { tabs } = get();
+    set({
+      tabs: tabs.map(t => 
+        t.request.id === requestId 
+          ? { ...t, request: { ...t.request, name: newName } } 
+          : t
+      )
+    });
+  },
   
   updateActiveTabRequest: (updates) => {
     const { tabs, activeTabId } = get();

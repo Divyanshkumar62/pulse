@@ -1,11 +1,14 @@
 import { useAppStore } from '../../stores/useAppStore';
 import { useMonitorStore, MonitorCheck, CheckRun } from '../../stores/useMonitorStore';
+import { useSettingsStore } from '../../stores/useSettingsStore';
+import { sendRequest } from '../../hooks/useTauri';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 
 export default function MonitorDashboard() {
   const { selectedMonitorId, setSelectedMonitorId } = useAppStore();
   const { monitors, checkRuns, isChecking, setChecking, addRun, updateMonitor, deleteMonitor } = useMonitorStore();
+  const { settings } = useSettingsStore();
 
   const selectedCheck = useMemo(() => 
     monitors.find(m => m.id === selectedMonitorId), 
@@ -29,21 +32,26 @@ export default function MonitorDashboard() {
   }, [runs]);
 
   const handleRunCheck = async () => {
-    if (!selectedCheck) return;
+    if (!selectedCheck || !settings) return;
     setChecking(true);
     const startTime = Date.now();
     try {
-      const response = await fetch(selectedCheck.url, {
-        method: selectedCheck.method,
-        headers: { 'Accept': 'application/json' }
-      });
+      // Execute via backend to bypass CORS
+      const response = await sendRequest(
+        selectedCheck.method, 
+        selectedCheck.url, 
+        {}, 
+        { type: 'none', content: '' }, 
+        settings
+      );
+      
       const responseTime = Date.now() - startTime;
       const statusCode = response.status;
       const status = statusCode >= 200 && statusCode < 300 ? 'healthy' :
                     statusCode >= 300 && statusCode < 400 ? 'degraded' : 'failing';
       
       const newRun: CheckRun = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: Math.random().toString(36).substring(2, 9),
         timestamp: new Date().toLocaleTimeString(),
         statusCode,
         responseTime
@@ -56,11 +64,19 @@ export default function MonitorDashboard() {
         lastCheck: newRun.timestamp
       });
       addRun(selectedCheck.id, newRun);
-      toast.success(`${selectedCheck.name}: ${statusCode} (${responseTime}ms)`);
+      
+      const msg = `${selectedCheck.name}: ${statusCode} (${responseTime}ms)`;
+      if (status === 'healthy') {
+        toast.success(msg);
+      } else if (status === 'degraded') {
+        toast.warning(msg);
+      } else {
+        toast.error(msg);
+      }
     } catch (error) {
       const responseTime = Date.now() - startTime;
       const newRun: CheckRun = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: Math.random().toString(36).substring(2, 9),
         timestamp: new Date().toLocaleTimeString(),
         statusCode: 0,
         responseTime

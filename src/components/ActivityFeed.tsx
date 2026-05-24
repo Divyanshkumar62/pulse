@@ -1,14 +1,18 @@
 import { useHistoryStore } from '../stores/useHistoryStore';
 import { useTabStore } from '../stores/useTabStore';
+import { useCollectionStore } from '../stores/useCollectionStore';
 import { useState, useMemo } from 'react';
 import { Search, Filter, X, Calendar, Clock, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import ConfirmModal from './ui/ConfirmModal';
 
 export default function ActivityFeed() {
   const { history, clearHistory } = useHistoryStore();
   const { openTab } = useTabStore();
+  const { collections } = useCollectionStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [methodFilter, setMethodFilter] = useState<string | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const getStatusColor = (status: number) => {
     if (status >= 200 && status < 300) return '#22c55e';
@@ -17,16 +21,47 @@ export default function ActivityFeed() {
     return '#ef4444';
   };
 
+  // Helper to find a request name by its ID in the collections
+  const findRequestName = (requestId: string | undefined, savedName: string | undefined) => {
+    if (!requestId) return savedName;
+    
+    // Check if the saved name is just a URL. If so, we try to find a better name in collections.
+    const isUrl = savedName && (savedName.startsWith('http://') || savedName.startsWith('https://'));
+    
+    if (savedName && !isUrl) return savedName;
+
+    // Search collections for this request ID
+    for (const col of collections) {
+      const found = col.requests.find(r => r.id === requestId);
+      if (found) return found.name;
+      
+      const findInFolders = (folders: any[]): any => {
+        for (const f of folders) {
+          const req = f.requests.find((r: any) => r.id === requestId);
+          if (req) return req;
+          if (f.folders) {
+            const nested = findInFolders(f.folders);
+            if (nested) return nested;
+          }
+        }
+      };
+      const inFolder = findInFolders(col.folders);
+      if (inFolder) return inFolder.name;
+    }
+
+    return savedName;
+  };
+
   const filteredHistory = useMemo(() => {
     return history.filter(entry => {
-      const name = entry.requestName || '';
+      const name = findRequestName(entry.requestId, entry.requestName) || '';
       const matchesSearch = entry.url.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            entry.method.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesMethod = methodFilter ? entry.method === methodFilter : true;
       return matchesSearch && matchesMethod;
     });
-  }, [history, searchQuery, methodFilter]);
+  }, [history, searchQuery, methodFilter, collections]);
 
   const groupedHistory = useMemo(() => {
     const groups: Record<string, typeof history> = {};
@@ -55,10 +90,11 @@ export default function ActivityFeed() {
   const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
   const handleRestore = (entry: any) => {
+    const name = findRequestName(entry.requestId, entry.requestName);
     const restoredRequest = {
         ...entry.request,
         id: entry.requestId || entry.id,
-        name: entry.requestName || `Restored: ${new URL(entry.url).pathname}`,
+        name: name || `Restored: ${new URL(entry.url).pathname}`,
         url: entry.url,
         method: entry.method,
         headers: entry.request.headers || [],
@@ -74,9 +110,7 @@ export default function ActivityFeed() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h3 style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: 700, margin: 0 }}>History</h3>
         <button 
-            onClick={() => {
-                if (confirm('Clear all history?')) clearHistory();
-            }}
+            onClick={() => setShowClearConfirm(true)}
             style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}
             title="Clear History"
         >
@@ -114,7 +148,7 @@ export default function ActivityFeed() {
             )}
         </div>
         
-        <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px' }} className="no-scrollbar">
+        <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px' }} className="custom-scrollbar-mini">
             <button 
                 onClick={() => setMethodFilter(null)}
                 style={{ 
@@ -151,7 +185,10 @@ export default function ActivityFeed() {
         </div>
       </div>
       
-      <div style={{ flex: 1, overflowY: 'auto' }} className="no-scrollbar">
+      <div 
+        style={{ flex: 1, overflowY: 'auto' }} 
+        className="custom-scrollbar-mini"
+      >
         {Object.keys(groupedHistory).length === 0 ? (
             <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px' }}>
                 {history.length === 0 ? 'No requests yet' : 'No matches found'}
@@ -166,7 +203,12 @@ export default function ActivityFeed() {
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {entries.map(entry => {
-                            const name = entry.requestName;
+                            const name = findRequestName(entry.requestId, entry.requestName);
+                            // Check if the name looks like a URL. If it does, we prefer showing just the path or URL once.
+                            const nameIsUrl = name && (name.startsWith('http://') || name.startsWith('https://'));
+                            const displayTitle = (name && !nameIsUrl) ? name : entry.url;
+                            const displaySub = (name && !nameIsUrl) ? entry.url : '';
+
                             return (
                                 <div 
                                     key={entry.id} 
@@ -175,7 +217,7 @@ export default function ActivityFeed() {
                                         display: 'flex', 
                                         gap: '12px', 
                                         alignItems: 'center',
-                                        padding: '8px 10px',
+                                        padding: '10px 12px',
                                         background: 'var(--bg-surface)',
                                         borderRadius: '8px',
                                         border: '1px solid var(--border-subtle)',
@@ -205,13 +247,13 @@ export default function ActivityFeed() {
                                             whiteSpace: 'nowrap', 
                                             overflow: 'hidden', 
                                             textOverflow: 'ellipsis',
-                                            fontWeight: name ? 600 : 400
+                                            fontWeight: (name && !nameIsUrl) ? 600 : 400
                                         }}>
-                                            {name || entry.url}
+                                            {displayTitle}
                                         </div>
-                                        {name && (
-                                            <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {entry.url}
+                                        {displaySub && (
+                                            <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', opacity: 0.7 }}>
+                                                {displaySub}
                                             </div>
                                         )}
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
@@ -234,6 +276,37 @@ export default function ActivityFeed() {
             ))
         )}
       </div>
+
+      <ConfirmModal 
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={() => clearHistory()}
+        title="Clear Request History"
+        message="Are you sure you want to delete all previous requests? This action cannot be undone."
+        confirmLabel="Clear All"
+        isDanger={true}
+      />
+
+      <style>{`
+        .custom-scrollbar-mini::-webkit-scrollbar {
+          width: 4px;
+          height: 4px;
+        }
+        .custom-scrollbar-mini::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar-mini::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+        }
+        .custom-scrollbar-mini::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        .history-item-hover:hover {
+            border-color: var(--accent-subtle) !important;
+            background: rgba(255,255,255,0.05) !important;
+        }
+      `}</style>
     </div>
   );
 }

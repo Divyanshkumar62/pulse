@@ -1,7 +1,7 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use crate::collections::types::{Collection, Environment, HistoryEntry};
+use crate::collections::types::{Collection, Environment, HistoryEntry, Folder, Request};
 
 pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Collection, Box<dyn std::error::Error>> {
     let content = fs::read_to_string(&path)?;
@@ -79,13 +79,15 @@ pub fn import_openapi(path: impl AsRef<Path>) -> Result<Collection, Box<dyn std:
 
 pub fn load_all_collections<P: AsRef<Path>>(dir: P) -> Result<Vec<Collection>, Box<dyn std::error::Error>> {
     let mut collections = Vec::new();
-    if !dir.as_ref().exists() {
+    let dir_path = dir.as_ref();
+    if !dir_path.exists() {
         return Ok(collections);
     }
 
-    for entry in fs::read_dir(dir)? {
+    for entry in fs::read_dir(dir_path)? {
         let entry = entry?;
         let path = entry.path();
+        
         if path.is_file() {
             if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                 if ext == "json" || ext == "yaml" || ext == "yml" {
@@ -94,7 +96,67 @@ pub fn load_all_collections<P: AsRef<Path>>(dir: P) -> Result<Vec<Collection>, B
                     }
                 }
             }
+        } else if path.is_dir() {
+            // Check if it's a "New Style" folder-based collection
+            if path.join("collection.json").exists() {
+                if let Ok(collection) = load_folder_collection(&path) {
+                    collections.push(collection);
+                }
+            }
         }
     }
     Ok(collections)
+}
+
+// Helper for folder-based collections
+fn load_folder_collection(path: &Path) -> Result<Collection, Box<dyn std::error::Error>> {
+    let meta_content = fs::read_to_string(path.join("collection.json"))?;
+    let mut collection: Collection = serde_json::from_str(&meta_content)?;
+
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+        let file_name = entry.file_name().into_string().unwrap_or_default();
+
+        if entry_path.is_dir() {
+            if entry_path.join("folder.json").exists() {
+                collection.folders.push(load_folder_structure(&entry_path)?);
+            }
+        } else if file_name != "collection.json" && file_name.ends_with(".json") {
+            let req_content = fs::read_to_string(&entry_path)?;
+            let request: Request = serde_json::from_str(&req_content)?;
+            collection.requests.push(request);
+        }
+    }
+
+    Ok(collection)
+}
+
+fn load_folder_structure(path: &Path) -> Result<Folder, Box<dyn std::error::Error>> {
+    let meta_content = fs::read_to_string(path.join("folder.json"))?;
+    let mut folder: Folder = serde_json::from_str(&meta_content)?;
+    
+    let mut subfolders = vec![];
+
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+        let file_name = entry.file_name().into_string().unwrap_or_default();
+
+        if entry_path.is_dir() {
+            if entry_path.join("folder.json").exists() {
+                subfolders.push(load_folder_structure(&entry_path)?);
+            }
+        } else if file_name != "folder.json" && file_name.ends_with(".json") {
+            let req_content = fs::read_to_string(&entry_path)?;
+            let request: Request = serde_json::from_str(&req_content)?;
+            folder.requests.push(request);
+        }
+    }
+    
+    if !subfolders.is_empty() {
+        folder.folders = Some(subfolders);
+    }
+
+    Ok(folder)
 }

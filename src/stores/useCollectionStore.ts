@@ -29,13 +29,17 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
   isLoading: false,
 
   addCollection: async (collection: Collection, path: string) => {
-    const existing = get().collections.find(c => c.id === collection.id);
-    if (existing) return;
+    const { collections } = get();
+    const existingIdx = collections.findIndex(c => c.id === collection.id);
     
-    set((state) => ({
-      collections: [...state.collections, { ...collection, _diskPath: path }]
-    }));
-    get().saveAllCollectionsToDisk();
+    if (existingIdx !== -1) {
+      // Overwrite with the latest version from disk
+      const newCollections = [...collections];
+      newCollections[existingIdx] = { ...collection, _diskPath: path };
+      set({ collections: newCollections });
+    } else {
+      set({ collections: [...collections, { ...collection, _diskPath: path }] });
+    }
   },
 
   updateCollection: async (id: string, updates: Partial<Collection>, _path: string) => {

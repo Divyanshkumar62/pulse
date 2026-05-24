@@ -6,7 +6,9 @@ use serde_json;
 pub async fn save_collection_to_disk(workspace_path: String, collection: Collection) -> Result<(), String> {
     let base_path = PathBuf::from(workspace_path);
     let collections_dir = base_path.join("collections");
-    let collection_path = collections_dir.join(&collection.name);
+    
+    // Use ID for the folder name to prevent duplicates on rename
+    let collection_path = collections_dir.join(&collection.id);
     
     fs::create_dir_all(&collection_path).map_err(|e| e.to_string())?;
 
@@ -32,7 +34,9 @@ pub async fn save_collection_to_disk(workspace_path: String, collection: Collect
 }
 
 fn save_folder_to_disk(parent_path: &Path, folder: &Folder) -> Result<(), String> {
-    let folder_path = parent_path.join(&folder.name);
+    // For internal folders, we still use names but we should probably use IDs here too eventually
+    // but the main issue is the top-level collection renaming.
+    let folder_path = parent_path.join(&folder.id);
     fs::create_dir_all(&folder_path).map_err(|e| e.to_string())?;
 
     let mut folder_meta = folder.clone();
@@ -56,7 +60,8 @@ fn save_folder_to_disk(parent_path: &Path, folder: &Folder) -> Result<(), String
 }
 
 fn save_request_to_disk(parent_path: &Path, request: &Request) -> Result<(), String> {
-    let filename = format!("{}.json", sanitize_filename(&request.name));
+    // Use ID for filename to prevent duplicates on rename
+    let filename = format!("{}.json", request.id);
     let request_json = serde_json::to_string_pretty(request).map_err(|e| e.to_string())?;
     fs::write(parent_path.join(filename), request_json).map_err(|e| e.to_string())?;
     Ok(())
@@ -82,7 +87,10 @@ pub async fn load_collections_from_workspace(workspace_path: String) -> Result<V
     for entry in fs::read_dir(collections_dir).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
         if entry.path().is_dir() {
-            collections.push(load_collection(&entry.path())?);
+            // Check if it's a valid collection (has collection.json)
+            if entry.path().join("collection.json").exists() {
+                collections.push(load_collection(&entry.path())?);
+            }
         }
     }
     Ok(collections)
@@ -98,7 +106,10 @@ fn load_collection(path: &Path) -> Result<Collection, String> {
         let file_name = entry.file_name().into_string().unwrap_or_default();
 
         if entry_path.is_dir() {
-            collection.folders.push(load_folder(&entry_path)?);
+            // Subfolders (using IDs now)
+            if entry_path.join("folder.json").exists() {
+                collection.folders.push(load_folder(&entry_path)?);
+            }
         } else if file_name != "collection.json" && file_name.ends_with(".json") {
             let req_content = fs::read_to_string(&entry_path).map_err(|e| e.to_string())?;
             let request: Request = serde_json::from_str(&req_content).map_err(|e| e.to_string())?;
@@ -121,7 +132,9 @@ fn load_folder(path: &Path) -> Result<Folder, String> {
         let file_name = entry.file_name().into_string().unwrap_or_default();
 
         if entry_path.is_dir() {
-            subfolders.push(load_folder(&entry_path)?);
+            if entry_path.join("folder.json").exists() {
+                subfolders.push(load_folder(&entry_path)?);
+            }
         } else if file_name != "folder.json" && file_name.ends_with(".json") {
             let req_content = fs::read_to_string(&entry_path).map_err(|e| e.to_string())?;
             let request: Request = serde_json::from_str(&req_content).map_err(|e| e.to_string())?;
@@ -151,9 +164,9 @@ pub async fn save_flows_to_disk(workspace_path: String, flows: Vec<crate::collec
         fs::create_dir_all(&flows_dir).map_err(|e| e.to_string())?;
     }
 
-    // Save each flow as a separate JSON file
     for flow in flows {
-        let filename = format!("{}.json", sanitize_filename(&flow.name));
+        // Use ID for filename
+        let filename = format!("{}.json", flow.id);
         let json = serde_json::to_string_pretty(&flow).map_err(|e| e.to_string())?;
         fs::write(flows_dir.join(filename), json).map_err(|e| e.to_string())?;
     }

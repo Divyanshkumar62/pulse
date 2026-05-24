@@ -15,13 +15,13 @@ import { useEnvStore } from '../../stores/useEnvStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { useHistoryStore } from '../../stores/useHistoryStore';
 import { useGlobalStore } from '../../stores/useGlobalStore';
+import { executeScript } from '../../services/scriptRunner';
 import { toast } from 'sonner';
 import type { HttpRequest } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import '../../styles/components/request.css';
 
 type ConfigTab = 'params' | 'headers' | 'body' | 'auth' | 'scripts';
-import { executeScript } from '../../services/scriptRunner';
 
 export default function RequestBuilder() {
   const { tabs, activeTabId, setTabResponse, updateActiveTabRequest } = useTabStore();
@@ -148,6 +148,9 @@ export default function RequestBuilder() {
         body: resolvedBody,
         preRequestScript: activeTab.request.preRequestScript,
       };
+      
+      // Ensure we capture the request name carefully. 
+      // If it's a URL, we try to see if it has a better name in the collection tree.
       await addEntry({
         id: uuidv4(),
         requestId: activeTab.request.id,

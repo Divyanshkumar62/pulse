@@ -7,43 +7,60 @@ import { sendNotification, isPermissionGranted, requestPermission } from '@tauri
 export default function MonitorEngine() {
   const { monitors, updateMonitor, addRun } = useMonitorStore();
   const { settings } = useSettingsStore();
+  
+  const monitorsRef = useRef(monitors);
+  const settingsRef = useRef(settings);
   const lastRunRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
-    // Request notification permission on mount
-    const checkPermission = async () => {
-      let permissionGranted = await isPermissionGranted();
-      if (!permissionGranted) {
-        const permission = await requestPermission();
-        permissionGranted = permission === 'granted';
+    monitorsRef.current = monitors;
+  }, [monitors]);
+
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        let permissionGranted = await isPermissionGranted();
+        if (!permissionGranted) {
+          const permission = await requestPermission();
+          permissionGranted = permission === 'granted';
+        }
+        console.log("[Pulse Monitor] OS Notification Permission:", permissionGranted);
+      } catch (e) {
+        console.warn("[Pulse Monitor] Notification permission request failed:", e);
       }
     };
-    checkPermission();
+    initNotifications();
 
     const intervalId = setInterval(async () => {
       const now = Date.now();
-      const activeMonitors = monitors.filter(m => m.isActive);
+      const currentMonitors = monitorsRef.current;
+      const currentSettings = settingsRef.current;
+
+      if (!currentSettings) return;
+
+      const activeMonitors = currentMonitors.filter(m => m.isActive);
 
       for (const monitor of activeMonitors) {
         const lastRun = lastRunRef.current[monitor.id] || 0;
-        const intervalMs = monitor.interval * 60 * 1000;
+        const intervalMs = (monitor.interval || 5) * 60 * 1000;
 
         if (now - lastRun >= intervalMs) {
           lastRunRef.current[monitor.id] = now;
-          await executeMonitorCheck(monitor);
+          executeMonitorCheck(monitor, currentSettings);
         }
       }
-    }, 10000); // Check every 10 seconds if any monitor needs to run
+    }, 5000);
 
     return () => clearInterval(intervalId);
-  }, [monitors, settings]);
+  }, []);
 
-  const executeMonitorCheck = async (monitor: MonitorCheck) => {
-    if (!settings) return;
-
+  const executeMonitorCheck = async (monitor: MonitorCheck, settings: any) => {
     try {
       const start = Date.now();
-      // Execute via backend to bypass CORS
       const response = await sendRequest(
         monitor.method, 
         monitor.url, 
@@ -66,28 +83,25 @@ export default function MonitorEngine() {
   const handleResult = async (monitor: MonitorCheck, newStatus: string, statusCode: number, responseTime: number) => {
     const timestamp = new Date().toLocaleTimeString();
     
-    // Check if status changed to failing
-    if (monitor.status !== 'failing' && newStatus === 'failing') {
+    const statusChangedToFailing = monitor.status !== 'failing' && newStatus === 'failing';
+    const statusChangedToHealthy = monitor.status === 'failing' && (newStatus === 'healthy' || newStatus === 'degraded');
+
+    if (statusChangedToFailing || statusChangedToHealthy) {
+      console.log(`[Pulse Monitor] Alert triggered for ${monitor.name}. Status: ${newStatus}`);
       try {
-        if (await isPermissionGranted()) {
+        const hasPermission = await isPermissionGranted();
+        if (hasPermission) {
           sendNotification({ 
-            title: 'API Monitor Alert', 
-            body: `Monitor "${monitor.name}" is failing.` 
+            title: statusChangedToFailing ? 'API Monitor Alert' : 'API Monitor Recovery', 
+            body: statusChangedToFailing 
+                ? `Monitor "${monitor.name}" is failing with status ${statusCode || 'Error'}.`
+                : `Monitor "${monitor.name}" is back online.`,
           });
+        } else {
+          console.warn("[Pulse Monitor] OS Notification permission denied.");
         }
       } catch (e) {
-        console.error("Failed to send OS notification", e);
-      }
-    } else if (monitor.status === 'failing' && newStatus === 'healthy') {
-      try {
-        if (await isPermissionGranted()) {
-          sendNotification({ 
-            title: 'API Monitor Recovery', 
-            body: `Monitor "${monitor.name}" is back online.` 
-          });
-        }
-      } catch (e) {
-        console.error("Failed to send OS notification", e);
+        console.error("[Pulse Monitor] Failed to send OS notification:", e);
       }
     }
 
