@@ -138,8 +138,11 @@ pub struct FlowNodeData {
     pub method: Option<String>,
     pub delay_ms: Option<u64>,
     pub condition: Option<String>,
+    pub loop_over: Option<String>,
+    pub loop_var: Option<String>,
     pub headers: Option<Vec<FlowHeader>>,
     pub mappings: Option<Vec<FlowNodeMapping>>,
+    pub body: Option<String>,
     pub status: Option<String>,
     pub last_response: Option<HistoryResponse>,
 }
@@ -166,5 +169,7 @@ pub struct FlowEdge {
     pub id: String,
     pub source: String,
     pub target: String,
+    pub source_handle: Option<String>,
+    pub target_handle: Option<String>,
     pub animated: Option<bool>,
 }

@@ -5,18 +5,19 @@ import { v4 as uuidv4 } from 'uuid';
 interface CreateNodeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddNode: (node: any) => void;
+  onAdd: (node: any) => void;
 }
 
 const nodeTypeOptions = [
   { type: 'request', label: 'HTTP Request', description: 'Make an HTTP API call' },
   { type: 'delay', label: 'Delay', description: 'Wait for a specified time' },
   { type: 'logic', label: 'Condition', description: 'Branch based on a condition' },
+  { type: 'loop', label: 'Loop', description: 'Iterate over an array' },
 ];
 
 const httpMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
-export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNodeModalProps) {
+export default function CreateNodeModal({ isOpen, onClose, onAdd }: CreateNodeModalProps) {
   const { collections } = useCollectionStore();
   const [nodeType, setNodeType] = useState('request');
   const [name, setName] = useState('');
@@ -25,6 +26,25 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
   const [selectedRequestId, setSelectedRequestId] = useState('');
   const [delayMs, setDelayMs] = useState(1000);
   const [condition, setCondition] = useState('');
+  const [loopOver, setLoopOver] = useState('');
+  const [loopVar, setLoopVar] = useState('item');
+
+  const isValid = () => {
+    if (!name.trim()) return false;
+    if (nodeType === 'request') {
+      return !!selectedRequestId || !!url.trim();
+    }
+    if (nodeType === 'delay') {
+      return delayMs > 0;
+    }
+    if (nodeType === 'logic') {
+      return !!condition.trim();
+    }
+    if (nodeType === 'loop') {
+      return !!loopOver.trim() && !!loopVar.trim();
+    }
+    return true;
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -34,22 +54,28 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
       setSelectedRequestId('');
       setDelayMs(1000);
       setCondition('');
+      setLoopOver('');
+      setLoopVar('item');
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const allRequests = collections.flatMap(c => 
-    c.requests.map(r => ({ ...r, collectionName: c.name }))
-  );
+  const allRequests = collections.flatMap(c => {
+    const directReqs = (c.requests || []).map(r => ({ ...r, collectionName: c.name }));
+    const folderReqs = (c.folders || []).flatMap(f => 
+      (f.requests || []).map(r => ({ ...r, collectionName: `${c.name} / ${f.name}` }))
+    );
+    return [...directReqs, ...folderReqs];
+  });
 
   const handleAdd = () => {
     const nodeData: any = {
       id: uuidv4(),
       type: nodeType,
-      position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
+      position: { x: 100, y: 100 }, // Builder will reposition
       data: {
-        name: name || (nodeType === 'request' ? 'New Request' : nodeType === 'delay' ? 'Delay' : 'Condition'),
+        name: name || (nodeType === 'request' ? 'New Request' : nodeType === 'delay' ? 'Delay' : nodeType === 'logic' ? 'Condition' : 'Loop'),
         status: 'idle',
         type: nodeType,
       },
@@ -75,9 +101,12 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
       nodeData.data.delayMs = delayMs;
     } else if (nodeType === 'logic') {
       nodeData.data.condition = condition;
+    } else if (nodeType === 'loop') {
+      nodeData.data.loopOver = loopOver;
+      nodeData.data.loopVar = loopVar;
     }
 
-    onAddNode(nodeData);
+    onAdd(nodeData);
     onClose();
   };
 
@@ -90,7 +119,8 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        zIndex: 1000,
+        zIndex: 11000,
+        backdropFilter: 'blur(4px)'
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -103,7 +133,7 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
           backgroundColor: '#1e293b', 
           borderRadius: '12px', 
           padding: '24px',
-          width: '480px',
+          width: '520px',
           maxWidth: '90vw',
           border: '1px solid rgba(255,255,255,0.1)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
@@ -121,39 +151,54 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
 
         {/* Node Type Selection */}
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
             Node Type
           </label>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             {nodeTypeOptions.map(opt => (
               <button
                 key={opt.type}
                 onClick={() => setNodeType(opt.type)}
                 style={{
-                  flex: 1,
                   padding: '12px 8px',
                   backgroundColor: nodeType === opt.type ? '#2563eb' : '#0f172a',
                   border: `1px solid ${nodeType === opt.type ? '#2563eb' : 'rgba(255,255,255,0.1)'}`,
                   borderRadius: '8px',
                   color: 'white',
                   fontSize: '13px',
-                  fontWeight: 500,
+                  fontWeight: 600,
                   cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  flexDirection: 'column'
                 }}
               >
-                {opt.label}
+                <span>{opt.label}</span>
+                <span style={{ fontSize: '10px', opacity: 0.6, fontWeight: 400 }}>{opt.description}</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Request Node Options */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
+            Node Name
+          </label>
+          <input 
+            type="text"
+            className="text-input"
+            style={{ width: '100%' }}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="My Custom Step"
+          />
+        </div>
+
         {nodeType === 'request' && (
           <>
-            {/* Select from Collection */}
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>
-                Select from Collections <span style={{ color: '#64748b', fontWeight: 400 }}>(optional)</span>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
+                Select from Collections
               </label>
               <select
                 value={selectedRequestId}
@@ -161,21 +206,12 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
                   setSelectedRequestId(e.target.value);
                   if (e.target.value) setUrl('');
                 }}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  backgroundColor: '#0f172a',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '14px',
-                  outline: 'none',
-                  cursor: 'pointer',
-                }}
+                className="text-input"
+                style={{ width: '100%' }}
               >
-                <option value="" style={{ color: '#64748b' }}>-- Select a saved request --</option>
-                {allRequests.map(req => (
-                  <option key={req.id} value={req.id}>
+                <option value="">-- Manual URL --</option>
+                {allRequests.map((req, idx) => (
+                  <option key={`${req.id}-${idx}`} value={req.id}>
                     [{req.method}] {req.name} ({req.collectionName})
                   </option>
                 ))}
@@ -184,51 +220,31 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
 
             {!selectedRequestId && (
               <>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>
-                    HTTP Method
-                  </label>
-                  <select
-                    value={method}
-                    onChange={(e) => setMethod(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      backgroundColor: '#0f172a',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '14px',
-                      outline: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {httpMethods.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Method</label>
+                        <select
+                            value={method}
+                            onChange={(e) => setMethod(e.target.value)}
+                            className="text-input"
+                            style={{ width: '100%' }}
+                        >
+                            {httpMethods.map(m => (
+                            <option key={m} value={m}>{m}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>
-                    URL
-                  </label>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>URL</label>
                   <input
                     type="text"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://api.example.com/endpoint"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      backgroundColor: '#0f172a',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '14px',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
+                    className="text-input"
+                    style={{ width: '100%' }}
+                    placeholder="https://api.example.com"
                   />
                 </div>
               </>
@@ -236,88 +252,70 @@ export default function CreateNodeModal({ isOpen, onClose, onAddNode }: CreateNo
           </>
         )}
 
-        {/* Delay Node Options */}
         {nodeType === 'delay' && (
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>
-              Delay (milliseconds)
-            </label>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Delay (ms)</label>
             <input
               type="number"
               value={delayMs}
               onChange={(e) => setDelayMs(parseInt(e.target.value) || 0)}
-              placeholder="1000"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                backgroundColor: '#0f172a',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              className="text-input"
+              style={{ width: '100%' }}
             />
           </div>
         )}
 
-        {/* Condition Node Options */}
         {nodeType === 'logic' && (
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>
-              Condition
-            </label>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Condition</label>
             <input
               type="text"
               value={condition}
               onChange={(e) => setCondition(e.target.value)}
-              placeholder="{{status}} == 200"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                backgroundColor: '#0f172a',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              className="text-input"
+              style={{ width: '100%' }}
+              placeholder="{{status}} === 200"
             />
-            <p style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
-              Use {"{{variable}}"} to reference flow state variables
-            </p>
+          </div>
+        )}
+
+        {nodeType === 'loop' && (
+          <div style={{ display: 'flex', gap: '12px' }}>
+             <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Loop Over</label>
+                <input
+                    type="text"
+                    value={loopOver}
+                    onChange={(e) => setLoopOver(e.target.value)}
+                    className="text-input"
+                    style={{ width: '100%' }}
+                    placeholder="{{items}}"
+                />
+             </div>
+             <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Var Name</label>
+                <input
+                    type="text"
+                    value={loopVar}
+                    onChange={(e) => setLoopVar(e.target.value)}
+                    className="text-input"
+                    style={{ width: '100%' }}
+                    placeholder="item"
+                />
+             </div>
           </div>
         )}
 
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '10px 16px',
-              backgroundColor: 'transparent',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              color: '#94a3b8',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleAdd}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#2563eb',
-              border: 'none',
-              borderRadius: '8px',
-              color: 'white',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
+          <button onClick={onClose} className="btn-secondary">Cancel</button>
+          <button 
+            onClick={handleAdd} 
+            className="btn-primary" 
+            disabled={!isValid()}
+            style={{ 
+              padding: '8px 24px',
+              opacity: isValid() ? 1 : 0.5,
+              cursor: isValid() ? 'pointer' : 'not-allowed'
             }}
           >
             Add Node

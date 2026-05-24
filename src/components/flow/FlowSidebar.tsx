@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
 import { v4 as uuidv4 } from 'uuid';
-import { LayoutDashboard, Folder, ChevronDown, ChevronRight, Clock, Globe, GitBranch } from 'lucide-react';
+import { LayoutDashboard, Folder, ChevronDown, ChevronRight, Clock, Globe, GitBranch, MoreVertical, Pin } from 'lucide-react';
+import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
+import ConfirmModal from '../ui/ConfirmModal';
+import { toast } from 'sonner';
 import '../../styles/components/flow/flow-sidebar.css';
 
 export default function FlowSidebar() {
@@ -11,11 +14,23 @@ export default function FlowSidebar() {
   const [isFlowsExpanded, setIsFlowsExpanded] = useState(true);
   const [isCollectionsExpanded, setIsCollectionsExpanded] = useState(true);
   const [isControlExpanded, setIsControlExpanded] = useState(true);
-  const { addFlow, setActiveFlow, flows, activeFlowId, updateFlow, deleteFlow } = useFlowStore();
+  const { addFlow, setActiveFlowId, flows, activeFlowId, updateFlow, deleteFlow } = useFlowStore();
   const { collections } = useCollectionStore();
   const { setCreateFlowModalOpen } = useAppStore();
-  const [flowMenuAnchor, setFlowMenuAnchor] = useState<{flowId: string, x: number, y: number} | null>(null);
-  const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
+  
+  const [menuPos, setMenuPos] = useState<{ x: number, y: number, flowId: string } | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
 
   const handleOpenCreateModal = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -23,27 +38,24 @@ export default function FlowSidebar() {
   };
 
   const handleFlowClick = (flowId: string) => {
-    setActiveFlow(flowId);
+    setActiveFlowId(flowId);
   };
 
   const handleFlowMenuClick = (e: React.MouseEvent, flowId: string) => {
     e.stopPropagation();
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    setFlowMenuAnchor({ flowId, x: rect.left, y: rect.bottom });
-    setMenuPosition({ top: rect.bottom + 5, left: rect.left - 120 });
+    setMenuPos({ x: e.clientX, y: e.clientY, flowId });
   };
 
-  const handleCloseMenu = () => {
-    setFlowMenuAnchor(null);
-    setMenuPosition(null);
+  const startRename = (id: string, name: string) => {
+    setEditingId(id);
+    setEditValue(name);
   };
 
-  const handleRenameFlow = (flowId: string) => {
-    const newName = prompt('Enter new name:');
-    if (newName && newName.trim()) {
-      updateFlow(flowId, { name: newName.trim() });
+  const submitRename = (id: string) => {
+    if (editValue.trim()) {
+      updateFlow(id, { name: editValue.trim() });
     }
-    handleCloseMenu();
+    setEditingId(null);
   };
 
   const handleDuplicateFlow = (flowId: string) => {
@@ -53,32 +65,34 @@ export default function FlowSidebar() {
         ...flow,
         id: uuidv4(),
         name: flow.name + ' (Copy)',
-        nodes: [...flow.nodes],
-        edges: [...flow.edges],
+        nodes: (flow.nodes || []).map(n => ({ ...n })),
+        edges: (flow.edges || []).map(e => ({ ...e })),
         pinned: false,
       };
-      addFlow(newFlow);
+      addFlow(newFlow as any);
+      toast.success('Flow duplicated');
     }
-    handleCloseMenu();
   };
 
-  const handlePinFlow = (flowId: string) => {
-    const flow = flows.find(f => f.id === flowId);
-    if (flow) {
-      updateFlow(flowId, { pinned: !flow.pinned });
+  const getMenuItems = (flow: any): ContextMenuItem[] => [
+    { 
+      label: 'Rename', 
+      onClick: () => startRename(flow.id, flow.name) 
+    },
+    { 
+      label: 'Duplicate', 
+      onClick: () => handleDuplicateFlow(flow.id) 
+    },
+    { 
+      label: flow.pinned ? 'Unpin' : 'Pin', 
+      onClick: () => updateFlow(flow.id, { pinned: !flow.pinned }) 
+    },
+    { 
+      label: 'Delete', 
+      danger: true, 
+      onClick: () => setConfirmDeleteId(flow.id) 
     }
-    handleCloseMenu();
-  };
-
-  const handleDeleteFlow = (flowId: string) => {
-    if (confirm('Are you sure you want to delete this flow?')) {
-      deleteFlow(flowId);
-      if (activeFlowId === flowId) {
-        setActiveFlow(null);
-      }
-    }
-    handleCloseMenu();
-  };
+  ];
 
   const handleDragStart = (event: React.DragEvent, nodeType: string, requestName?: string, requestMethod?: string, requestUrl?: string, requestId?: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
@@ -89,10 +103,14 @@ export default function FlowSidebar() {
     event.dataTransfer.effectAllowed = 'move';
   };
 
+  const flowToDelete = flows.find(f => f.id === confirmDeleteId);
+
+  // Deduplicate flows for safety before rendering to prevent key issues
+  const uniqueFlows = Array.from(new Map(flows.map(f => [f.id, f])).values());
+
   return (
     <div className="flow-sidebar">
-      
-      <div className="sidebar-content">
+      <div className="sidebar-content no-scrollbar">
         
         <div className="category-group">
           <span className="category-title">Library</span>
@@ -127,52 +145,62 @@ export default function FlowSidebar() {
             
             {isFlowsExpanded && (
               <div className="expanded-list">
-                {flows.length === 0 ? (
+                {uniqueFlows.length === 0 ? (
                   <span style={{ padding: '8px 12px', color: 'var(--text-tertiary, #64748b)', fontSize: '13px' }}>
                     No flows yet. Create one to get started.
                   </span>
                 ) : (
-                  [...flows].sort((a, b) => {
+                  [...uniqueFlows].sort((a, b) => {
                     if (a.pinned && !b.pinned) return -1;
                     if (!a.pinned && b.pinned) return 1;
                     return 0;
                   }).map((flow) => (
                     <div 
                       key={flow.id}
-                      style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}
+                      className={`nav-item-wrapper ${activeFlowId === flow.id ? 'active' : ''}`}
                     >
                       <button 
                         className={`nav-item ${activeFlowId === flow.id ? 'active' : ''}`}
                         onClick={() => handleFlowClick(flow.id)}
-                        style={{ flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}
+                        style={{ flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: '2px', padding: '8px 12px' }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 500 }}>{flow.name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%' }}>
+                          {editingId === flow.id ? (
+                            <input 
+                              ref={editInputRef}
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onBlur={() => submitRename(flow.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') submitRename(flow.id);
+                                if (e.key === 'Escape') setEditingId(null);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ 
+                                width: '100%', background: 'var(--bg-deep)', border: '1px solid var(--accent-primary)', 
+                                borderRadius: '4px', color: 'white', padding: '2px 6px', fontSize: '13px', outline: 'none'
+                              }}
+                            />
+                          ) : (
+                            <>
+                              <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{flow.name}</span>
+                              {flow.pinned && <Pin size={10} style={{ opacity: 0.6, color: '#f59e0b' }} />}
+                            </>
+                          )}
                         </div>
-                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary, #64748b)' }}>
-                          {flow.nodes?.length || 0} nodes
-                        </span>
+                        {!editingId && (
+                          <span style={{ fontSize: '10px', color: 'var(--text-tertiary, #64748b)' }}>
+                            {flow.nodes?.length || 0} nodes
+                          </span>
+                        )}
                       </button>
-                      {flow.pinned && (
-                        <span style={{ color: '#8b5cf6', fontSize: '12px', marginRight: '2px' }} title="Pinned">★</span>
-                      )}
+                      
                       <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFlowMenuClick(e, flow.id);
-                        }}
-                        style={{ 
-                          background: 'transparent', 
-                          border: 'none', 
-                          color: 'var(--text-tertiary, #64748b)', 
-                          cursor: 'pointer',
-                          padding: '8px',
-                          fontSize: '16px',
-                          borderRadius: '4px',
-                        }}
+                        onClick={(e) => handleFlowMenuClick(e, flow.id)}
+                        className="item-action-btn"
                         title="More options"
                       >
-                        ⋮
+                        <MoreVertical size={14} />
                       </button>
                     </div>
                   ))
@@ -197,42 +225,42 @@ export default function FlowSidebar() {
             </div>
 
             {isCollectionsExpanded && (
-              <div className="expanded-list">
+              <div className="expanded-list custom-scrollbar-mini" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                 {collections.length === 0 ? (
                   <span style={{ padding: '8px 12px', color: 'var(--text-tertiary, #64748b)', fontSize: '12px' }}>
                     No collections yet. Create one in Collections tab.
                   </span>
                 ) : (
-                  collections.map(col => (
-                    <div key={col.id}>
-                      <div style={{ padding: '4px 12px', fontSize: '10px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  collections.map((col, colIdx) => (
+                    <div key={`${col.id || 'col'}-${colIdx}`}>
+                      <div style={{ padding: '8px 12px 4px', fontSize: '10px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         {col.name}
                       </div>
-                      {col.requests.map(req => (
+                      {col.requests.map((req, idx) => (
                         <button 
-                          key={req.id}
+                          key={`${req.id}-${col.id}-${idx}`}
                           className="nav-item"
                           draggable={true}
                           onDragStart={(e) => handleDragStart(e, 'request', req.name, req.method, req.url, req.id)}
                         >
-                          <span className={`http-badge badge-${req.method.toLowerCase()}`}>{req.method}</span>
-                          <span>{req.name}</span>
+                          <span className={`http-badge badge-${req.method.toLowerCase()}`} style={{ fontSize: '9px', padding: '1px 4px', minWidth: '32px' }}>{req.method}</span>
+                          <span style={{ fontSize: '12px' }}>{req.name}</span>
                         </button>
                       ))}
-                      {col.folders?.map(folder => (
-                        <div key={folder.id}>
-                          <div style={{ padding: '4px 12px', fontSize: '10px', color: '#475569' }}>
+                      {col.folders?.map((folder, folderIdx) => (
+                        <div key={`${folder.id || 'folder'}-${folderIdx}`}>
+                          <div style={{ padding: '4px 12px', fontSize: '11px', color: '#475569' }}>
                             📁 {folder.name}
                           </div>
-                          {folder.requests.map(req => (
+                          {folder.requests.map((req, idx) => (
                             <button 
-                              key={req.id}
+                              key={`${req.id}-${folder.id}-${idx}`}
                               className="nav-item"
                               draggable={true}
                               onDragStart={(e) => handleDragStart(e, 'request', req.name, req.method, req.url, req.id)}
                             >
-                              <span className={`http-badge badge-${req.method.toLowerCase()}`}>{req.method}</span>
-                              <span>{req.name}</span>
+                              <span className={`http-badge badge-${req.method.toLowerCase()}`} style={{ fontSize: '9px', padding: '1px 4px', minWidth: '32px' }}>{req.method}</span>
+                              <span style={{ fontSize: '12px' }}>{req.name}</span>
                             </button>
                           ))}
                         </div>
@@ -265,7 +293,9 @@ export default function FlowSidebar() {
                 draggable={true}
                 onDragStart={(e) => handleDragStart(e, 'logic', 'Condition', 'LOGIC')}
               >
-                <GitBranch size={16} className="text-purple-400" />
+                <div className="node-icon-preview purple">
+                   <GitBranch size={12} />
+                </div>
                 <span>Condition</span>
               </button>
               <button 
@@ -273,15 +303,29 @@ export default function FlowSidebar() {
                 draggable={true}
                 onDragStart={(e) => handleDragStart(e, 'delay', 'Delay', 'DELAY')}
               >
-                <Clock size={16} className="text-blue-400" />
+                <div className="node-icon-preview blue">
+                   <Clock size={12} />
+                </div>
                 <span>Delay</span>
+              </button>
+              <button 
+                className="nav-item"
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, 'loop', 'Loop', 'LOOP')}
+              >
+                <div className="node-icon-preview orange">
+                   <GitBranch size={12} style={{ transform: 'rotate(90deg)' }} />
+                </div>
+                <span>Loop</span>
               </button>
               <button 
                 className="nav-item"
                 draggable={true}
                 onDragStart={(e) => handleDragStart(e, 'request', 'HTTP Request', 'REQUEST')}
               >
-                <Globe size={16} className="text-slate-400" />
+                <div className="node-icon-preview slate">
+                   <Globe size={12} />
+                </div>
                 <span>HTTP Request</span>
               </button>
             </div>
@@ -289,126 +333,35 @@ export default function FlowSidebar() {
         </div>
       </div>
 
-      {/* SECTION 2: Footer with Create Flow Button */}
       <div className="sidebar-footer">
-        <button className="primary-btn" onClick={handleOpenCreateModal}>
+        <button className="primary-btn rounded-md" style={{ fontWeight: 600 }} onClick={handleOpenCreateModal}>
           + New Flow
         </button>
       </div>
 
-      {/* Context Menu for Flow Actions */}
-      {flowMenuAnchor && menuPosition && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: menuPosition.top,
-            left: menuPosition.left,
-            backgroundColor: 'var(--bg-elevated, #1e293b)',
-            border: '1px solid var(--border-default, rgba(255,255,255,0.1))',
-            borderRadius: '8px',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-            zIndex: 20000,
-            minWidth: '160px',
-            overflow: 'hidden',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => handleRenameFlow(flowMenuAnchor.flowId)}
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-primary, white)',
-              fontSize: '13px',
-              textAlign: 'left',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface, #334155)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            ✏️ Rename
-          </button>
-          <button
-            onClick={() => handleDuplicateFlow(flowMenuAnchor.flowId)}
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-primary, white)',
-              fontSize: '13px',
-              textAlign: 'left',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface, #334155)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            📋 Duplicate
-          </button>
-          <button
-            onClick={() => handleDeleteFlow(flowMenuAnchor.flowId)}
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              background: 'transparent',
-              border: 'none',
-              color: '#ef4444',
-              fontSize: '13px',
-              textAlign: 'left',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface, #334155)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            🗑️ Delete
-          </button>
-          <button
-            onClick={() => {
-              const flow = flows.find(f => f.id === flowMenuAnchor.flowId);
-              handlePinFlow(flowMenuAnchor.flowId);
-            }}
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-primary, white)',
-              fontSize: '13px',
-              textAlign: 'left',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-surface, #334155)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            {flows.find(f => f.id === flowMenuAnchor.flowId)?.pinned ? '📌 Unpin' : '📌 Pin'}
-          </button>
-        </div>
-      )}
-      
-      {flowMenuAnchor && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 999,
-          }}
-          onClick={handleCloseMenu}
+      {menuPos && (
+        <ContextMenu 
+          x={menuPos.x}
+          y={menuPos.y}
+          items={getMenuItems(flows.find(f => f.id === menuPos.flowId))}
+          onClose={() => setMenuPos(null)}
         />
       )}
+
+      <ConfirmModal 
+        isOpen={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={() => {
+            if (confirmDeleteId) {
+                deleteFlow(confirmDeleteId);
+                if (activeFlowId === confirmDeleteId) setActiveFlowId(null);
+            }
+        }}
+        title="Delete Flow"
+        message={`Are you sure you want to delete "${flowToDelete?.name}"? This will permanently remove the flow and all its connections.`}
+        confirmLabel="Delete"
+        isDanger={true}
+      />
 
     </div>
   );

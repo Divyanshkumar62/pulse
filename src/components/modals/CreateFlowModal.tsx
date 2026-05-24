@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useEnvStore } from '../../stores/useEnvStore';
 import { v4 as uuidv4 } from 'uuid';
+import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 
 interface CreateFlowModalProps {
   isOpen?: boolean;
@@ -9,7 +11,7 @@ interface CreateFlowModalProps {
 }
 
 export default function CreateFlowModal({ isOpen, onClose }: CreateFlowModalProps) {
-  const { addFlow, setActiveFlow } = useFlowStore();
+  const { addFlow, setActiveFlowId } = useFlowStore();
   const { environments } = useEnvStore();
   
   const isModalOpen = isOpen;
@@ -25,12 +27,13 @@ export default function CreateFlowModal({ isOpen, onClose }: CreateFlowModalProp
       setName('');
       setDescription('');
       setEnvironmentId('');
+      setIsCreating(false);
     }
   }, [isModalOpen]);
 
   if (!isModalOpen) return null;
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!name.trim()) return;
     
     setIsCreating(true);
@@ -47,14 +50,15 @@ export default function CreateFlowModal({ isOpen, onClose }: CreateFlowModalProp
       updatedAt: Date.now(),
     };
     
-    addFlow(newFlow);
-    setActiveFlow(newFlow.id);
-    
-    setName('');
-    setDescription('');
-    setEnvironmentId('');
-    setIsCreating(false);
-    closeModal();
+    try {
+        await addFlow(newFlow);
+        setActiveFlowId(newFlow.id);
+        closeModal();
+    } catch (e) {
+        console.error("Failed to create flow:", e);
+    } finally {
+        setIsCreating(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -66,7 +70,7 @@ export default function CreateFlowModal({ isOpen, onClose }: CreateFlowModalProp
     }
   };
 
-  return (
+  return createPortal(
     <div 
       style={{ 
         position: 'fixed', 
@@ -75,7 +79,8 @@ export default function CreateFlowModal({ isOpen, onClose }: CreateFlowModalProp
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        zIndex: 1000,
+        zIndex: 10000,
+        backdropFilter: 'blur(4px)'
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -86,138 +91,86 @@ export default function CreateFlowModal({ isOpen, onClose }: CreateFlowModalProp
       <div 
         style={{ 
           backgroundColor: '#1e293b', 
-          borderRadius: '12px', 
-          padding: '24px',
-          width: '420px',
+          borderRadius: '16px', 
+          width: '450px',
           maxWidth: '90vw',
           border: '1px solid rgba(255,255,255,0.1)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 style={{ 
-          margin: '0 0 20px 0', 
-          fontSize: '18px', 
-          fontWeight: 600,
-          color: 'white',
-        }}>
-          Create New Flow
-        </h2>
-        
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>
-            Flow Name <span style={{ color: '#ef4444' }}>*</span>
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="e.g., User Provisioning Flow"
-            autoFocus
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              backgroundColor: '#0f172a',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              color: 'white',
-              fontSize: '14px',
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: 'white' }}>Create New Flow</h2>
+            <button onClick={closeModal} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
         </div>
         
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>
-            Description <span style={{ color: '#64748b', fontWeight: 400 }}>(optional)</span>
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Briefly describe what this flow does..."
-            rows={2}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              backgroundColor: '#0f172a',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              color: 'white',
-              fontSize: '14px',
-              outline: 'none',
-              boxSizing: 'border-box',
-              resize: 'vertical',
-              fontFamily: 'inherit',
-            }}
-          />
+        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
+                Flow Name <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <input
+                type="text"
+                className="text-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="e.g., User Onboarding Workflow"
+                autoFocus
+                style={{ width: '100%' }}
+            />
+            </div>
+            
+            <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
+                Description <span style={{ color: '#64748b', fontWeight: 400 }}>(optional)</span>
+            </label>
+            <textarea
+                className="text-input"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Briefly describe what this flow does..."
+                rows={2}
+                style={{ width: '100%', resize: 'none' }}
+            />
+            </div>
+            
+            <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
+                Target Environment <span style={{ color: '#64748b', fontWeight: 400 }}>(optional)</span>
+            </label>
+            <select
+                className="text-input"
+                value={environmentId}
+                onChange={(e) => setEnvironmentId(e.target.value)}
+                style={{ width: '100%', cursor: 'pointer' }}
+            >
+                <option value="">Select an environment...</option>
+                {environments.map((env) => (
+                <option key={env.id} value={env.id}>
+                    {env.name}
+                </option>
+                ))}
+            </select>
+            </div>
         </div>
         
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>
-            Target Environment <span style={{ color: '#64748b', fontWeight: 400 }}>(optional)</span>
-          </label>
-          <select
-            value={environmentId}
-            onChange={(e) => setEnvironmentId(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              backgroundColor: '#0f172a',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              color: 'white',
-              fontSize: '14px',
-              outline: 'none',
-              boxSizing: 'border-box',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="" style={{ color: '#64748b' }}>Select an environment...</option>
-            {environments.map((env) => (
-              <option key={env.id} value={env.id}>
-                {env.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-          <button
-            onClick={closeModal}
-            style={{
-              padding: '10px 16px',
-              backgroundColor: 'transparent',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              color: '#94a3b8',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-          >
-            Cancel
-          </button>
+        <div style={{ padding: '16px 24px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+          <button onClick={closeModal} className="btn-secondary">Cancel</button>
           <button
             onClick={handleCreate}
             disabled={!name.trim() || isCreating}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: name.trim() && !isCreating ? '#2563eb' : '#334155',
-              border: 'none',
-              borderRadius: '8px',
-              color: name.trim() && !isCreating ? 'white' : '#64748b',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: name.trim() && !isCreating ? 'pointer' : 'not-allowed',
-              opacity: isCreating ? 0.7 : 1,
-            }}
+            className="btn-primary"
+            style={{ padding: '10px 24px' }}
           >
             {isCreating ? 'Creating...' : 'Create Flow'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

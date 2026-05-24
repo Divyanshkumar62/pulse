@@ -24,6 +24,8 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
   const [method, setMethod] = useState(node?.data.method || 'GET');
   const [delayMs, setDelayMs] = useState(node?.data.delayMs || 1000);
   const [condition, setCondition] = useState(node?.data.condition || '');
+  const [loopOver, setLoopOver] = useState(node?.data.loopOver || '');
+  const [loopVar, setLoopVar] = useState(node?.data.loopVar || '');
   const [mappings, setMappings] = useState<FlowNodeMapping[]>(node?.data.mappings || []);
   const [headers, setHeaders] = useState<Header[]>(node?.data.headers || [
     { id: '1', key: 'Content-Type', value: 'application/json', enabled: true }
@@ -38,6 +40,8 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
       setMethod(node.data.method || 'GET');
       setDelayMs(node.data.delayMs || 1000);
       setCondition(node.data.condition || '');
+      setLoopOver(node.data.loopOver || '');
+      setLoopVar(node.data.loopVar || '');
       setMappings(node.data.mappings || []);
       setHeaders(node.data.headers || [{ id: '1', key: 'Content-Type', value: 'application/json', enabled: true }]);
       setParams(node.data.params || []);
@@ -59,6 +63,8 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
             method,
             delayMs,
             condition,
+            loopOver,
+            loopVar,
             mappings,
             headers,
             params,
@@ -165,6 +171,33 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
                 style={{ width: '100%', marginTop: '8px' }}
               />
             </div>
+          )}
+
+          {node.type === 'loop' && (
+            <>
+              <div className="config-section">
+                <label className="config-label">Loop Over Array</label>
+                <input 
+                  type="text" 
+                  value={loopOver}
+                  onChange={(e) => setLoopOver(e.target.value)}
+                  placeholder="{{users_array}}"
+                  className="kv-input"
+                  style={{ width: '100%', marginTop: '8px' }}
+                />
+              </div>
+              <div className="config-section">
+                <label className="config-label">Iterator Variable Name</label>
+                <input 
+                  type="text" 
+                  value={loopVar}
+                  onChange={(e) => setLoopVar(e.target.value)}
+                  placeholder="user"
+                  className="kv-input"
+                  style={{ width: '100%', marginTop: '8px' }}
+                />
+              </div>
+            </>
           )}
 
           {node.type === 'request' && (

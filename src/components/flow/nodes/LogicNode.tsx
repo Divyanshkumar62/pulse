@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Clock, GitBranch, Repeat, Settings2, Plus } from 'lucide-react';
+import { Clock, GitBranch, Repeat, Settings2, Plus, MoreVertical, Play } from 'lucide-react';
 import '../../../styles/components/flow/flow-nodes.css';
 
 export function LogicNode({ data, id }: { data: any, id: string }) {
+  const [showMenu, setShowMenu] = useState(false);
+
   const isDelay = data.type === 'delay';
   const isBranch = data.type === 'logic';
   const isLoop = data.type === 'loop';
@@ -24,6 +26,21 @@ export function LogicNode({ data, id }: { data: any, id: string }) {
     }
   };
 
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setShowMenu(!showMenu);
+  };
+
+  const handleActionClick = (action: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (data.onAction) {
+      data.onAction(action, id);
+    }
+    setShowMenu(false);
+  };
+
   return (
     <div 
       className={`logic-node-container ${data.type || 'logic'} ${data.status || 'idle'}`}
@@ -32,6 +49,47 @@ export function LogicNode({ data, id }: { data: any, id: string }) {
         borderLeft: data.status && data.status !== 'idle' ? `3px solid ${getStatusColor()}` : undefined
       }}
     >
+      <div className="node-menu-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <button 
+          className="node-play-btn" 
+          title="Run Node"
+          onClick={(e) => handleActionClick('runNode', e)}
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#10b981',
+            cursor: 'pointer',
+            padding: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '4px',
+            transition: 'all 0.2s',
+          }}
+        >
+          <Play size={12} fill="#10b981" />
+        </button>
+        <button 
+          className="node-menu-btn" 
+          onClick={handleMenuClick}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <MoreVertical size={14} />
+        </button>
+        
+        {showMenu && (
+          <>
+            <div className="node-menu-overlay" onClick={() => setShowMenu(false)} />
+            <div className="node-context-menu" onClick={(e) => e.stopPropagation()}>
+              <button onClick={(e) => handleActionClick('rename', e)}>Rename</button>
+              <button onClick={(e) => handleActionClick('duplicate', e)}>Duplicate</button>
+              <button onClick={(e) => handleActionClick('delete', e)} className="delete-btn">Delete</button>
+            </div>
+          </>
+        )}
+      </div>
+
       <Handle 
         type="target" 
         position={Position.Left} 
@@ -51,25 +109,63 @@ export function LogicNode({ data, id }: { data: any, id: string }) {
 
       <div className="logic-node-info">
         <span className="node-active-tag">
-          {isDelay ? 'Delay' : isBranch ? 'Logic' : 'Control'}
+          {isDelay ? 'Delay' : isBranch ? 'Logic' : isLoop ? 'Loop' : 'Control'}
         </span>
         <span className="node-name">
           {isDelay ? `${data.delayMs || 1000}ms Wait` : isBranch ? (data.condition || 'Condition') : data.name}
         </span>
       </div>
 
-      <Handle 
-        type="source" 
-        position={Position.Right} 
-        className="flow-handle flow-handle-right"
-      >
-        <div 
-          className="handle-plus-icon" 
-          onClick={(e) => { e.stopPropagation(); if (data.onAction) data.onAction('addFromNode_right', id); }}
+      {isBranch ? (
+        <>
+          <Handle 
+            type="source" 
+            position={Position.Right} 
+            id="true"
+            className="flow-handle flow-handle-right flow-handle-true"
+          />
+          <div className="handle-label success-label top">True</div>
+
+          <Handle 
+            type="source" 
+            position={Position.Right} 
+            id="false"
+            className="flow-handle flow-handle-right flow-handle-false"
+          />
+          <div className="handle-label failure-label bottom">False</div>
+        </>
+      ) : isLoop ? (
+        <>
+          <Handle 
+            type="source" 
+            position={Position.Right} 
+            id="each"
+            className="flow-handle flow-handle-right flow-handle-true"
+          />
+          <div className="handle-label success-label top">Each</div>
+
+          <Handle 
+            type="source" 
+            position={Position.Right} 
+            id="done"
+            className="flow-handle flow-handle-right flow-handle-false"
+          />
+          <div className="handle-label failure-label bottom">Done</div>
+        </>
+      ) : (
+        <Handle 
+          type="source" 
+          position={Position.Right} 
+          className="flow-handle flow-handle-right"
         >
-          <Plus size={10} strokeWidth={3} />
-        </div>
-      </Handle>
+          <div 
+            className="handle-plus-icon" 
+            onClick={(e) => { e.stopPropagation(); if (data.onAction) data.onAction('addFromNode_right', id); }}
+          >
+            <Plus size={10} strokeWidth={3} />
+          </div>
+        </Handle>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { CheckCircle, AlertCircle, Loader2, MoreVertical, Plus } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, MoreVertical, Plus, Play } from 'lucide-react';
 import '../../../styles/components/flow/flow-nodes.css';
 
 interface RequestNodeProps {
@@ -66,30 +66,51 @@ export function RequestNode({ data, id }: RequestNodeProps) {
         </div>
       </Handle>
       
+      <div className="node-menu-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <button 
+          className="node-play-btn" 
+          title="Run Node"
+          onClick={(e) => handleActionClick('runNode', e)}
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#10b981',
+            cursor: 'pointer',
+            padding: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '4px',
+            transition: 'all 0.2s',
+          }}
+        >
+          <Play size={12} fill="#10b981" />
+        </button>
+        <button 
+          className="node-menu-btn" 
+          onClick={handleMenuClick}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <MoreVertical size={14} />
+        </button>
+        
+        {showMenu && (
+          <>
+            <div className="node-menu-overlay" onClick={handleOverlayClick} />
+            <div className="node-context-menu" onClick={(e) => e.stopPropagation()}>
+              <button onClick={(e) => handleActionClick('rename', e)}>Rename</button>
+              <button onClick={(e) => handleActionClick('duplicate', e)}>Duplicate</button>
+              <button onClick={(e) => handleActionClick('viewResponse', e)}>View Response</button>
+              <button onClick={(e) => handleActionClick('delete', e)} className="delete-btn">Delete</button>
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="request-node-content">
         <div className="node-header">
           <span className="node-name" style={{ color: methodColor }}>{data.name || 'Request'}</span>
-          <div className="node-menu-wrapper">
-            <button 
-              className="node-menu-btn" 
-              onClick={handleMenuClick}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <MoreVertical size={14} />
-            </button>
-            
-            {showMenu && (
-              <>
-                <div className="node-menu-overlay" onClick={handleOverlayClick} />
-                <div className="node-context-menu" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={(e) => handleActionClick('rename', e)}>Rename</button>
-                  <button onClick={(e) => handleActionClick('duplicate', e)}>Duplicate</button>
-                  <button onClick={(e) => handleActionClick('viewResponse', e)}>View Response</button>
-                  <button onClick={(e) => handleActionClick('delete', e)} className="delete-btn">Delete</button>
-                </div>
-              </>
-            )}
-          </div>
         </div>
         
         <div className="node-info">
@@ -108,15 +129,18 @@ export function RequestNode({ data, id }: RequestNodeProps) {
       <Handle 
         type="source" 
         position={Position.Right} 
-        className="flow-handle flow-handle-right"
-      >
-        <div 
-          className="handle-plus-icon" 
-          onClick={(e) => { e.stopPropagation(); if (data.onAction) data.onAction('addFromNode_right', id); }}
-        >
-          <Plus size={10} strokeWidth={3} />
-        </div>
-      </Handle>
+        id="success"
+        className="flow-handle flow-handle-right flow-handle-success"
+      />
+      <div className="handle-label success-label top">Success</div>
+
+      <Handle 
+        type="source" 
+        position={Position.Right} 
+        id="failure"
+        className="flow-handle flow-handle-right flow-handle-failure"
+      />
+      <div className="handle-label failure-label bottom">Failure</div>
     </div>
   );
 }

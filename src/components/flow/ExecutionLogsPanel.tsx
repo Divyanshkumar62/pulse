@@ -17,15 +17,14 @@ interface LogEntry {
 }
 
 export default function ExecutionLogsPanel({ isOpen, onToggle }: ExecutionLogsPanelProps) {
-  const { executionState, flowState } = useFlowStore();
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const { executionState, executionLogs, clearLogs } = useFlowStore();
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [logs]);
+  }, [executionLogs]);
 
   if (!isOpen) return null;
 
@@ -58,10 +57,8 @@ export default function ExecutionLogsPanel({ isOpen, onToggle }: ExecutionLogsPa
     });
   };
 
-  const clearLogs = () => setLogs([]);
-
   const exportLogs = () => {
-    const content = logs.map(log => 
+    const content = executionLogs.map(log => 
       `[${formatTime(log.timestamp)}] [${log.level.toUpperCase()}] ${log.message}`
     ).join('\n');
     
@@ -121,9 +118,9 @@ export default function ExecutionLogsPanel({ isOpen, onToggle }: ExecutionLogsPa
           }}>
             {executionState.toUpperCase()}
           </span>
-          {logs.length > 0 && (
+          {executionLogs.length > 0 && (
             <span style={{ fontSize: '11px', color: '#64748b' }}>
-              {logs.length} entries
+              {executionLogs.length} entries
             </span>
           )}
         </div>
@@ -179,14 +176,14 @@ export default function ExecutionLogsPanel({ isOpen, onToggle }: ExecutionLogsPa
         fontFamily: 'monospace',
         fontSize: '12px',
       }}>
-        {logs.length === 0 ? (
+        {executionLogs.length === 0 ? (
           <div style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
             No logs yet. Run the flow to see execution output.
           </div>
         ) : (
-          logs.map((log, idx) => (
+          executionLogs.map((log, idx) => (
             <div 
-              key={idx} 
+              key={log.id || idx} 
               style={{ 
                 display: 'flex', 
                 gap: '12px', 
@@ -200,11 +197,6 @@ export default function ExecutionLogsPanel({ isOpen, onToggle }: ExecutionLogsPa
               <span style={{ color: getLevelColor(log.level), flexShrink: 0, fontWeight: 600 }}>
                 {getLevelIcon(log.level)}
               </span>
-              {log.nodeName && (
-                <span style={{ color: '#3b82f6', flexShrink: 0 }}>
-                  [{log.nodeName}]
-                </span>
-              )}
               <span style={{ color: '#e2e8f0', wordBreak: 'break-word' }}>
                 {log.message}
               </span>
@@ -213,34 +205,6 @@ export default function ExecutionLogsPanel({ isOpen, onToggle }: ExecutionLogsPa
         )}
         <div ref={logsEndRef} />
       </div>
-
-      {/* Flow State Preview */}
-      {Object.keys(flowState).length > 0 && (
-        <div style={{ 
-          padding: '12px 16px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          backgroundColor: 'rgba(0, 0, 0, 0.2)',
-        }}>
-          <span style={{ fontSize: '11px', color: '#64748b', marginRight: '12px' }}>
-            FLOW STATE:
-          </span>
-          {Object.keys(flowState).map(key => (
-            <span 
-              key={key}
-              style={{ 
-                fontSize: '11px', 
-                marginRight: '12px',
-                padding: '2px 6px',
-                backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                borderRadius: '4px',
-                color: '#93c5fd',
-              }}
-            >
-              {key}: {JSON.stringify(flowState[key]).substring(0, 50)}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

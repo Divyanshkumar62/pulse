@@ -499,6 +499,7 @@ pub fn run() {
             collections::git::git_resolve_conflict,
             collections::git::git_rebase_continue,
             collections::git::git_rebase_abort,
+            collections::flow_runner::run_flow,
             save_flows_to_disk,
             load_flows_from_workspace,
             start_mock_server,

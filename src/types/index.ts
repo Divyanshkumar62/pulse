@@ -163,7 +163,7 @@ export interface FlowNodeMapping {
 
 export interface FlowNode {
   id: string;
-  type: 'request' | 'logic' | 'delay' | 'start' | 'end';
+  type: 'request' | 'logic' | 'delay' | 'start' | 'end' | 'loop';
   position: { x: number; y: number };
   data: {
     name: string;
@@ -172,6 +172,8 @@ export interface FlowNode {
     method?: string;
     delayMs?: number;
     condition?: string;
+    loopOver?: string; // e.g. "{{users}}"
+    loopVar?: string;  // e.g. "user"
     headers?: { id: string; key: string; value: string; enabled: boolean }[];
     params?: { id: string; key: string; value: string; enabled: boolean }[];
     mappings?: FlowNodeMapping[];
@@ -185,6 +187,8 @@ export interface FlowEdge {
   id: string;
   source: string;
   target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
   animated?: boolean;
 }
 

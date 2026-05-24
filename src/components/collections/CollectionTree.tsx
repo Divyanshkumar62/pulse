@@ -289,12 +289,12 @@ export default function CollectionTree() {
     setContextMenu({ x: menuX, y: menuY, items });
   };
 
-  const renderTreeItem = (item: TreeItem) => {
+  const renderTreeItem = (item: TreeItem, idx: number) => {
     const paddingLeft = item.level * 12 + 8;
 
     if (item.type === 'creating') {
       return (
-        <div key={`creating-${item.parentId}`} style={{ paddingLeft, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
+        <div key={`creating-${item.parentId}-${idx}`} style={{ paddingLeft, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
           <span style={{ width: '14px' }}></span>
           <input
             ref={createInputRef}
@@ -325,7 +325,7 @@ export default function CollectionTree() {
     if (item.type === 'collection' || item.type === 'folder') {
       if (editingId === item.id) {
         return (
-          <div key={`editing-${item.id}`} style={{ paddingLeft, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
+          <div key={`editing-${item.id}-${idx}`} style={{ paddingLeft, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
             <span style={{ width: '14px' }}></span>
             <input
               ref={editInputRef}
@@ -356,7 +356,7 @@ export default function CollectionTree() {
       const isExpanded = expandedItems.has(item.id);
       return (
         <div 
-          key={item.id}
+          key={`${item.type}-${item.id}-${idx}`}
           onClick={() => toggleExpand(item.id)}
           onContextMenu={(e) => handleContextMenu(e, item.type, item.data)}
           onDoubleClick={() => startEdit(item.id, item.name)}
@@ -395,7 +395,7 @@ export default function CollectionTree() {
     if (item.type === 'request') {
       if (editingId === item.id) {
         return (
-          <div key={`editing-${item.id}`} style={{ paddingLeft: paddingLeft + 14, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
+          <div key={`editing-${item.id}-${idx}`} style={{ paddingLeft: paddingLeft + 14, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
             <input
               ref={editInputRef}
               type="text"
@@ -431,7 +431,7 @@ export default function CollectionTree() {
 
       return (
         <div 
-          key={item.id}
+          key={`${item.type}-${item.id}-${idx}`}
           onClick={() => openTab(item.data)}
           onContextMenu={(e) => handleContextMenu(e, 'request', item.data)}
           onDoubleClick={() => startEdit(item.id, item.name)}
@@ -474,7 +474,7 @@ export default function CollectionTree() {
       items.push({ type: 'collection', id: collection.id, name: collection.name, data: collection, level: 0 });
       
       if (expandedItems.has(collection.id)) {
-        if (creatingInline?.parentId === collection.id) {
+        if (creatingInline && creatingInline.parentId === collection.id) {
            items.push({ type: 'creating', itemType: creatingInline.itemType, parentId: collection.id, parentType: 'collection', level: 1 });
         }
 
@@ -487,7 +487,7 @@ export default function CollectionTree() {
             items.push({ type: 'folder', id: folder.id, name: folder.name, data: { ...folder, collectionId }, level, collectionId });
             
             if (expandedItems.has(folder.id)) {
-                if (creatingInline?.parentId === folder.id) {
+                if (creatingInline && creatingInline.parentId === folder.id) {
                     items.push({ type: 'creating', itemType: creatingInline.itemType, parentId: folder.id, parentType: 'folder', level: level + 1 });
                 }
                 folder.requests.forEach((req: any) => {
@@ -604,7 +604,7 @@ export default function CollectionTree() {
             </div>
         ) : (
             <div className="tree-items">
-                {visibleItems.map(item => renderTreeItem(item))}
+                {visibleItems.map((item, idx) => renderTreeItem(item, idx))}
             </div>
         )}
       </div>

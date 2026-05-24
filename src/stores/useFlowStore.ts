@@ -5,36 +5,30 @@ import { useWorkspaceStore } from './useWorkspaceStore';
 export interface ExecutionLog {
   id: string;
   timestamp: number;
-  nodeId?: string;
-  nodeName?: string;
-  level: 'info' | 'success' | 'error' | 'warn';
+  nodeId: string;
   message: string;
+  level: 'info' | 'success' | 'error' | 'warn';
   latencyMs?: number;
-  data?: any;
 }
 
 interface FlowStore {
   flows: Flow[];
   activeFlowId: string | null;
-  executionState: 'idle' | 'running' | 'paused' | 'done' | 'error';
-  flowState: Record<string, any>;
-  logs: ExecutionLog[];
+  isLoading: boolean;
+  executionState: 'idle' | 'running' | 'done' | 'error';
+  executionLogs: ExecutionLog[];
   
-  // Actions
+  initialize: () => Promise<void>;
+  setActiveFlowId: (id: string | null) => void;
   addFlow: (flow: Flow) => void;
   updateFlow: (id: string, updates: Partial<Flow>) => void;
   deleteFlow: (id: string) => void;
-  setActiveFlow: (id: string | null) => void;
   
-  // Execution
-  setExecutionState: (state: 'idle' | 'running' | 'paused' | 'done' | 'error') => void;
-  updateFlowNodeStatus: (flowId: string, nodeId: string, status: FlowNode['data']['status'], response?: HttpResponse) => void;
-  setFlowStateValue: (key: string, value: any) => void;
-  resetFlowState: () => void;
-  addLog: (log: Omit<ExecutionLog, 'id' | 'timestamp'>) => void;
+  setExecutionState: (state: 'idle' | 'running' | 'done' | 'error') => void;
+  addLog: (log: ExecutionLog) => void;
   clearLogs: () => void;
+  updateNodeData: (nodeId: string, data: Partial<FlowNode['data']>) => void;
   
-  // Persistence
   saveFlowsToDisk: () => Promise<void>;
   loadFlowsFromDisk: (workspacePath: string) => Promise<void>;
 }
@@ -42,19 +36,20 @@ interface FlowStore {
 export const useFlowStore = create<FlowStore>((set, get) => ({
   flows: [],
   activeFlowId: null,
+  isLoading: false,
   executionState: 'idle',
-  flowState: {},
-  logs: [],
+  executionLogs: [],
 
-  addFlow: (flow: Flow) => {
-    const existing = get().flows.find(f => f.id === flow.id);
-    if (existing) return;
-    
-    set((state) => ({ flows: [...state.flows, flow] }));
+  initialize: async () => {
+    // Initial loading happens via WorkspaceStore
   },
 
+  setActiveFlowId: (id) => set({ activeFlowId: id, executionState: 'idle', executionLogs: [] }),
+
+  addFlow: (flow) => set((state) => ({ flows: [...state.flows, flow] })),
+
   updateFlow: (id, updates) => set((state) => ({
-    flows: state.flows.map((f) => (f.id === id ? { ...f, ...updates } : f))
+    flows: state.flows.map((f) => f.id === id ? { ...f, ...updates } : f)
   })),
 
   deleteFlow: (id) => set((state) => ({
@@ -62,84 +57,78 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     activeFlowId: state.activeFlowId === id ? null : state.activeFlowId
   })),
 
-  setActiveFlow: (id) => {
-    set({ activeFlowId: id });
-  },
-
   setExecutionState: (executionState) => set({ executionState }),
 
-  updateFlowNodeStatus: (flowId, nodeId, status, response) => set((state) => ({
-    flows: state.flows.map((f) => {
-      if (f.id !== flowId) return f;
-      return {
-        ...f,
-        nodes: f.nodes.map((n) => 
-          n.id === nodeId ? { ...n, data: { ...n.data, status, lastResponse: response } } : n
-        )
-      };
-    })
-  })),
-
-  setFlowStateValue: (key, value) => set((state) => ({
-    flowState: { ...state.flowState, [key]: value }
-  })),
-
   addLog: (log) => set((state) => ({
-    logs: [...state.logs, {
-      ...log,
-      id: Math.random().toString(36).substring(7),
-      timestamp: Date.now()
-    }]
+    executionLogs: [...state.executionLogs, log]
   })),
 
-  clearLogs: () => set({ logs: [] }),
+  clearLogs: () => set({ executionLogs: [] }),
 
-  resetFlowState: () => set({ flowState: {}, executionState: 'idle', logs: [] }),
+  updateNodeData: (nodeId, data) => {
+    const { activeFlowId, flows } = get();
+    if (!activeFlowId) return;
+
+    set({
+      flows: flows.map(f => {
+        if (f.id !== activeFlowId) return f;
+        return {
+          ...f,
+          nodes: f.nodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n)
+        };
+      })
+    });
+  },
 
   saveFlowsToDisk: async () => {
+    const { flows } = get();
     const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
       w => w.id === useWorkspaceStore.getState().activeWorkspaceId
     );
-    let workspacePath = activeWorkspace?.path;
     
-    if (!workspacePath) {
-      const { invoke } = await import('@tauri-apps/api/core');
-      workspacePath = await invoke<string>('create_data_dir');
+    let path = activeWorkspace?.path;
+    if (!path) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        path = await invoke<string>('create_data_dir');
+      } catch (e) {
+        console.error('[Pulse FlowStore] Failed to get default data directory for saving:', e);
+        return;
+      }
     }
 
     try {
       const { saveFlowsToDisk } = await import('../hooks/useTauri');
-      await saveFlowsToDisk(workspacePath, get().flows);
+      console.log(`[Pulse FlowStore] Saving flows to disk at: ${path}. Flows count: ${flows.length}`);
+      await saveFlowsToDisk(path, flows);
     } catch (e) {
-      console.error('[Pulse] Failed to save flows to disk:', e);
+      console.error('[Pulse FlowStore] Failed to save flows:', e);
     }
   },
 
   loadFlowsFromDisk: async (workspacePath: string) => {
+    set({ isLoading: true });
     try {
       const { loadFlowsFromWorkspace } = await import('../hooks/useTauri');
       const flows = await loadFlowsFromWorkspace(workspacePath);
-      set({ flows });
+      
+      // Deduplicate flows by ID to prevent UI crashes with duplicate keys
+      const uniqueFlows = Array.from(new Map(flows.map(f => [f.id, f])).values());
+      set({ flows: uniqueFlows });
     } catch (e) {
-      console.error('[Pulse] Failed to load flows from disk:', e);
+      console.error('[FlowStore] Failed to load flows:', e);
+    } finally {
+      set({ isLoading: false });
     }
   }
 }));
 
-// Auto-save: debounce saves to disk whenever flows change
-let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+// Auto-save debounced (reduced to 500ms to prevent data loss on rapid app restarts)
+let saveTimeout: any = null;
 useFlowStore.subscribe((state, prevState) => {
-  const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
-    w => w.id === useWorkspaceStore.getState().activeWorkspaceId
-  );
-  
-  // We need a path to save. If no workspace path is set, we will eventually
-  // default to the internal data directory, but we need to resolve it.
-  const hasChanged = state.flows !== prevState.flows;
-  if (!hasChanged) return;
-
+  if (state.flows === prevState.flows) return;
   if (saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(async () => {
-    await state.saveFlowsToDisk();
-  }, 1500);
+  saveTimeout = setTimeout(() => {
+    state.saveFlowsToDisk();
+  }, 500);
 });

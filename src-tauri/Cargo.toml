@@ -47,6 +47,7 @@ clap = { version = "4", features = ["derive"] }
 openapiv3 = "2"
 diff = "0.1"
 tauri-plugin-notification = "2"
+async-recursion = "1.1.1"
 
 [profile.release]
 panic = "abort"

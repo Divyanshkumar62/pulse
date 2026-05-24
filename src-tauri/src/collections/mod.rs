@@ -7,5 +7,6 @@ pub mod postman;
 pub mod team;
 pub mod team_loader;
 pub mod types;
+pub mod flow_runner;
 pub mod runner;
 pub mod workspace;
