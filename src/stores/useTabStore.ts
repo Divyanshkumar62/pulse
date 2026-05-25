@@ -1,11 +1,15 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { Request, HttpResponse, WebSocketMessage, WebSocketStatus } from '../types';
+import { Request, HttpResponse, WebSocketMessage, WebSocketStatus, Collection } from '../types';
+
+export type TabType = 'request' | 'runner' | 'docs';
 
 export interface Tab {
-  id: string; // Typically corresponds to the request ID
+  id: string; // Corresponds to request ID or collection ID for runner/docs
+  type: TabType;
   collectionId?: string; 
-  request: Request;
+  request?: Request;
+  collection?: Collection;
   response?: HttpResponse;
   isDirty?: boolean;
   wsMessages?: WebSocketMessage[];
@@ -17,6 +21,8 @@ interface TabStore {
   activeTabId: string | null;
   
   openTab: (request: Request, collectionId?: string) => void;
+  openRunnerTab: (collection: Collection) => void;
+  openDocsTab: (collection: Collection) => void;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateActiveTabRequest: (updates: Partial<Request>) => void;
@@ -37,11 +43,39 @@ export const useTabStore = create<TabStore>()(
     const existing = tabs.find(t => t.id === request.id);
     if (!existing) {
       set({ 
-        tabs: [...tabs, { id: request.id, request, collectionId }],
+        tabs: [...tabs, { id: request.id, type: 'request', request, collectionId }],
         activeTabId: request.id 
       });
     } else {
       set({ activeTabId: request.id });
+    }
+  },
+
+  openRunnerTab: (collection) => {
+    const { tabs } = get();
+    const id = `runner-${collection.id}`;
+    const existing = tabs.find(t => t.id === id);
+    if (!existing) {
+      set({ 
+        tabs: [...tabs, { id, type: 'runner', collection, collectionId: collection.id }],
+        activeTabId: id 
+      });
+    } else {
+      set({ activeTabId: id });
+    }
+  },
+
+  openDocsTab: (collection) => {
+    const { tabs } = get();
+    const id = `docs-${collection.id}`;
+    const existing = tabs.find(t => t.id === id);
+    if (!existing) {
+      set({ 
+        tabs: [...tabs, { id, type: 'docs', collection, collectionId: collection.id }],
+        activeTabId: id 
+      });
+    } else {
+      set({ activeTabId: id });
     }
   },
 
@@ -68,7 +102,7 @@ export const useTabStore = create<TabStore>()(
     const { tabs } = get();
     set({
       tabs: tabs.map(t => 
-        t.request.id === requestId 
+        (t.type === 'request' && t.request?.id === requestId)
           ? { ...t, request: { ...t.request, name: newName } } 
           : t
       )
@@ -81,7 +115,7 @@ export const useTabStore = create<TabStore>()(
     
     set({
       tabs: tabs.map(t => 
-        t.id === activeTabId 
+        (t.id === activeTabId && t.type === 'request' && t.request)
           ? { ...t, request: { ...t.request, ...updates }, isDirty: true } 
           : t
       )

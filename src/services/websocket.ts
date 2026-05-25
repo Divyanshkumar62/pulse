@@ -26,7 +26,7 @@ class WebSocketManager {
       socket.onmessage = (event) => {
         addWsMessage(tabId, {
           id: uuidv4(),
-          type: 'receive',
+          type: 'received',
           content: event.data.toString(),
           timestamp: new Date().toISOString()
         });

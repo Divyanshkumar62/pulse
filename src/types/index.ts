@@ -7,7 +7,7 @@ export interface KeyValuePair {
 
 export type Header = KeyValuePair;
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS' | 'WS';
 export type Protocol = 'http' | 'ws';
 
 export interface GraphQLConfig {
@@ -23,7 +23,7 @@ export interface RequestBody {
 
 export interface AuthConfig {
   type: 'none' | 'bearer' | 'basic' | 'oauth2' | 'inherit';
-  config: any;
+  config?: any;
 }
 
 export interface Request {
@@ -82,7 +82,7 @@ export interface Environment {
 }
 
 export interface Variable extends KeyValuePair {
-  id: string;
+  id?: string;
 }
 
 export interface HistoryEntry {
@@ -139,7 +139,7 @@ export interface HttpResponse {
 
 export interface WebSocketMessage {
   id: string;
-  type: 'send' | 'received';
+  type: 'send' | 'received' | 'error' | 'meta';
   content: string;
   timestamp: string;
 }
@@ -192,6 +192,7 @@ export interface Flow {
   workspaceId: string;
   createdAt?: number;
   updatedAt?: number;
+  pinned?: boolean;
 }
 
 export interface MockRoute {

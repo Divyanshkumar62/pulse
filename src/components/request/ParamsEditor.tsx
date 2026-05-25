@@ -1,18 +1,21 @@
-import { useTabStore } from '../../stores/useTabStore';
 import KeyValueTable from './KeyValueTable';
+import { useTabStore } from '../../stores/useTabStore';
 
 export default function ParamsEditor() {
   const { tabs, activeTabId, updateActiveTabRequest } = useTabStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
-  const params = activeTab?.request.params || [];
+
+  if (!activeTab || activeTab.type !== 'request' || !activeTab.request) return null;
+
+  const params = activeTab.request.params || [];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="params-editor" style={{ height: '100%', overflowY: 'auto' }}>
       <KeyValueTable 
         items={params} 
-        onChange={(newParams) => updateActiveTabRequest({ params: newParams })} 
-        keyPlaceholder="Query Param" 
-        valuePlaceholder="Value" 
+        onChange={(data) => updateActiveTabRequest({ params: data })} 
+        keyPlaceholder="Query Parameter"
+        valuePlaceholder="Value"
       />
     </div>
   );

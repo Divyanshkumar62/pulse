@@ -8,10 +8,14 @@ import CustomSelect from '../ui/CustomSelect';
 export default function AuthTab() {
   const { tabs, activeTabId, updateActiveTabRequest } = useTabStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
-  const auth = activeTab?.request.auth || { type: 'none' };
+
+  if (!activeTab || activeTab.type !== 'request' || !activeTab.request) return null;
+
+  const auth = activeTab.request.auth || { type: 'none', config: {} };
 
   const handleGetToken = async () => {
-    const { authUrl, tokenUrl, clientId, scopes } = auth.config || {};
+    const config = auth.config || {};
+    const { authUrl, tokenUrl, clientId, scopes } = config;
     if (!authUrl || !tokenUrl || !clientId) {
       toast.error('Missing OAuth configuration (Auth URL, Token URL, or Client ID)');
       return;
@@ -27,7 +31,7 @@ export default function AuthTab() {
         flowResult.code,
         flowResult.code_verifier,
         clientId,
-        auth.config?.clientSecret || null,
+        config?.clientSecret || null,
         flowResult.redirect_uri
       );
 
@@ -50,7 +54,7 @@ export default function AuthTab() {
   };
 
   const handleTypeChange = (type: AuthConfig['type']) => {
-    updateActiveTabRequest({ auth: { ...auth, type } });
+    updateActiveTabRequest({ auth: { ...auth, type, config: auth.config || {} } });
   };
 
   const updateConfig = (updates: any) => {
@@ -71,7 +75,9 @@ export default function AuthTab() {
           onChange={(val) => handleTypeChange(val as any)}
           options={[
             { value: 'none', label: 'No Auth' },
+            { value: 'inherit', label: 'Inherit from Parent' },
             { value: 'bearer', label: 'Bearer Token' },
+            { value: 'basic', label: 'Basic Auth' },
             { value: 'oauth2', label: 'OAuth 2.0' },
           ]}
         />
@@ -82,6 +88,37 @@ export default function AuthTab() {
           <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center' }}>
             This request does not use any authentication.
           </p>
+        )}
+
+        {auth.type === 'inherit' && (
+          <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center' }}>
+            This request inherits authentication from its parent folder or collection.
+          </p>
+        )}
+
+        {auth.type === 'basic' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Username</label>
+              <input 
+                type="text" 
+                placeholder="Username"
+                value={auth.config?.username || ''}
+                onChange={(e) => updateConfig({ username: e.target.value })}
+                style={{ padding: '8px', background: 'var(--bg-deep)', border: '1px solid var(--border-default)', borderRadius: '4px', color: 'var(--text-primary)', outline: 'none', fontSize: '12px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Password</label>
+              <input 
+                type="password" 
+                placeholder="Password"
+                value={auth.config?.password || ''}
+                onChange={(e) => updateConfig({ password: e.target.value })}
+                style={{ padding: '8px', background: 'var(--bg-deep)', border: '1px solid var(--border-default)', borderRadius: '4px', color: 'var(--text-primary)', outline: 'none', fontSize: '12px' }}
+              />
+            </div>
+          </div>
         )}
 
         {auth.type === 'bearer' && (

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Collection, Folder, Request } from '../../types';
-import { X, Globe, FileText, Lock, Code, Layout } from 'lucide-react';
+import { X, FileText, Layout } from 'lucide-react';
 
 interface CollectionDocsProps {
   collection: Collection;
@@ -40,7 +40,7 @@ export default function CollectionDocs({ collection, onClose }: CollectionDocsPr
         </div>
       )}
 
-      {req.body.content && (
+      {req.body?.content && (
         <div>
           <h4 style={{ fontSize: '12px', color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: '8px' }}>Request Body</h4>
           <pre style={{ 
@@ -68,7 +68,7 @@ export default function CollectionDocs({ collection, onClose }: CollectionDocsPr
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, backgroundColor: 'var(--bg-deep)', zIndex: 11000,
+      width: '100%', height: '100%', backgroundColor: 'var(--bg-deep)',
       display: 'flex', flexDirection: 'column'
     }}>
       {/* Navbar */}

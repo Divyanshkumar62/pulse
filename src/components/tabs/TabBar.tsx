@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
+import { Play, FileText } from 'lucide-react';
 import '../../styles/components/tabs.css';
 
 export default function TabBar() {
@@ -97,37 +98,86 @@ export default function TabBar() {
       )}
       <div className="tabs-container">
         {tabs.map(tab => {
-          const methodColor = getMethodColor(tab.request.method);
-          return (
-            <div 
-              key={tab.id} 
-              className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <span className={`method-pill method-${tab.request.method.toLowerCase()}`}>
-                {tab.request.method}
-              </span>
-              <span className="tab-name">{tab.request.name || 'Untitled Request'}</span>
-              {tab.isDirty && (
-                <span 
-                  className="tab-dirty-pulse" 
-                  style={{ background: methodColor }}
-                />
-              )}
-              <button 
-                className="tab-close-btn" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(tab.id);
-                }}
+          if (tab.type === 'request' && tab.request) {
+            const methodColor = getMethodColor(tab.request.method);
+            return (
+              <div 
+                key={tab.id} 
+                className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
               >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-          );
+                <span className={`method-pill method-${tab.request.method.toLowerCase()}`}>
+                  {tab.request.method}
+                </span>
+                <span className="tab-name">{tab.request.name || 'Untitled Request'}</span>
+                {tab.isDirty && (
+                  <span 
+                    className="tab-dirty-pulse" 
+                    style={{ background: methodColor }}
+                  />
+                )}
+                <button 
+                  className="tab-close-btn" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeTab(tab.id);
+                  }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            );
+          } else if (tab.type === 'runner') {
+              return (
+                <div 
+                  key={tab.id} 
+                  className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <Play size={12} style={{ marginRight: '6px', color: '#10b981' }} />
+                  <span className="tab-name">Runner: {tab.collection?.name}</span>
+                  <button 
+                    className="tab-close-btn" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(tab.id);
+                    }}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+              );
+          } else if (tab.type === 'docs') {
+            return (
+              <div 
+                key={tab.id} 
+                className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <FileText size={12} style={{ marginRight: '6px', color: 'var(--accent-primary)' }} />
+                <span className="tab-name">Docs: {tab.collection?.name}</span>
+                <button 
+                  className="tab-close-btn" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeTab(tab.id);
+                  }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            );
+          }
+          return null;
         })}
         
         <button className="add-tab-btn" onClick={handleNewTab} title="New Tab (Ctrl+T)">

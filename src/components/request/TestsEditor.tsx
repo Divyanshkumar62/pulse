@@ -9,8 +9,11 @@ export default function TestsEditor() {
   const [mode, setMode] = useState<ViewMode>('script');
   
   const activeTab = tabs.find(t => t.id === activeTabId);
-  const script = activeTab?.request.testScript || '';
-  const schema = activeTab?.request.responseSchema || '';
+
+  if (!activeTab || activeTab.type !== 'request' || !activeTab.request) return null;
+
+  const script = activeTab.request.testScript || '';
+  const schema = activeTab.request.responseSchema || '';
 
   return (
     <div className="tests-editor" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

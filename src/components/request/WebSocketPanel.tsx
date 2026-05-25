@@ -1,25 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
 import { wsManager } from '../../services/websocket';
-import { WebSocketMessage } from '../../types';
 
 export default function WebSocketPanel() {
-  const { tabs, activeTabId, setWsStatus, clearWsMessages } = useTabStore();
+  const { tabs, activeTabId, clearWsMessages } = useTabStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [messageContent, setMessageContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const messages = activeTab?.wsMessages || [];
-  const status = activeTab?.wsStatus || 'none';
+  if (!activeTab || activeTab.type !== 'request' || !activeTab.request) return null;
+
+  const messages = activeTab.wsMessages || [];
+  const status = activeTab.wsStatus || 'disconnected';
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  if (!activeTab) return null;
-
   const handleConnect = () => {
-    if (activeTab.request.url) {
+    if (activeTab.request?.url) {
       wsManager.connect(activeTab.id, activeTab.request.url);
     }
   };
@@ -72,14 +71,14 @@ export default function WebSocketPanel() {
           </div>
         )}
         {messages.map((msg) => (
-          <div key={msg.id} style={{ marginBottom: '8px', borderLeft: `2px solid ${msg.type === 'send' ? 'var(--accent-primary)' : msg.type === 'receive' ? '#10b981' : 'var(--border-subtle)'}`, paddingLeft: '8px' }}>
+          <div key={msg.id} style={{ marginBottom: '8px', borderLeft: `2px solid ${msg.type === 'send' ? 'var(--accent-primary)' : msg.type === 'received' ? '#10b981' : msg.type === 'error' ? '#ef4444' : 'var(--border-subtle)'}`, paddingLeft: '8px' }}>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '2px', opacity: 0.6, fontSize: '10px' }}>
-              <span style={{ color: msg.type === 'send' ? 'var(--accent-primary)' : msg.type === 'receive' ? '#10b981' : 'var(--text-secondary)' }}>
+              <span style={{ color: msg.type === 'send' ? 'var(--accent-primary)' : msg.type === 'received' ? '#10b981' : msg.type === 'error' ? '#ef4444' : 'var(--text-secondary)' }}>
                 {msg.type.toUpperCase()}
               </span>
               <span>{new Date(msg.timestamp).toLocaleTimeString()}</span>
             </div>
-            <div style={{ color: msg.type === 'error' ? 'var(--text-error)' : 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            <div style={{ color: msg.type === 'error' ? '#ef4444' : 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
               {msg.content}
             </div>
           </div>

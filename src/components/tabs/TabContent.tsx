@@ -2,12 +2,17 @@ import { useTabStore } from '../../stores/useTabStore';
 import { useAppStore } from '../../stores/useAppStore';
 import RequestBuilder from '../request/RequestBuilder';
 import ResponseViewer from '../response/ResponseViewer';
+import CollectionRunner from '../collections/CollectionRunner';
+import CollectionDocs from '../collections/CollectionDocs';
+import WelcomeScreen from '../layout/WelcomeScreen';
 import { useResizable } from '../../hooks/useResizable';
 import '../../styles/components/tab-content.css';
 
 export default function TabContent() {
-  const { activeTabId } = useTabStore();
+  const { tabs, activeTabId, closeTab } = useTabStore();
   const { responsePosition, responseHeight, setResponseHeight, responseWidth, setResponseWidth } = useAppStore();
+
+  const activeTab = tabs.find(t => t.id === activeTabId);
 
   const isBottom = responsePosition === 'bottom';
   
@@ -29,18 +34,38 @@ export default function TabContent() {
     'x'
   );
 
-  if (!activeTabId) {
+  if (!activeTab) {
     return (
       <div className="tab-content-empty">
-        <div className="empty-state">
-          <div className="pulse-echo"></div>
-          <h2 className="text-h2">Pulse IDE</h2>
-          <p className="text-body">Create or select a request to begin your adventure.</p>
-        </div>
+        <WelcomeScreen />
       </div>
     );
   }
 
+  // Handle special tab types
+  if (activeTab.type === 'runner' && activeTab.collection) {
+    return (
+      <div style={{ width: '100%', height: '100%', background: 'var(--bg-deep)' }}>
+        <CollectionRunner 
+          collection={activeTab.collection} 
+          onClose={() => closeTab(activeTab.id)} 
+        />
+      </div>
+    );
+  }
+
+  if (activeTab.type === 'docs' && activeTab.collection) {
+    return (
+      <div style={{ width: '100%', height: '100%', background: 'var(--bg-deep)' }}>
+        <CollectionDocs 
+          collection={activeTab.collection} 
+          onClose={() => closeTab(activeTab.id)} 
+        />
+      </div>
+    );
+  }
+
+  // Default: Request Builder
   return (
     <div className={`tab-content-layout ${isBottom ? 'dock-bottom' : 'dock-right'}`}>
       <div className="request-pane">

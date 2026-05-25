@@ -17,7 +17,7 @@ import { useHistoryStore } from '../../stores/useHistoryStore';
 import { useGlobalStore } from '../../stores/useGlobalStore';
 import { executeScript } from '../../services/scriptRunner';
 import { toast } from 'sonner';
-import type { HttpRequest } from '../../types';
+import type { HttpRequest, KeyValuePair } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import '../../styles/components/request.css';
 
@@ -35,20 +35,29 @@ export default function RequestBuilder() {
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
-  const isWebSocket = activeTab?.request.url?.startsWith('ws://') || activeTab?.request.url?.startsWith('wss://');
+  
+  if (!activeTab || activeTab.type !== 'request' || !activeTab.request) {
+    return (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
+          <p>No active request selected.</p>
+        </div>
+    );
+  }
+
+  const request = activeTab.request;
+  const isWebSocket = request.url?.startsWith('ws://') || request.url?.startsWith('wss://');
 
   // Sync protocol based on URL
   useEffect(() => {
-    if (!activeTab) return;
-    if (isWebSocket && activeTab.request.protocol !== 'ws') {
+    if (isWebSocket && request.protocol !== 'ws') {
       updateActiveTabRequest({ protocol: 'ws' });
-    } else if (!isWebSocket && activeTab.request.protocol === 'ws') {
+    } else if (!isWebSocket && request.protocol === 'ws') {
       updateActiveTabRequest({ protocol: 'http' });
     }
-  }, [isWebSocket, activeTab?.request.protocol, activeTabId, updateActiveTabRequest]);
+  }, [isWebSocket, request.protocol, activeTabId, updateActiveTabRequest]);
 
   const handleSend = useCallback(async () => {
-    if (!activeTab || !activeTab.request.url) {
+    if (!request.url) {
       toast.error('Please enter a URL');
       return;
     }
@@ -60,7 +69,7 @@ export default function RequestBuilder() {
 
     setIsLoading(true);
     try {
-      const { method, url, headers, body, auth, preRequestScript, testScript } = activeTab.request;
+      const { method, url, headers, body, auth, preRequestScript, testScript } = request;
       
       const activeCollection = collections.find(c => c.id === activeTab.collectionId);
       
@@ -79,7 +88,7 @@ export default function RequestBuilder() {
           }
           return false;
         };
-        findParentFolders(activeCollection.folders, activeTab.request.id, []);
+        findParentFolders(activeCollection.folders, request.id, []);
       }
 
       const collectionVariables = (activeCollection?.variables || []).reduce((acc, v) => {
@@ -94,17 +103,15 @@ export default function RequestBuilder() {
 
       for (const parent of inheritanceChain) {
         if (parent.preRequestScript) {
-          const res = await executeScript(parent.preRequestScript, activeTab.request, activeEnv, undefined, collectionVariables);
+          const res = await executeScript(parent.preRequestScript, request, activeEnv, undefined, collectionVariables);
           if (res.modifiedUrl) finalUrl = res.modifiedUrl;
           res.addedHeaders.forEach(h => { injectedHeaders[h.key] = h.value; });
-          // Note: Environment updates are handled in executeScript call below if needed, 
-          // but for simplicity we assume inherited scripts can also update env.
         }
       }
       
       // 1.b Execute Local Pre-request Script
       if (preRequestScript) {
-        const scriptResult = await executeScript(preRequestScript, activeTab.request, activeEnv, undefined, collectionVariables);
+        const scriptResult = await executeScript(preRequestScript, request, activeEnv, undefined, collectionVariables);
         if (scriptResult.modifiedUrl) finalUrl = scriptResult.modifiedUrl;
         scriptResult.addedHeaders.forEach(h => { injectedHeaders[h.key] = h.value; });
         
@@ -142,14 +149,13 @@ export default function RequestBuilder() {
         headerRecord['Authorization'] = `Basic ${credentials}`;
       }
 
-      headers.forEach(h => {
+      headers.forEach((h: KeyValuePair) => {
         if (h.enabled !== false && h.key) {
             headerRecord[h.key] = h.value;
         }
       });
       
       // Resolve variables in URL and headers before sending
-      const activeEnv = environments.find(e => e.id === activeEnvId);
       const envVars = activeEnv?.variables?.filter(v => v.enabled !== false && v.key) || [];
       const collectionVars = activeCollection?.variables?.filter(v => v.enabled !== false && v.key) || [];
       
@@ -162,11 +168,11 @@ export default function RequestBuilder() {
       });
       
       // Resolve variables in body content if it's a string
-      let resolvedBody = body;
-      if (body && typeof body === 'object' && 'content' in body && typeof body.content === 'string') {
+      let resolvedBody = request.body;
+      if (request.body && typeof request.body === 'object' && 'content' in request.body && typeof request.body.content === 'string') {
         resolvedBody = {
-          ...body,
-          content: VariableResolver.resolve(body.content, collectionVars, envVars, globalVariables)
+          ...request.body,
+          content: VariableResolver.resolve(request.body.content, collectionVars, envVars, globalVariables)
         };
       }
       
@@ -177,21 +183,19 @@ export default function RequestBuilder() {
 
       // Save to history
       const httpRequest: HttpRequest = {
-        method: activeTab.request.method,
+        method: request.method,
         url: finalUrl,
         headers: Object.entries(resolvedHeaders).map(([key, value]) => ({ key, value })),
         body: resolvedBody,
-        preRequestScript: activeTab.request.preRequestScript,
+        preRequestScript: request.preRequestScript,
       };
       
-      // Ensure we capture the request name carefully. 
-      // If it's a URL, we try to see if it has a better name in the collection tree.
       await addEntry({
         id: uuidv4(),
-        requestId: activeTab.request.id,
-        requestName: activeTab.request.name,
+        requestId: request.id,
+        requestName: request.name,
         timestamp: new Date().toISOString(),
-        method: activeTab.request.method,
+        method: request.method,
         url: finalUrl,
         status: response.status,
         time_ms: response.time_ms,
@@ -202,19 +206,14 @@ export default function RequestBuilder() {
       // 3. Execute Test Script (Post-request)
       if (testScript) {
         const activeEnv = environments.find(e => e.id === activeEnvId);
-        // We reuse the same sandbox logic, but now inject the response
-        const testResult = await executeScript(testScript, activeTab.request, activeEnv, response, collectionVariables);
+        const testResult = await executeScript(testScript, request, activeEnv, response, collectionVariables);
         
-        // Apply environment updates from the test script (Request Chaining)
         if (Object.keys(testResult.environmentUpdates).length > 0 && activeEnv) {
           const newVariables = [...activeEnv.variables];
           Object.entries(testResult.environmentUpdates).forEach(([key, value]) => {
             const idx = newVariables.findIndex(v => v.key === key);
-            if (idx >= 0) {
-              newVariables[idx] = { ...newVariables[idx], value };
-            } else {
-              newVariables.push({ key, value, enabled: true });
-            }
+            if (idx >= 0) newVariables[idx] = { ...newVariables[idx], value };
+            else newVariables.push({ key, value, enabled: true });
           });
           updateEnvironment(activeEnv.id, { variables: newVariables });
         }
@@ -224,7 +223,7 @@ export default function RequestBuilder() {
       for (let i = inheritanceChain.length - 1; i >= 0; i--) {
         const parent = inheritanceChain[i];
         if (parent.testScript) {
-          await executeScript(parent.testScript, activeTab.request, activeEnv, response, collectionVariables);
+          await executeScript(parent.testScript, request, activeEnv, response, collectionVariables);
         }
       }
     } catch (error: any) {
@@ -233,21 +232,13 @@ export default function RequestBuilder() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, isWebSocket, environments, activeEnvId, updateEnvironment, setTabResponse, settings, globalVariables]);
+  }, [activeTab, isWebSocket, environments, activeEnvId, updateEnvironment, setTabResponse, settings, globalVariables, request]);
 
   useEffect(() => {
     const onSendRequest = () => handleSend();
     window.addEventListener('pulse:send-request', onSendRequest);
     return () => window.removeEventListener('pulse:send-request', onSendRequest);
   }, [handleSend]);
-
-  if (!activeTabId) {
-    return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
-        <p>No active request. Open a tab to begin.</p>
-      </div>
-    );
-  }
 
   const configTabs: { id: ConfigTab; label: string }[] = [
     { id: 'params', label: 'Params' },
