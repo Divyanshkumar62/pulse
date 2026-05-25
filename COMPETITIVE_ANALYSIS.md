@@ -164,3 +164,24 @@ Pulse now sits at Level 4 (Advanced Automation). You have implemented features t
   core engine is now solid; future upgrades should focus on Developer Productivity (Debugging) and Scalability (Sub-flows).
 
 
+1. Folder-Level Inheritance (Commit 1)
+   * Auth & Script Reuse: You can now define Auth and Pre-request/Test Scripts at the Collection or Folder level.
+   * Recursive Resolution: Requests automatically inherit these properties from their parent folders. Pre-request scripts now execute in order: Collection ->
+     Folder -> Request.
+   * Smart Auth: Added an "Inherit from parent" option to Auth. The request will automatically traverse up the tree to find the nearest defined authentication.
+
+  2. Visual Collection Runner (Commit 1)
+   * Sequential Execution: Added a dedicated Visual Runner that executes an entire folder of APIs with one click.
+   * Live Dashboard: A real-time interface shows a summary of passed/failed requests, latency metrics, and detailed test result breakdowns for every endpoint in
+     the run.
+   * Filterable Results: You can toggle the results to show "All", "Passed", or only "Failed" requests for quick debugging.
+
+  3. Response Schema Validation (Commit 2)
+   * Apidog Standard: Added a new "JSON Schema" tab inside the Tests editor. 
+   * Structural Assurance: You can now define a JSON Schema for your response. Pulse will automatically validate the response body against this schema every time
+     the request is sent, ensuring your API contracts never break.
+
+  4. Documentation Portal (Commit 2)
+   * Auto-Generation: Every collection now has a "View Documentation" option in its context menu.
+   * Clean Markdown-Style View: Generates a professional, searchable documentation page showing all endpoints, URLs, headers, and request bodies in a readable
+     format.

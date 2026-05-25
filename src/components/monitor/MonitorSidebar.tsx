@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAppStore } from '../../stores/useAppStore';
 import { useMonitorStore, MonitorCheck } from '../../stores/useMonitorStore';
+import EmptyState from '../ui/EmptyState';
+import { Activity } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MonitorSidebar() {
@@ -76,7 +78,6 @@ export default function MonitorSidebar() {
 
   const healthyCount = monitors.filter(m => m.status === 'healthy').length;
   const failingCount = monitors.filter(m => m.status === 'failing').length;
-  const pendingCount = monitors.filter(m => m.status === 'pending').length;
 
   return (
     <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
@@ -105,9 +106,14 @@ export default function MonitorSidebar() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
         {monitors.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-tertiary)' }}>
-            <p style={{ fontSize: '12px' }}>No monitors set up yet.</p>
-          </div>
+          <EmptyState 
+            icon={Activity}
+            title="No monitors"
+            description="Automatic health checks help you ensure your production APIs are always up and running."
+            actionLabel="New Monitor"
+            onAction={() => setIsAdding(true)}
+            compact
+          />
         ) : (
           monitors.map(m => (
             <div 

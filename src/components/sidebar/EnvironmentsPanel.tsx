@@ -3,6 +3,7 @@ import { useEnvStore } from '../../stores/useEnvStore';
 import { useAppStore } from '../../stores/useAppStore';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import ConfirmModal from '../ui/ConfirmModal';
+import EmptyState from '../ui/EmptyState';
 import { MoreVertical, Pin, Plus, Globe } from 'lucide-react';
 import '../../styles/components/environments.css';
 
@@ -131,12 +132,14 @@ export default function EnvironmentsPanel() {
         ))}
 
         {environments.length === 0 && (
-          <div style={{ marginTop: '20px', padding: '20px', textAlign: 'center', border: '1px dashed var(--border-subtle)', borderRadius: '12px' }}>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>No environments found</p>
-            <button onClick={() => setAddEnvironmentModalOpen(true)} className="btn-primary rounded-md" style={{ fontSize: '12px', padding: '8px 16px' }}>
-              Add Environment
-            </button>
-          </div>
+          <EmptyState 
+            icon={Globe}
+            title="No environments"
+            description="Create environments to manage variables for different stages like dev, staging, or prod."
+            actionLabel="New Environment"
+            onAction={() => setAddEnvironmentModalOpen(true)}
+            compact
+          />
         )}
       </div>
 

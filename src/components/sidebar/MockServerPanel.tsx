@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMockStore } from '../../stores/useMockStore';
+import EmptyState from '../ui/EmptyState';
 import { Play, Square, Trash2, Server } from 'lucide-react';
 
 export default function MockServerPanel() {
@@ -108,11 +109,14 @@ export default function MockServerPanel() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
         {mockServers.length === 0 ? (
-          <div style={{ marginTop: '20px', padding: '24px', textAlign: 'center', border: '1px dashed var(--border-subtle)', borderRadius: '12px' }}>
-            <Server size={32} style={{ color: 'var(--text-tertiary)', marginBottom: '8px', opacity: 0.7 }} />
-            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>No mock servers found</p>
-            <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>Create one to mock APIs locally.</p>
-          </div>
+          <EmptyState 
+            icon={Server}
+            title="No mock servers"
+            description="Mock servers let you simulate API responses locally before the backend is even ready."
+            actionLabel="New Mock"
+            onAction={() => setShowAddForm(true)}
+            compact
+          />
         ) : (
           mockServers.map(mock => {
             const isActive = activeMockServerId === mock.id;
