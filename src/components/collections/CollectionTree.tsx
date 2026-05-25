@@ -5,8 +5,8 @@ import { useCollectionStore } from '../../stores/useCollectionStore';
 import { useAppStore } from '../../stores/useAppStore';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import ConfirmModal from '../ui/ConfirmModal';
-import CollectionRunner from './CollectionRunner';
-import CollectionDocs from './CollectionDocs';
+import EmptyState from '../ui/EmptyState';
+import { MoreVertical, Pin, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -18,9 +18,14 @@ type TreeItem =
 
 export default function CollectionTree() {
   const { workspaces, activeWorkspaceId } = useWorkspaceStore();
-  const { openTab, updateTabRequestName } = useTabStore();
-  const { collections, addCollection, addFolder, addRequest, updateCollection, updateRequest, deleteCollection, deleteFolder, deleteRequest } = useCollectionStore();
-  const { isImportModalOpen, setImportModalOpen } = useAppStore();
+  const { openTab, openRunnerTab, openDocsTab, updateTabRequestName } = useTabStore();
+  const { 
+    collections, addCollection, addFolder, addRequest, 
+    updateCollection, updateRequest, updateFolder, 
+    duplicateCollection, duplicateFolder, duplicateRequest,
+    deleteCollection, deleteFolder, deleteRequest 
+  } = useCollectionStore();
+  const { setImportModalOpen } = useAppStore();
   
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, items: ContextMenuItem[]} | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -29,8 +34,6 @@ export default function CollectionTree() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<TreeItem[]>([]);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
-  const [runnerCollection, setRunnerCollection] = useState<any | null>(null);
-  const [docsCollection, setDocsCollection] = useState<any | null>(null);
   
   const [creatingInline, setCreatingInline] = useState<{ parentId: string; parentType: 'collection' | 'folder'; itemType: 'request' | 'folder' } | null>(null);
   const [creatingName, setCreatingName] = useState('');
@@ -43,8 +46,6 @@ export default function CollectionTree() {
   const editInputRef = useRef<HTMLInputElement>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
   const menuDropdownRef = useRef<HTMLDivElement>(null);
-
-  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
 
   useEffect(() => {
     if (editingId && editInputRef.current) {
@@ -143,15 +144,28 @@ export default function CollectionTree() {
   const handleCreateRequest = (collectionId: string, folderId: string | null) => {
     setCreatingInline({ parentId: folderId || collectionId, parentType: folderId ? 'folder' : 'collection', itemType: 'request' });
     setCreatingName('');
+    if (folderId) {
+        setExpandedItems(prev => new Set([...prev, folderId]));
+    } else {
+        setExpandedItems(prev => new Set([...prev, collectionId]));
+    }
   };
 
   const handleCreateFolder = (collectionId: string, parentFolderId: string | null) => {
     setCreatingInline({ parentId: parentFolderId || collectionId, parentType: parentFolderId ? 'folder' : 'collection', itemType: 'folder' });
     setCreatingName('');
+    if (parentFolderId) {
+        setExpandedItems(prev => new Set([...prev, parentFolderId]));
+    } else {
+        setExpandedItems(prev => new Set([...prev, collectionId]));
+    }
   };
 
   const confirmCreate = () => {
-    if (!creatingInline || !creatingName.trim()) return;
+    if (!creatingInline || !creatingName.trim()) {
+        setCreatingInline(null);
+        return;
+    }
     
     const { parentId, parentType, itemType } = creatingInline;
     
@@ -165,9 +179,22 @@ export default function CollectionTree() {
         body: { type: 'none' as any, content: '' }
       };
       
-      const colId = parentType === 'collection' ? parentId : collections.find(c => c.folders.some(f => f.id === parentId))?.id || '';
+      let colId = '';
+      if (parentType === 'collection') colId = parentId;
+      else {
+          for (const c of collections) {
+              const findInFolders = (folders: any[]): boolean => {
+                  return folders.some(f => f.id === parentId || (f.folders && findInFolders(f.folders)));
+              }
+              if (findInFolders(c.folders)) {
+                  colId = c.id;
+                  break;
+              }
+          }
+      }
+
       addRequest(colId, parentType === 'folder' ? parentId : null, newReq);
-      openTab(newReq);
+      openTab(newReq, colId);
     } else {
       const newFolder = {
         id: uuidv4(),
@@ -175,9 +202,22 @@ export default function CollectionTree() {
         requests: [],
         folders: []
       };
-      const colId = parentType === 'collection' ? parentId : collections.find(c => c.folders.some(f => f.id === parentId))?.id || '';
+      
+      let colId = '';
+      if (parentType === 'collection') colId = parentId;
+      else {
+          for (const c of collections) {
+              const findInFolders = (folders: any[]): boolean => {
+                  return folders.some(f => f.id === parentId || (f.folders && findInFolders(f.folders)));
+              }
+              if (findInFolders(c.folders)) {
+                  colId = c.id;
+                  break;
+              }
+          }
+      }
+
       addFolder(colId, parentType === 'folder' ? parentId : null, newFolder);
-      setExpandedItems(prev => new Set([...prev, parentId]));
     }
     
     setCreatingInline(null);
@@ -231,8 +271,12 @@ export default function CollectionTree() {
         return;
       }
       
-      const updateInFolders = (folders: any[]): boolean => {
+      const findFolderAndRename = (folders: any[]): boolean => {
         for (const f of folders) {
+          if (f.id === editingId) {
+             updateFolder(col.id, editingId, { name: newName });
+             return true;
+          }
           const r = f.requests?.find((r: any) => r.id === editingId);
           if (r) {
             updateRequest(col.id, editingId, { name: newName });
@@ -241,14 +285,13 @@ export default function CollectionTree() {
             }
             return true;
           }
-          if (f.folders && updateInFolders(f.folders)) return true;
+          if (f.folders && findFolderAndRename(f.folders)) return true;
         }
         return false;
       };
       
-      if (updateInFolders(col.folders)) {
+      if (findFolderAndRename(col.folders)) {
         setEditingId(null);
-        toast.success('Request renamed');
         return;
       }
     }
@@ -286,30 +329,39 @@ export default function CollectionTree() {
     const items: ContextMenuItem[] = [];
     
     if (type === 'collection') {
-      items.push({ label: 'Run Collection', onClick: () => setRunnerCollection(data) });
-      items.push({ label: 'View Documentation', onClick: () => setDocsCollection(data) });
-      items.push({ label: 'New Request', onClick: () => handleCreateRequest(data.id, null) });
-      items.push({ label: 'New Folder', onClick: () => handleCreateFolder(data.id, null) });
+      items.push({ label: 'Run Collection', onClick: () => openRunnerTab(data) });
+      items.push({ label: 'View Documentation', onClick: () => openDocsTab(data) });
+      items.push({ label: 'Add Folder', onClick: () => handleCreateFolder(data.id, null) });
       items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
-      items.push({ label: 'Duplicate', onClick: () => toast('Duplicate coming soon') });
+      items.push({ label: 'Duplicate', onClick: () => {
+          duplicateCollection(data.id);
+          toast.success('Collection duplicated');
+      }});
       items.push({ label: data.pinned ? 'Unpin' : 'Pin', onClick: () => { 
         updateCollection(data.id, { pinned: !data.pinned }, '');
       }});
       items.push({ label: 'Delete', danger: true, onClick: () => setConfirmDelete({ id: data.id, type: 'collection', name: data.name }) });
     } else if (type === 'folder') {
-      items.push({ label: 'Run Folder', onClick: () => setRunnerCollection({ ...data, requests: data.requests || [] }) });
-      items.push({ label: 'New Request', onClick: () => handleCreateRequest(data.collectionId, data.id) });
-      items.push({ label: 'New Folder', onClick: () => handleCreateFolder(data.collectionId, data.id) });
+      items.push({ label: 'Run Folder', onClick: () => openRunnerTab({ ...data, requests: data.requests || [] }) });
+      items.push({ label: 'Add Request', onClick: () => handleCreateRequest(data.collectionId, data.id) });
+      items.push({ label: 'Add Folder', onClick: () => handleCreateFolder(data.collectionId, data.id) });
       items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
+      items.push({ label: 'Duplicate', onClick: () => {
+          duplicateFolder(data.collectionId, data.id);
+          toast.success('Folder duplicated');
+      }});
+      items.push({ label: data.pinned ? 'Unpin' : 'Pin', onClick: () => { 
+        updateFolder(data.collectionId, data.id, { pinned: !data.pinned });
+      }});
       items.push({ label: 'Delete', danger: true, onClick: () => setConfirmDelete({ id: data.id, type: 'folder', name: data.name, collectionId: data.collectionId }) });
     } else if (type === 'request') {
       items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
-      items.push({ label: 'Duplicate', onClick: () => toast('Duplicate coming soon') });
+      items.push({ label: 'Duplicate', onClick: () => {
+          duplicateRequest(data.collectionId, data.id);
+          toast.success('Request duplicated');
+      }});
       items.push({ label: data.pinned ? 'Unpin' : 'Pin', onClick: () => { 
-        const col = collections.find(c => c.id === data.collectionId);
-        if (col) {
-          updateRequest(col.id, data.id, { pinned: !data.pinned });
-        }
+        updateRequest(data.collectionId, data.id, { pinned: !data.pinned });
       }});
       items.push({ label: 'Delete', danger: true, onClick: () => setConfirmDelete({ id: data.id, type: 'request', name: data.name, collectionId: data.collectionId }) });
     }
@@ -387,7 +439,6 @@ export default function CollectionTree() {
           key={`${item.type}-${item.id}-${idx}`}
           onClick={() => toggleExpand(item.id)}
           onContextMenu={(e) => handleContextMenu(e, item.type, item.data)}
-          onDoubleClick={() => startEdit(item.id, item.name)}
           style={{ 
             paddingLeft,
             display: 'flex', 
@@ -400,7 +451,7 @@ export default function CollectionTree() {
             fontWeight: item.type === 'collection' ? 600 : 500,
             color: item.type === 'collection' ? 'var(--text-primary)' : 'var(--text-secondary)'
           }}
-          className="tree-item-hover"
+          className="tree-item-group tree-item-hover"
         >
           <span style={{ 
             display: 'flex', 
@@ -413,9 +464,20 @@ export default function CollectionTree() {
           }}>
             ▶
           </span>
-          <span style={{ opacity: 0.7 }}>{item.type === 'collection' ? '📦' : '📁'}</span>
           <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
-          {item.data.pinned && <span style={{ fontSize: '10px' }}>📌</span>}
+          
+          <div className="tree-item-actions">
+            {item.data.pinned && <Pin size={10} style={{ opacity: 0.6, marginRight: '4px', color: '#f59e0b' }} />}
+            <button 
+                className="tree-action-btn"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleContextMenu(e, item.type, item.data);
+                }}
+            >
+                <MoreVertical size={14} />
+            </button>
+          </div>
         </div>
       );
     }
@@ -460,9 +522,8 @@ export default function CollectionTree() {
       return (
         <div 
           key={`${item.type}-${item.id}-${idx}`}
-          onClick={() => openTab(item.data)}
+          onClick={() => openTab(item.data, item.collectionId)}
           onContextMenu={(e) => handleContextMenu(e, 'request', item.data)}
-          onDoubleClick={() => startEdit(item.id, item.name)}
           style={{ 
             paddingLeft: paddingLeft + 14,
             display: 'flex', 
@@ -474,7 +535,7 @@ export default function CollectionTree() {
             fontSize: '12px',
             color: 'var(--text-secondary)'
           }}
-          className="tree-item-hover"
+          className="tree-item-group tree-item-hover"
         >
           <span style={{ 
             fontSize: '9px', 
@@ -485,7 +546,19 @@ export default function CollectionTree() {
             {item.method}
           </span>
           <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
-          {item.data.pinned && <span style={{ fontSize: '10px' }}>📌</span>}
+          
+          <div className="tree-item-actions">
+            {item.data.pinned && <Pin size={10} style={{ opacity: 0.6, marginRight: '4px', color: '#f59e0b' }} />}
+            <button 
+                className="tree-action-btn"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleContextMenu(e, item.type, item.data);
+                }}
+            >
+                <MoreVertical size={14} />
+            </button>
+          </div>
         </div>
       );
     }
@@ -498,7 +571,14 @@ export default function CollectionTree() {
 
     const items: TreeItem[] = [];
 
-    collections.forEach(collection => {
+    // Sort: pinned collections first
+    const sortedCollections = [...collections].sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return a.name.localeCompare(b.name);
+    });
+
+    sortedCollections.forEach(collection => {
       items.push({ type: 'collection', id: collection.id, name: collection.name, data: collection, level: 0 });
       
       if (expandedItems.has(collection.id)) {
@@ -506,21 +586,44 @@ export default function CollectionTree() {
            items.push({ type: 'creating', itemType: creatingInline.itemType, parentId: collection.id, parentType: 'collection', level: 1 });
         }
 
-        collection.requests.forEach(req => {
+        // Sort: pinned requests first
+        const sortedRequests = [...collection.requests].sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        sortedRequests.forEach(req => {
           items.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: 1, collectionId: collection.id });
         });
 
         const pushFolders = (folders: any[], level: number, collectionId: string) => {
-          folders.forEach(folder => {
+          // Sort: pinned folders first
+          const sortedFolders = [...folders].sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return a.name.localeCompare(b.name);
+          });
+
+          sortedFolders.forEach(folder => {
             items.push({ type: 'folder', id: folder.id, name: folder.name, data: { ...folder, collectionId }, level, collectionId });
             
             if (expandedItems.has(folder.id)) {
                 if (creatingInline && creatingInline.parentId === folder.id) {
                     items.push({ type: 'creating', itemType: creatingInline.itemType, parentId: folder.id, parentType: 'folder', level: level + 1 });
                 }
-                folder.requests.forEach((req: any) => {
+                
+                // Sort: pinned requests in folder
+                const sortedSubRequests = [...(folder.requests || [])].sort((a, b) => {
+                    if (a.pinned && !b.pinned) return -1;
+                    if (!a.pinned && b.pinned) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+
+                sortedSubRequests.forEach((req: any) => {
                     items.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: level + 1, collectionId });
                 });
+
                 if (folder.folders) {
                     pushFolders(folder.folders, level + 1, collectionId);
                 }
@@ -564,14 +667,14 @@ export default function CollectionTree() {
                             style={{ width: '100%', padding: '10px 12px', textAlign: 'left', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '12px' }}
                             className="dropdown-item-hover"
                         >
-                            📦 New Collection
+                            New Collection
                         </button>
                         <button 
                             onClick={() => { setImportModalOpen(true); setShowMenuDropdown(false); }}
                             style={{ width: '100%', padding: '10px 12px', textAlign: 'left', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '12px' }}
                             className="dropdown-item-hover"
                         >
-                            📥 Import
+                            Import
                         </button>
                     </div>
                 )}
@@ -627,9 +730,14 @@ export default function CollectionTree() {
         )}
 
         {visibleItems.length === 0 && !isCreatingCollection ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)', fontSize: '12px' }}>
-                {searchQuery ? 'No results found' : 'No collections yet'}
-            </div>
+            <EmptyState 
+                icon={FolderOpen}
+                title={searchQuery ? 'No results found' : 'No collections'}
+                description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : 'Create your first collection or import an existing one to get started.'}
+                actionLabel={searchQuery ? undefined : 'Import'}
+                onAction={() => setImportModalOpen(true)}
+                compact
+            />
         ) : (
             <div className="tree-items">
                 {visibleItems.map((item, idx) => renderTreeItem(item, idx))}
@@ -656,21 +764,34 @@ export default function CollectionTree() {
         isDanger={true}
       />
 
-      {runnerCollection && (
-        <CollectionRunner 
-          collection={runnerCollection} 
-          onClose={() => setRunnerCollection(null)} 
-        />
-      )}
-
-      {docsCollection && (
-        <CollectionDocs 
-            collection={docsCollection}
-            onClose={() => setDocsCollection(null)}
-        />
-      )}
-
       <style>{`
+        .tree-item-group {
+            position: relative;
+        }
+        .tree-item-actions {
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+        .tree-item-group:hover .tree-item-actions {
+            opacity: 1;
+        }
+        .tree-action-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tree-action-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
         .tree-item-hover:hover {
             background: rgba(255,255,255,0.03);
         }

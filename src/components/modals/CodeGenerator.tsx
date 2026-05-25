@@ -21,7 +21,7 @@ export default function CodeGenerator({ isOpen, onClose }: CodeGeneratorProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || !activeTab) return null;
+  if (!isOpen || !activeTab || !activeTab.request) return null;
 
   const request = activeTab.request;
   const code = lang === 'curl' ? generateCurl(request) : generateFetch(request);

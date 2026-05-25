@@ -7,6 +7,7 @@ interface HistoryStore {
   isLoading: boolean;
   initialize: () => Promise<void>;
   addEntry: (entry: HistoryEntry) => Promise<void>;
+  deleteEntry: (id: string) => Promise<void>;
   clearHistory: () => Promise<void>;
 }
 
@@ -29,6 +30,13 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
   addEntry: async (entry) => {
     const { history } = get();
     const newHistory = [entry, ...history].slice(0, 500);
+    set({ history: newHistory });
+    await saveHistory(newHistory);
+  },
+
+  deleteEntry: async (id) => {
+    const { history } = get();
+    const newHistory = history.filter(e => e.id !== id);
     set({ history: newHistory });
     await saveHistory(newHistory);
   },

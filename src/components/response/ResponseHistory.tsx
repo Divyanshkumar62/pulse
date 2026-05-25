@@ -1,75 +1,89 @@
-import React from 'react';
 import { useHistoryStore } from '../../stores/useHistoryStore';
 import { useTabStore } from '../../stores/useTabStore';
-import { Clock, ArrowRight, CornerDownRight } from 'lucide-react';
+import EmptyState from '../ui/EmptyState';
+import { Clock, Trash2 } from 'lucide-react';
 
 export default function ResponseHistory() {
-  const { history } = useHistoryStore();
-  const { activeTabId, tabs, setTabResponse } = useTabStore();
+  const { history, clearHistory, deleteEntry } = useHistoryStore();
+  const { tabs, activeTabId, setTabResponse } = useTabStore();
   
   const tabData = tabs.find(t => t.id === activeTabId);
-  const requestId = tabData?.request.id;
 
-  const requestHistory = history
-    .filter(entry => entry.requestId === requestId)
-    .slice(0, 5);
-
-  if (requestHistory.length === 0) {
+  if (!tabData || !tabData.request) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-tertiary)', gap: '12px' }}>
-        <Clock size={32} opacity={0.5} />
-        <p style={{ fontSize: '13px' }}>No previous responses for this request</p>
-      </div>
+        <EmptyState 
+            icon={Clock}
+            title="No request selected"
+            description="Select a request from the sidebar to view its execution history."
+            compact
+        />
     );
   }
 
-  return (
-    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <h3 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', letterSpacing: '0.05em' }}>RECENT RESPONSES</h3>
-      
-      {requestHistory.map((entry) => (
-        <div 
-          key={entry.id}
-          onClick={() => setTabResponse(activeTabId!, entry.response)}
-          style={{ 
-            padding: '12px', 
-            background: 'rgba(255,255,255,0.03)', 
-            border: '1px solid var(--border-subtle)', 
-            borderRadius: '8px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-          className="history-item-hover"
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ 
-                fontSize: '11px', 
-                fontWeight: 700, 
-                color: entry.response.status < 400 ? '#10b981' : '#ef4444',
-                background: entry.response.status < 400 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                padding: '2px 6px',
-                borderRadius: '4px'
-              }}>
-                {entry.response.status}
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                {new Date(entry.timestamp).toLocaleTimeString()}
-              </span>
-            </div>
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{entry.response.time_ms}ms</span>
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-            <CornerDownRight size={12} style={{ flexShrink: 0 }} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.url}</span>
-          </div>
-        </div>
-      ))}
+  const requestId = tabData.request.id;
+  const filteredHistory = history
+    .filter(entry => entry.requestId === requestId)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-      <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '8px', textAlign: 'center' }}>
-        Click a past response to restore it to the viewer
-      </p>
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Request History</h3>
+        {filteredHistory.length > 0 && (
+          <button 
+            onClick={clearHistory}
+            style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Trash2 size={12} /> Clear All
+          </button>
+        )}
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }} className="custom-scrollbar-mini">
+        {filteredHistory.length === 0 ? (
+          <EmptyState 
+            icon={Clock}
+            title="No history"
+            description="Send this request to see its history logs here."
+            compact
+          />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {filteredHistory.map((entry) => (
+              <div 
+                key={entry.id}
+                onClick={() => setTabResponse(tabData.id, entry.response)}
+                style={{ 
+                  padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.02)', 
+                  border: '1px solid var(--border-subtle)', cursor: 'pointer', transition: 'all 0.2s'
+                }}
+                className="history-item-hover"
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ 
+                    fontSize: '10px', fontWeight: 700, 
+                    color: entry.status < 400 ? '#10b981' : '#ef4444' 
+                  }}>
+                    {entry.status} {entry.response.status_text}
+                  </span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                    {new Date(entry.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{entry.time_ms}ms</span>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); deleteEntry(entry.id); }}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '2px' }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

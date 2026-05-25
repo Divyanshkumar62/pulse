@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Collection, Folder, Request } from '../types';
 import { useWorkspaceStore } from './useWorkspaceStore';
+import { v4 as uuidv4 } from 'uuid';
 
 interface CollectionWithPath extends Collection {
   _diskPath?: string;
@@ -14,11 +15,17 @@ interface CollectionStore {
   // Actions
   addCollection: (collection: Collection, path: string) => Promise<void>;
   updateCollection: (id: string, updates: Partial<Collection>, _path: string) => Promise<void>;
+  duplicateCollection: (id: string) => void;
   deleteCollection: (id: string) => void;
+  
   addFolder: (collectionId: string, parentFolderId: string | null, folder: Folder) => Promise<void>;
+  updateFolder: (collectionId: string, folderId: string, updates: Partial<Folder>) => void;
+  duplicateFolder: (collectionId: string, folderId: string) => void;
   deleteFolder: (collectionId: string, folderId: string) => void;
+  
   addRequest: (collectionId: string, folderId: string | null, request: Request) => Promise<void>;
   updateRequest: (collectionId: string, requestId: string, updates: Partial<Request>) => Promise<void>;
+  duplicateRequest: (collectionId: string, requestId: string) => void;
   deleteRequest: (collectionId: string, requestId: string) => void;
   
   // Persistence
@@ -53,11 +60,36 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     get().saveAllCollectionsToDisk();
   },
 
+  duplicateCollection: (id) => {
+    const { collections } = get();
+    const source = collections.find(c => c.id === id);
+    if (!source) return;
+
+    const newCol: CollectionWithPath = JSON.parse(JSON.stringify(source));
+    newCol.id = uuidv4();
+    newCol.name = `${source.name} (Copy)`;
+    newCol.pinned = false;
+    delete newCol._diskPath;
+
+    const regenerateIds = (item: any) => {
+        if (item.requests) item.requests.forEach((r: any) => r.id = uuidv4());
+        if (item.folders) {
+            item.folders.forEach((f: any) => {
+                f.id = uuidv4();
+                regenerateIds(f);
+            });
+        }
+    };
+    regenerateIds(newCol);
+
+    set({ collections: [...collections, newCol] });
+    get().saveAllCollectionsToDisk();
+  },
+
   deleteCollection: (id) => {
     set((state) => ({
       collections: state.collections.filter(c => c.id !== id)
     }));
-    // We should ideally trigger a disk cleanup here too
     get().saveAllCollectionsToDisk();
   },
 
@@ -84,6 +116,68 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
 
         return { ...c, folders: updateFolders(c.folders) };
       }),
+    }));
+    get().saveAllCollectionsToDisk();
+  },
+
+  updateFolder: (collectionId, folderId, updates) => {
+    set((state) => ({
+      collections: state.collections.map((c) => {
+        if (c.id !== collectionId) return c;
+
+        const updateFoldersRecursive = (folders: Folder[]): Folder[] => {
+          return folders.map(f => {
+            if (f.id === folderId) {
+              return { ...f, ...updates };
+            }
+            if (f.folders && f.folders.length > 0) {
+              return { ...f, folders: updateFoldersRecursive(f.folders) };
+            }
+            return f;
+          });
+        };
+
+        return { ...c, folders: updateFoldersRecursive(c.folders) };
+      }),
+    }));
+    get().saveAllCollectionsToDisk();
+  },
+
+  duplicateFolder: (collectionId, folderId) => {
+    set((state) => ({
+      collections: state.collections.map((c) => {
+        if (c.id !== collectionId) return c;
+
+        let duplicated: Folder | null = null;
+
+        const findAndClone = (folders: Folder[]): Folder[] => {
+            const result: Folder[] = [];
+            for (const f of folders) {
+                result.push(f);
+                if (f.id === folderId) {
+                    duplicated = JSON.parse(JSON.stringify(f));
+                    duplicated!.id = uuidv4();
+                    duplicated!.name = `${f.name} (Copy)`;
+                    duplicated!.pinned = false;
+                    
+                    const regenerate = (item: any) => {
+                        if (item.requests) item.requests.forEach((r: any) => r.id = uuidv4());
+                        if (item.folders) item.folders.forEach((child: any) => {
+                            child.id = uuidv4();
+                            regenerate(child);
+                        });
+                    };
+                    regenerate(duplicated);
+                    result.push(duplicated!);
+                } else if (f.folders) {
+                    f.folders = findAndClone(f.folders);
+                }
+            }
+            return result;
+        };
+
+        return { ...c, folders: findAndClone(c.folders) };
+      })
     }));
     get().saveAllCollectionsToDisk();
   },
@@ -166,6 +260,43 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     get().saveAllCollectionsToDisk();
   },
 
+  duplicateRequest: (collectionId, requestId) => {
+    set((state) => ({
+      collections: state.collections.map((c) => {
+        if (c.id !== collectionId) return c;
+
+        const topLevelIdx = c.requests.findIndex(r => r.id === requestId);
+        if (topLevelIdx !== -1) {
+            const source = c.requests[topLevelIdx];
+            const duplicated: Request = { ...JSON.parse(JSON.stringify(source)), id: uuidv4(), name: `${source.name} (Copy)`, pinned: false };
+            const newRequests = [...c.requests];
+            newRequests.splice(topLevelIdx + 1, 0, duplicated);
+            return { ...c, requests: newRequests };
+        }
+
+        const updateFolders = (folders: Folder[]): Folder[] => {
+          return folders.map(f => {
+            const reqIdx = f.requests.findIndex(r => r.id === requestId);
+            if (reqIdx !== -1) {
+              const source = f.requests[reqIdx];
+              const duplicated: Request = { ...JSON.parse(JSON.stringify(source)), id: uuidv4(), name: `${source.name} (Copy)`, pinned: false };
+              const newReqs = [...f.requests];
+              newReqs.splice(reqIdx + 1, 0, duplicated);
+              return { ...f, requests: newReqs };
+            }
+            if (f.folders && f.folders.length > 0) {
+              return { ...f, folders: updateFolders(f.folders) };
+            }
+            return f;
+          });
+        };
+
+        return { ...c, folders: updateFolders(c.folders) };
+      })
+    }));
+    get().saveAllCollectionsToDisk();
+  },
+
   deleteRequest: (collectionId, requestId) => {
     set((state) => ({
       collections: state.collections.map(c => {
@@ -235,6 +366,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
   }
 }));
 
+// Auto-save: debounce saves to disk whenever collections change
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 useCollectionStore.subscribe((state, prevState) => {
   const hasChanged = state.collections !== prevState.collections;
