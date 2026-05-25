@@ -318,6 +318,15 @@ async fn git_add_remote(path: String, remote_name: String, remote_url: String) -
 }
 
 #[tauri::command]
+async fn run_collection(
+    collection: collections::types::Collection,
+    environment: Option<collections::types::Environment>,
+) -> Result<Vec<collections::runner::RunResult>, String> {
+    let mut runner = collections::runner::CollectionRunner::new(collection, environment);
+    Ok(runner.run_all().await)
+}
+
+#[tauri::command]
 fn get_user_settings() -> Result<UserSettings, String> {
     let path = get_data_dir().join("settings.json");
     if path.exists() {
@@ -494,6 +503,7 @@ pub fn run() {
             git_push_repo,
             git_pull_repo,
             git_add_remote,
+            run_collection,
             collections::git::get_git_diff,
             collections::git::git_discard_changes,
             collections::git::git_resolve_conflict,

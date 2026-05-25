@@ -63,37 +63,57 @@ export default function RequestBuilder() {
       const { method, url, headers, body, auth, preRequestScript, testScript } = activeTab.request;
       
       const activeCollection = collections.find(c => c.id === activeTab.collectionId);
+      
+      // Get all parent objects (collection and folders) for inheritance
+      const inheritanceChain: (any)[] = [];
+      if (activeCollection) {
+        inheritanceChain.push(activeCollection);
+        
+        const findParentFolders = (folders: any[], targetId: string, currentPath: any[]): boolean => {
+          for (const f of folders) {
+            if (f.requests.some((r: any) => r.id === targetId)) {
+              inheritanceChain.push(...currentPath, f);
+              return true;
+            }
+            if (f.folders && findParentFolders(f.folders, targetId, [...currentPath, f])) return true;
+          }
+          return false;
+        };
+        findParentFolders(activeCollection.folders, activeTab.request.id, []);
+      }
+
       const collectionVariables = (activeCollection?.variables || []).reduce((acc, v) => {
         if (v.enabled !== false) acc[v.key] = v.value;
         return acc;
       }, {} as Record<string, string>);
 
-      // 1. Execute Pre-request Script
+      // 1. Execute Inherited Pre-request Scripts (Parent to Child)
       let finalUrl = url;
       const injectedHeaders: Record<string, string> = {};
-      
-      if (preRequestScript) {
-        const activeEnv = environments.find(e => e.id === activeEnvId);
-        const scriptResult = await executeScript(preRequestScript, activeTab.request, activeEnv, undefined, collectionVariables);
-        
-        if (scriptResult.modifiedUrl) {
-          finalUrl = scriptResult.modifiedUrl;
+      const activeEnv = environments.find(e => e.id === activeEnvId);
+
+      for (const parent of inheritanceChain) {
+        if (parent.preRequestScript) {
+          const res = await executeScript(parent.preRequestScript, activeTab.request, activeEnv, undefined, collectionVariables);
+          if (res.modifiedUrl) finalUrl = res.modifiedUrl;
+          res.addedHeaders.forEach(h => { injectedHeaders[h.key] = h.value; });
+          // Note: Environment updates are handled in executeScript call below if needed, 
+          // but for simplicity we assume inherited scripts can also update env.
         }
+      }
+      
+      // 1.b Execute Local Pre-request Script
+      if (preRequestScript) {
+        const scriptResult = await executeScript(preRequestScript, activeTab.request, activeEnv, undefined, collectionVariables);
+        if (scriptResult.modifiedUrl) finalUrl = scriptResult.modifiedUrl;
+        scriptResult.addedHeaders.forEach(h => { injectedHeaders[h.key] = h.value; });
         
-        scriptResult.addedHeaders.forEach(h => {
-          injectedHeaders[h.key] = h.value;
-        });
-        
-        // Apply environment updates
         if (Object.keys(scriptResult.environmentUpdates).length > 0 && activeEnv) {
           const newVariables = [...activeEnv.variables];
           Object.entries(scriptResult.environmentUpdates).forEach(([key, value]) => {
             const idx = newVariables.findIndex(v => v.key === key);
-            if (idx >= 0) {
-              newVariables[idx] = { ...newVariables[idx], value };
-            } else {
-              newVariables.push({ key, value, enabled: true });
-            }
+            if (idx >= 0) newVariables[idx] = { ...newVariables[idx], value };
+            else newVariables.push({ key, value, enabled: true });
           });
           updateEnvironment(activeEnv.id, { variables: newVariables });
         }
@@ -101,10 +121,25 @@ export default function RequestBuilder() {
 
       const headerRecord: Record<string, string> = { ...injectedHeaders };
       
-      if (auth?.type === 'bearer' && auth.config?.token) {
-        headerRecord['Authorization'] = `Bearer ${auth.config.token}`;
-      } else if (auth?.type === 'oauth2' && auth.config?.accessToken) {
-        headerRecord['Authorization'] = `Bearer ${auth.config.accessToken}`;
+      // Resolve Auth (Inheritance logic)
+      let effectiveAuth = auth;
+      if (!auth || auth.type === 'inherit') {
+        // Look up the chain (Child to Parent)
+        for (let i = inheritanceChain.length - 1; i >= 0; i--) {
+          if (inheritanceChain[i].auth && inheritanceChain[i].auth.type !== 'inherit') {
+            effectiveAuth = inheritanceChain[i].auth;
+            break;
+          }
+        }
+      }
+
+      if (effectiveAuth?.type === 'bearer' && effectiveAuth.config?.token) {
+        headerRecord['Authorization'] = `Bearer ${effectiveAuth.config.token}`;
+      } else if (effectiveAuth?.type === 'oauth2' && effectiveAuth.config?.accessToken) {
+        headerRecord['Authorization'] = `Bearer ${effectiveAuth.config.accessToken}`;
+      } else if (effectiveAuth?.type === 'basic' && effectiveAuth.config?.username) {
+        const credentials = btoa(`${effectiveAuth.config.username}:${effectiveAuth.config.password || ''}`);
+        headerRecord['Authorization'] = `Basic ${credentials}`;
       }
 
       headers.forEach(h => {
@@ -182,6 +217,14 @@ export default function RequestBuilder() {
             }
           });
           updateEnvironment(activeEnv.id, { variables: newVariables });
+        }
+      }
+
+      // 3.b Execute Inherited Test Scripts (Child to Parent)
+      for (let i = inheritanceChain.length - 1; i >= 0; i--) {
+        const parent = inheritanceChain[i];
+        if (parent.testScript) {
+          await executeScript(parent.testScript, activeTab.request, activeEnv, response, collectionVariables);
         }
       }
     } catch (error: any) {

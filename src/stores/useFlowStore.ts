@@ -85,24 +85,13 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
       w => w.id === useWorkspaceStore.getState().activeWorkspaceId
     );
-    
-    let path = activeWorkspace?.path;
-    if (!path) {
-      try {
-        const { invoke } = await import('@tauri-apps/api/core');
-        path = await invoke<string>('create_data_dir');
-      } catch (e) {
-        console.error('[Pulse FlowStore] Failed to get default data directory for saving:', e);
-        return;
-      }
-    }
+    if (!activeWorkspace?.path) return;
 
     try {
       const { saveFlowsToDisk } = await import('../hooks/useTauri');
-      console.log(`[Pulse FlowStore] Saving flows to disk at: ${path}. Flows count: ${flows.length}`);
-      await saveFlowsToDisk(path, flows);
+      await saveFlowsToDisk(activeWorkspace.path, flows);
     } catch (e) {
-      console.error('[Pulse FlowStore] Failed to save flows:', e);
+      console.error('[FlowStore] Failed to save flows:', e);
     }
   },
 
@@ -112,7 +101,6 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       const { loadFlowsFromWorkspace } = await import('../hooks/useTauri');
       const flows = await loadFlowsFromWorkspace(workspacePath);
       
-      // Deduplicate flows by ID to prevent UI crashes with duplicate keys
       const uniqueFlows = Array.from(new Map(flows.map(f => [f.id, f])).values());
       set({ flows: uniqueFlows });
     } catch (e) {
@@ -123,12 +111,12 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
   }
 }));
 
-// Auto-save debounced (reduced to 500ms to prevent data loss on rapid app restarts)
+// Auto-save debounced
 let saveTimeout: any = null;
 useFlowStore.subscribe((state, prevState) => {
   if (state.flows === prevState.flows) return;
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
     state.saveFlowsToDisk();
-  }, 500);
+  }, 2000);
 });

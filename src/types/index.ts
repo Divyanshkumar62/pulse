@@ -7,7 +7,8 @@ export interface KeyValuePair {
 
 export type Header = KeyValuePair;
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS' | 'WS';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+export type Protocol = 'http' | 'ws';
 
 export interface GraphQLConfig {
   query: string;
@@ -15,51 +16,14 @@ export interface GraphQLConfig {
 }
 
 export interface RequestBody {
-  type: 'none' | 'raw' | 'form-data' | 'json' | 'graphql';
+  type: 'none' | 'json' | 'raw' | 'form-data' | 'x-www-form-urlencoded' | 'graphql';
   content: string;
   graphql?: GraphQLConfig;
 }
 
-export interface OAuth2Config {
-  clientId: string;
-  clientSecret: string;
-  authUrl: string;
-  tokenUrl: string;
-  scope: string;
-  accessToken?: string;
-  refreshToken?: string;
-  expiresAt?: number;
-}
-
 export interface AuthConfig {
-  type: 'none' | 'bearer' | 'oauth2';
-  config?: any; // To be expanded in OAuth implementation
-}
-
-export type Protocol = 'http' | 'ws';
-
-export interface WebSocketMessage {
-  id: string;
-  type: 'send' | 'receive' | 'error' | 'meta';
-  content: string;
-  timestamp: string;
-}
-
-export type WebSocketStatus = 'none' | 'connecting' | 'connected' | 'disconnected' | 'error';
-
-export interface HttpResponse {
-  status: number;
-  status_text: string;
-  headers: Header[];
-  body: string;
-  time_ms: number;
-}
-
-export interface Variable {
-  key: string;
-  value: string;
-  enabled?: boolean;
-  description?: string;
+  type: 'none' | 'bearer' | 'basic' | 'oauth2' | 'inherit';
+  config: any;
 }
 
 export interface Request {
@@ -74,6 +38,7 @@ export interface Request {
   auth?: AuthConfig;
   preRequestScript?: string;
   testScript?: string;
+  responseSchema?: string;
   pinned?: boolean;
 }
 
@@ -91,6 +56,9 @@ export interface Folder {
   requests: Request[];
   folders?: Folder[];
   pinned?: boolean;
+  auth?: AuthConfig;
+  preRequestScript?: string;
+  testScript?: string;
 }
 
 export interface Collection {
@@ -101,6 +69,9 @@ export interface Collection {
   folders: Folder[];
   variables: KeyValuePair[];
   pinned?: boolean;
+  auth?: AuthConfig;
+  preRequestScript?: string;
+  testScript?: string;
 }
 
 export interface Environment {
@@ -108,6 +79,10 @@ export interface Environment {
   name: string;
   variables: Variable[];
   pinned?: boolean;
+}
+
+export interface Variable extends KeyValuePair {
+  id: string;
 }
 
 export interface HistoryEntry {
@@ -128,7 +103,6 @@ export interface TeamMember {
   email: string;
   name: string;
   role: TeamRole;
-  joined_at: string;
 }
 
 export type TeamRole = 'owner' | 'admin' | 'member';
@@ -138,8 +112,9 @@ export interface Team {
   name: string;
   owner_id: string;
   members: TeamMember[];
-  created_at: string;
 }
+
+export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired';
 
 export interface Invitation {
   id: string;
@@ -151,10 +126,25 @@ export interface Invitation {
   invited_by: string;
   invited_at: string;
   expires_at: string;
-  accepted_at: string | null;
+  accepted_at?: string;
 }
 
-export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired';
+export interface HttpResponse {
+  status: number;
+  status_text: string;
+  headers: KeyValuePair[];
+  body: string;
+  time_ms: number;
+}
+
+export interface WebSocketMessage {
+  id: string;
+  type: 'send' | 'received';
+  content: string;
+  timestamp: string;
+}
+
+export type WebSocketStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export interface FlowNodeMapping {
   sourcePath: string;
@@ -202,7 +192,6 @@ export interface Flow {
   workspaceId: string;
   createdAt?: number;
   updatedAt?: number;
-  pinned?: boolean;
 }
 
 export interface MockRoute {

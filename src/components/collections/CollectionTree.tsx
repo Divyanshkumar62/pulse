@@ -4,6 +4,9 @@ import { useTabStore } from '../../stores/useTabStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
 import { useAppStore } from '../../stores/useAppStore';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
+import ConfirmModal from '../ui/ConfirmModal';
+import CollectionRunner from './CollectionRunner';
+import CollectionDocs from './CollectionDocs';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -16,7 +19,7 @@ type TreeItem =
 export default function CollectionTree() {
   const { workspaces, activeWorkspaceId } = useWorkspaceStore();
   const { openTab, updateTabRequestName } = useTabStore();
-  const { collections, addCollection, addFolder, addRequest, updateCollection, updateRequest } = useCollectionStore();
+  const { collections, addCollection, addFolder, addRequest, updateCollection, updateRequest, deleteCollection, deleteFolder, deleteRequest } = useCollectionStore();
   const { isImportModalOpen, setImportModalOpen } = useAppStore();
   
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, items: ContextMenuItem[]} | null>(null);
@@ -26,12 +29,16 @@ export default function CollectionTree() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<TreeItem[]>([]);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+  const [runnerCollection, setRunnerCollection] = useState<any | null>(null);
+  const [docsCollection, setDocsCollection] = useState<any | null>(null);
   
   const [creatingInline, setCreatingInline] = useState<{ parentId: string; parentType: 'collection' | 'folder'; itemType: 'request' | 'folder' } | null>(null);
   const [creatingName, setCreatingName] = useState('');
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
+
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'collection' | 'folder' | 'request', name: string, collectionId?: string } | null>(null);
   
   const editInputRef = useRef<HTMLInputElement>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
@@ -254,7 +261,24 @@ export default function CollectionTree() {
     setEditingValue('');
   };
 
-  const handleContextMenu = (e: React.MouseEvent, type: string, data: any) => {
+  const handleDelete = () => {
+    if (!confirmDelete) return;
+    const { id, type, collectionId } = confirmDelete;
+
+    if (type === 'collection') {
+        deleteCollection(id);
+        toast.success('Collection deleted');
+    } else if (type === 'folder' && collectionId) {
+        deleteFolder(collectionId, id);
+        toast.success('Folder deleted');
+    } else if (type === 'request' && collectionId) {
+        deleteRequest(collectionId, id);
+        toast.success('Request deleted');
+    }
+    setConfirmDelete(null);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, type: 'collection' | 'folder' | 'request', data: any) => {
     e.preventDefault();
     const menuX = e.clientX;
     const menuY = e.clientY;
@@ -262,6 +286,8 @@ export default function CollectionTree() {
     const items: ContextMenuItem[] = [];
     
     if (type === 'collection') {
+      items.push({ label: 'Run Collection', onClick: () => setRunnerCollection(data) });
+      items.push({ label: 'View Documentation', onClick: () => setDocsCollection(data) });
       items.push({ label: 'New Request', onClick: () => handleCreateRequest(data.id, null) });
       items.push({ label: 'New Folder', onClick: () => handleCreateFolder(data.id, null) });
       items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
@@ -269,21 +295,23 @@ export default function CollectionTree() {
       items.push({ label: data.pinned ? 'Unpin' : 'Pin', onClick: () => { 
         updateCollection(data.id, { pinned: !data.pinned }, '');
       }});
-      items.push({ label: 'Delete', danger: true, onClick: () => toast('Delete coming soon') });
+      items.push({ label: 'Delete', danger: true, onClick: () => setConfirmDelete({ id: data.id, type: 'collection', name: data.name }) });
     } else if (type === 'folder') {
+      items.push({ label: 'Run Folder', onClick: () => setRunnerCollection({ ...data, requests: data.requests || [] }) });
       items.push({ label: 'New Request', onClick: () => handleCreateRequest(data.collectionId, data.id) });
       items.push({ label: 'New Folder', onClick: () => handleCreateFolder(data.collectionId, data.id) });
       items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
-      items.push({ label: 'Delete', danger: true, onClick: () => toast('Delete coming soon') });
+      items.push({ label: 'Delete', danger: true, onClick: () => setConfirmDelete({ id: data.id, type: 'folder', name: data.name, collectionId: data.collectionId }) });
     } else if (type === 'request') {
       items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
+      items.push({ label: 'Duplicate', onClick: () => toast('Duplicate coming soon') });
       items.push({ label: data.pinned ? 'Unpin' : 'Pin', onClick: () => { 
         const col = collections.find(c => c.id === data.collectionId);
         if (col) {
           updateRequest(col.id, data.id, { pinned: !data.pinned });
         }
       }});
-      items.push({ label: 'Delete', danger: true, onClick: () => toast('Delete coming soon') });
+      items.push({ label: 'Delete', danger: true, onClick: () => setConfirmDelete({ id: data.id, type: 'request', name: data.name, collectionId: data.collectionId }) });
     }
     
     setContextMenu({ x: menuX, y: menuY, items });
@@ -615,6 +643,30 @@ export default function CollectionTree() {
           y={contextMenu.y}
           items={contextMenu.items}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      <ConfirmModal 
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={handleDelete}
+        title={`Delete ${confirmDelete?.type.charAt(0).toUpperCase()}${confirmDelete?.type.slice(1)}`}
+        message={`Are you sure you want to delete "${confirmDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        isDanger={true}
+      />
+
+      {runnerCollection && (
+        <CollectionRunner 
+          collection={runnerCollection} 
+          onClose={() => setRunnerCollection(null)} 
+        />
+      )}
+
+      {docsCollection && (
+        <CollectionDocs 
+            collection={docsCollection}
+            onClose={() => setDocsCollection(null)}
         />
       )}
 

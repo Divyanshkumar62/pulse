@@ -14,9 +14,12 @@ interface CollectionStore {
   // Actions
   addCollection: (collection: Collection, path: string) => Promise<void>;
   updateCollection: (id: string, updates: Partial<Collection>, _path: string) => Promise<void>;
+  deleteCollection: (id: string) => void;
   addFolder: (collectionId: string, parentFolderId: string | null, folder: Folder) => Promise<void>;
+  deleteFolder: (collectionId: string, folderId: string) => void;
   addRequest: (collectionId: string, folderId: string | null, request: Request) => Promise<void>;
   updateRequest: (collectionId: string, requestId: string, updates: Partial<Request>) => Promise<void>;
+  deleteRequest: (collectionId: string, requestId: string) => void;
   
   // Persistence
   saveCollectionToDisk: (id: string) => Promise<void>;
@@ -33,7 +36,6 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     const existingIdx = collections.findIndex(c => c.id === collection.id);
     
     if (existingIdx !== -1) {
-      // Overwrite with the latest version from disk
       const newCollections = [...collections];
       newCollections[existingIdx] = { ...collection, _diskPath: path };
       set({ collections: newCollections });
@@ -48,6 +50,14 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         c.id === id ? { ...c, ...updates } : c
       ),
     }));
+    get().saveAllCollectionsToDisk();
+  },
+
+  deleteCollection: (id) => {
+    set((state) => ({
+      collections: state.collections.filter(c => c.id !== id)
+    }));
+    // We should ideally trigger a disk cleanup here too
     get().saveAllCollectionsToDisk();
   },
 
@@ -74,6 +84,24 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
 
         return { ...c, folders: updateFolders(c.folders) };
       }),
+    }));
+    get().saveAllCollectionsToDisk();
+  },
+
+  deleteFolder: (collectionId, folderId) => {
+    set((state) => ({
+      collections: state.collections.map(c => {
+          if (c.id !== collectionId) return c;
+          
+          const removeInFolders = (folders: Folder[]): Folder[] => {
+              return folders.filter(f => f.id !== folderId).map(f => ({
+                  ...f,
+                  folders: f.folders ? removeInFolders(f.folders) : []
+              }));
+          };
+          
+          return { ...c, folders: removeInFolders(c.folders) };
+      })
     }));
     get().saveAllCollectionsToDisk();
   },
@@ -138,6 +166,29 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     get().saveAllCollectionsToDisk();
   },
 
+  deleteRequest: (collectionId, requestId) => {
+    set((state) => ({
+      collections: state.collections.map(c => {
+          if (c.id !== collectionId) return c;
+          
+          const removeInFolders = (folders: Folder[]): Folder[] => {
+              return folders.map(f => ({
+                  ...f,
+                  requests: f.requests.filter(r => r.id !== requestId),
+                  folders: f.folders ? removeInFolders(f.folders) : []
+              }));
+          };
+          
+          return { 
+              ...c, 
+              requests: c.requests.filter(r => r.id !== requestId),
+              folders: removeInFolders(c.folders) 
+          };
+      })
+    }));
+    get().saveAllCollectionsToDisk();
+  },
+
   saveCollectionToDisk: async (id: string) => {
     const collection = get().collections.find((c) => c.id === id);
     if (!collection) return;
@@ -184,13 +235,8 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
   }
 }));
 
-// Auto-save: debounce saves to disk whenever collections change
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 useCollectionStore.subscribe((state, prevState) => {
-  const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
-    w => w.id === useWorkspaceStore.getState().activeWorkspaceId
-  );
-  
   const hasChanged = state.collections !== prevState.collections;
   if (!hasChanged) return;
 
