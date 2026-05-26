@@ -68,7 +68,7 @@ export default function TabBar() {
             transition: 'all 0.2s'
         }}
       >
-        <Plus size={18} strokeWidth={2.5} />
+        <Plus size={20} />
       </button>
 
       <div style={{ flex: 1, display: 'flex', overflowX: 'hidden', height: '100%' }}>
@@ -121,13 +121,13 @@ export default function TabBar() {
                     )}
                     <button 
                     className="tab-close-btn" 
-                    style={{ padding: '6px' }}
+                    style={{ padding: '4px', marginLeft: '4px' }}
                     onClick={(e) => {
                         e.stopPropagation();
                         closeTab(tab.id);
                     }}
                     >
-                        <X size={16} strokeWidth={3} />
+                        <X size={18} />
                     </button>
                 </div>
                 );
@@ -142,13 +142,13 @@ export default function TabBar() {
                     <span className="tab-name">Runner: {tab.collection?.name}</span>
                     <button 
                         className="tab-close-btn" 
-                        style={{ padding: '6px' }}
+                        style={{ padding: '4px', marginLeft: '4px' }}
                         onClick={(e) => {
                         e.stopPropagation();
                         closeTab(tab.id);
                         }}
                     >
-                        <X size={16} strokeWidth={3} />
+                        <X size={18} />
                     </button>
                     </div>
                 );
@@ -163,13 +163,13 @@ export default function TabBar() {
                     <span className="tab-name">Docs: {tab.collection?.name}</span>
                     <button 
                     className="tab-close-btn" 
-                    style={{ padding: '6px' }}
+                    style={{ padding: '4px', marginLeft: '4px' }}
                     onClick={(e) => {
                         e.stopPropagation();
                         closeTab(tab.id);
                     }}
                     >
-                        <X size={16} strokeWidth={3} />
+                        <X size={18} />
                     </button>
                 </div>
                 );
@@ -185,17 +185,18 @@ export default function TabBar() {
             color: var(--accent-primary) !important;
         }
         .tab-close-btn {
-            opacity: 0.6;
+            opacity: 0.5;
             transition: all 0.2s;
             border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
+            color: var(--text-tertiary);
         }
         .tab-close-btn:hover {
             opacity: 1;
             background: rgba(255,255,255,0.1);
-            color: #ef4444;
+            color: var(--text-primary);
         }
       `}</style>
     </div>

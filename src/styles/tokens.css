@@ -1,5 +1,5 @@
 :root {
-  /* ──── SPACING SYSTEM (iOS-inspired) ──── */
+  /* ──── SPACING SYSTEM ──── */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -19,17 +19,17 @@
   --radius-2xl: 18px;
   --radius-full: 9999px;
 
-  /* ──── APPLE DARK (ELECTRIC BLUE GLASS) ──── */
+  /* ──── DEFAULT: ELECTRIC BLUE DARK ──── */
   --bg-deep:        #080a0f;
   --bg-surface:     rgba(13, 17, 23, 0.72);
   --bg-elevated:    rgba(22, 27, 34, 0.82);
   --bg-overlay:     rgba(30, 35, 45, 0.94);
   --bg-glass:       rgba(10, 14, 20, 0.65);
-  --bg-input:       rgba(15, 20, 28, 0.88);
+  --bg-input:       #0d1117;
 
-  --border-default: rgba(255, 255, 255, 0.08);
-  --border-subtle:  rgba(255, 255, 255, 0.04);
-  --border-focus:   #0070F3; /* Authentic Electric Blue */
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-subtle:  rgba(255, 255, 255, 0.05);
+  --border-focus:   #0070F3;
 
   --text-primary:   #FFFFFF;
   --text-secondary: #98989D;
@@ -42,7 +42,7 @@
   --accent-subtle:     rgba(0, 112, 243, 0.12);
   --accent-border:     rgba(0, 112, 243, 0.25);
 
-  /* ──── METHODS & STATUS (Clean High Contrast) ──── */
+  /* ──── METHODS & STATUS ──── */
   --method-get:     #2ECC71;
   --method-post:    #F1C40F;
   --method-put:     #9B59B6;
@@ -74,56 +74,122 @@
   --transition-slow: 450ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* ──── LIGHT THEME (ELECTRIC BLUE GLASS) ──── */
+/* ──── HIGH CONTRAST (Light) ──── */
 .theme-light {
-  --bg-deep:        #F2F2F7;
-  --bg-surface:     rgba(255, 255, 255, 0.78);
-  --bg-elevated:    rgba(255, 255, 255, 0.88);
-  --bg-overlay:     rgba(255, 255, 255, 1);
-  --bg-glass:       rgba(255, 255, 255, 0.68);
-  --bg-input:       rgba(255, 255, 255, 0.9);
+  --bg-deep:        #FFFFFF;
+  --bg-surface:     #F6F8FA;
+  --bg-elevated:    #FFFFFF;
+  --bg-overlay:     #FFFFFF;
+  --bg-glass:       rgba(255, 255, 255, 0.8);
+  --bg-input:       #FFFFFF;
 
-  --border-default: rgba(0, 0, 0, 0.11);
-  --border-subtle:  rgba(0, 0, 0, 0.06);
-  --border-focus:   #007AFF;
+  --border-default: #D0D7DE;
+  --border-subtle:  #EBEEF2;
+  --border-focus:   #0969DA;
 
-  --text-primary:   #1C1C1E;
-  --text-secondary: #636366;
-  --text-tertiary:  #C7C7CC;
-  --text-link:      #007AFF;
+  --text-primary:   #1F2328;
+  --text-secondary: #657077;
+  --text-tertiary:  #8C959F;
+  --text-link:      #0969DA;
 
-  --accent-primary:    #007AFF;
-  --accent-hover:      #0059B3;
-  --accent-active:     #004080;
-  --accent-subtle:     rgba(0, 122, 255, 0.12);
-  --accent-border:     rgba(0, 122, 255, 0.25);
+  --accent-primary:    #0969DA;
+  --accent-hover:      #0856C1;
+  --accent-active:     #0744AD;
+  --accent-subtle:     rgba(9, 105, 218, 0.1);
+  --accent-border:     rgba(9, 105, 218, 0.3);
 
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 10px 24px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 20px 52px rgba(0, 0, 0, 0.13);
-  --blur-glass: blur(28px) saturate(210%);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 10px 24px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 20px 52px rgba(0, 0, 0, 0.15);
+  --blur-glass: blur(28px);
 }
 
-/* ──── TOKYO NIGHT (Glass Adaptation) ──── */
+/* ──── GRUVBOX ──── */
+.theme-gruvbox {
+  --bg-deep:        #1d2021;
+  --bg-surface:     #282828;
+  --bg-elevated:    #32302f;
+  --bg-overlay:     #3c3836;
+  --bg-glass:       rgba(40, 40, 40, 0.9);
+  --bg-input:       #1d2021;
+
+  --border-default: #504945;
+  --border-subtle:  #3c3836;
+  --border-focus:   #fe8019;
+
+  --text-primary:   #ebdbb2;
+  --text-secondary: #a89984;
+  --text-tertiary:  #928374;
+  --text-link:      #83a598;
+
+  --accent-primary:    #fe8019;
+  --accent-hover:      #fabd2f;
+  --accent-active:     #d65d0e;
+  --accent-subtle:     rgba(254, 128, 25, 0.15);
+  --accent-border:     rgba(254, 128, 25, 0.4);
+
+  --method-get:     #b8bb26;
+  --method-post:    #fabd2f;
+  --method-put:     #83a598;
+  --method-delete:  #fb4934;
+}
+
+/* ──── ARCTIC NORD ──── */
+.theme-nord {
+  --bg-deep:        #242933;
+  --bg-surface:     #2e3440;
+  --bg-elevated:    #3b4252;
+  --bg-overlay:     #434c5e;
+  --bg-glass:       rgba(46, 52, 64, 0.9);
+  --bg-input:       #242933;
+
+  --border-default: #4c566a;
+  --border-subtle:  #3b4252;
+  --border-focus:   #88c0d0;
+
+  --text-primary:   #eceff4;
+  --text-secondary: #d8dee9;
+  --text-tertiary:  #aeb3bb;
+  --text-link:      #81a1c1;
+
+  --accent-primary:    #88c0d0;
+  --accent-hover:      #8fbcbb;
+  --accent-active:     #5e81ac;
+  --accent-subtle:     rgba(136, 192, 208, 0.15);
+  --accent-border:     rgba(136, 192, 208, 0.4);
+
+  --method-get:     #a3be8c;
+  --method-post:    #ebcb8b;
+  --method-put:     #81a1c1;
+  --method-delete:  #bf616a;
+}
+
+/* ──── TOKYO NIGHT ──── */
 .theme-tokyo {
-  --bg-deep:        #000000;
-  --bg-surface:     rgba(26, 27, 38, 0.78);
-  --bg-elevated:    rgba(36, 40, 59, 0.84);
-  --bg-overlay:     rgba(41, 46, 66, 0.95);
-  --bg-input:       rgba(22, 22, 30, 0.85);
+  --bg-deep:        #16161e;
+  --bg-surface:     #1a1b26;
+  --bg-elevated:    #24283b;
+  --bg-overlay:     #292e42;
+  --bg-glass:       rgba(26, 27, 38, 0.9);
+  --bg-input:       #16161e;
 
-  --border-default: rgba(65, 72, 104, 0.45);
-  --border-subtle:  rgba(36, 40, 59, 0.55);
-  --border-focus:   #BB9AF7;
+  --border-default: #414868;
+  --border-subtle:  #24283b;
+  --border-focus:   #bb9af7;
 
-  --text-primary:   #C0CAF5;
-  --text-secondary: #9AA5CE;
-  --text-tertiary:  #565F89;
-  --text-link:      #7AA2F7;
+  --text-primary:   #c0caf5;
+  --text-secondary: #a9b1d6;
+  --text-tertiary:  #565f89;
+  --text-link:      #7aa2f7;
 
-  --accent-primary:    #BB9AF7;
-  --accent-hover:      #9D7CDB;
-  --accent-active:     #7AA2F7;
-  --accent-subtle:     rgba(187, 154, 247, 0.18);
-  --accent-border:     rgba(187, 154, 247, 0.45);
+  --accent-primary:    #bb9af7;
+  --accent-hover:      #9d7cdb;
+  --accent-active:     #7aa2f7;
+  --accent-subtle:     rgba(187, 154, 247, 0.15);
+  --accent-border:     rgba(187, 154, 247, 0.4);
+
+  --method-get:     #9ece6a;
+  --method-post:    #e0af68;
+  --method-put:     #7aa2f7;
+  --method-delete:  #f7768e;
 }

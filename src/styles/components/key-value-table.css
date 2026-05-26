@@ -55,8 +55,8 @@
 
 .kv-input {
   flex: 1;
-  background: rgba(255, 255, 255, 0.05); /* Lighter frosted background */
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
   color: var(--text-primary);
   padding: 8px 14px;
   border-radius: var(--radius-lg);
@@ -66,13 +66,13 @@
 }
 
 .kv-input::placeholder {
-  color: rgba(255, 255, 255, 0.4); /* Visible placeholder */
+  color: var(--text-tertiary);
 }
 
 .kv-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-input);
   box-shadow: 0 0 0 2px var(--accent-subtle);
 }
 

@@ -38,7 +38,7 @@ export default function CollectionTree() {
   const [creatingInline, setCreatingInline] = useState<{ parentId: string; parentType: 'collection' | 'folder'; itemType: 'request' | 'folder' } | null>(null);
   const [creatingName, setCreatingName] = useState('');
   
-  // Use unique editing key to prevent multiple items from opening simultaneously if IDs collide
+  // Use unique editing key that includes index to prevent collisions
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
 
@@ -239,8 +239,8 @@ export default function CollectionTree() {
     });
   };
 
-  const startEdit = (type: string, id: string, name: string) => {
-    setEditingKey(`${type}-${id}`);
+  const startEdit = (type: string, id: string, idx: number, name: string) => {
+    setEditingKey(`${type}-${id}-${idx}`);
     setEditingValue(name);
   };
 
@@ -250,7 +250,10 @@ export default function CollectionTree() {
       return;
     }
     
-    const [type, id] = editingKey.split(/-(.+)/); // Split on first dash
+    // Key format: type-id-idx
+    const parts = editingKey.split('-');
+    const type = parts[0];
+    const id = parts.slice(1, -1).join('-'); // Extract full ID back
     const newName = editingValue.trim();
     
     const collection = collections.find(c => c.id === id);
@@ -323,7 +326,7 @@ export default function CollectionTree() {
     setConfirmDelete(null);
   };
 
-  const handleContextMenu = (e: React.MouseEvent, type: 'collection' | 'folder' | 'request', data: any) => {
+  const handleContextMenu = (e: React.MouseEvent, type: 'collection' | 'folder' | 'request', idx: number, data: any) => {
     e.preventDefault();
     const menuX = e.clientX;
     const menuY = e.clientY;
@@ -334,7 +337,7 @@ export default function CollectionTree() {
       items.push({ label: 'Run Collection', onClick: () => openRunnerTab(data) });
       items.push({ label: 'View Documentation', onClick: () => openDocsTab(data) });
       items.push({ label: 'Add Folder', onClick: () => handleCreateFolder(data.id, null) });
-      items.push({ label: 'Rename', onClick: () => startEdit('collection', data.id, data.name) });
+      items.push({ label: 'Rename', onClick: () => startEdit('collection', data.id, idx, data.name) });
       items.push({ label: 'Duplicate', onClick: () => {
           duplicateCollection(data.id);
           toast.success('Collection duplicated');
@@ -347,7 +350,7 @@ export default function CollectionTree() {
       items.push({ label: 'Run Folder', onClick: () => openRunnerTab({ ...data, requests: data.requests || [] }) });
       items.push({ label: 'Add Request', onClick: () => handleCreateRequest(data.collectionId, data.id) });
       items.push({ label: 'Add Folder', onClick: () => handleCreateFolder(data.collectionId, data.id) });
-      items.push({ label: 'Rename', onClick: () => startEdit('folder', data.id, data.name) });
+      items.push({ label: 'Rename', onClick: () => startEdit('folder', data.id, idx, data.name) });
       items.push({ label: 'Duplicate', onClick: () => {
           duplicateFolder(data.collectionId, data.id);
           toast.success('Folder duplicated');
@@ -357,7 +360,7 @@ export default function CollectionTree() {
       }});
       items.push({ label: 'Delete', danger: true, onClick: () => setConfirmDelete({ id: data.id, type: 'folder', name: data.name, collectionId: data.collectionId }) });
     } else if (type === 'request') {
-      items.push({ label: 'Rename', onClick: () => startEdit('request', data.id, data.name) });
+      items.push({ label: 'Rename', onClick: () => startEdit('request', data.id, idx, data.name) });
       items.push({ label: 'Duplicate', onClick: () => {
           duplicateRequest(data.collectionId, data.id);
           toast.success('Request duplicated');
@@ -373,7 +376,7 @@ export default function CollectionTree() {
 
   const renderTreeItem = (item: TreeItem, idx: number) => {
     const paddingLeft = item.level * 12 + 8;
-    const isEditing = item.type !== 'creating' && editingKey === `${item.type}-${item.id}`;
+    const isEditing = item.type !== 'creating' && editingKey === `${item.type}-${item.id}-${idx}`;
 
     if (item.type === 'creating') {
       return (
@@ -441,8 +444,8 @@ export default function CollectionTree() {
         <div 
           key={`${item.type}-${item.id}-${idx}`}
           onClick={() => toggleExpand(item.id)}
-          onDoubleClick={(e) => { e.stopPropagation(); startEdit(item.type, item.id, item.name); }}
-          onContextMenu={(e) => handleContextMenu(e, item.type, item.data)}
+          onDoubleClick={(e) => { e.stopPropagation(); startEdit(item.type, item.id, idx, item.name); }}
+          onContextMenu={(e) => handleContextMenu(e, item.type, idx, item.data)}
           style={{ 
             paddingLeft,
             display: 'flex', 
@@ -476,7 +479,7 @@ export default function CollectionTree() {
                 className="tree-action-btn"
                 onClick={(e) => {
                     e.stopPropagation();
-                    handleContextMenu(e, item.type, item.data);
+                    handleContextMenu(e, item.type, idx, item.data);
                 }}
             >
                 <MoreVertical size={14} />
@@ -527,8 +530,8 @@ export default function CollectionTree() {
         <div 
           key={`${item.type}-${item.id}-${idx}`}
           onClick={() => openTab(item.data, item.collectionId)}
-          onDoubleClick={(e) => { e.stopPropagation(); startEdit('request', item.id, item.name); }}
-          onContextMenu={(e) => handleContextMenu(e, 'request', item.data)}
+          onDoubleClick={(e) => { e.stopPropagation(); startEdit('request', item.id, idx, item.name); }}
+          onContextMenu={(e) => handleContextMenu(e, 'request', idx, item.data)}
           style={{ 
             paddingLeft: paddingLeft + 14,
             display: 'flex', 
@@ -558,7 +561,7 @@ export default function CollectionTree() {
                 className="tree-action-btn"
                 onClick={(e) => {
                     e.stopPropagation();
-                    handleContextMenu(e, item.type, item.data);
+                    handleContextMenu(e, item.type, idx, item.data);
                 }}
             >
                 <MoreVertical size={14} />
@@ -663,7 +666,7 @@ export default function CollectionTree() {
                         style={{ 
                             position: 'absolute', top: '100%', right: 0, marginTop: '4px', 
                             background: 'var(--bg-deep)', border: '1px solid var(--border-default)', 
-                            borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 100,
+                            borderRadius: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 100,
                             minWidth: '150px', overflow: 'hidden'
                         }}
                     >

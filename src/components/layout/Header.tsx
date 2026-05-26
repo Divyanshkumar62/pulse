@@ -45,7 +45,18 @@ export default function Header() {
           {settings?.avatarUrl ? (
             <img src={settings.avatarUrl} alt="Profile" />
           ) : (
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 600, color: 'white' }}>
+            <div style={{ 
+              width: '100%', 
+              height: '100%', 
+              background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              fontSize: '12px', 
+              fontWeight: 700, 
+              color: 'white',
+              lineHeight: 1
+            }}>
               {settings?.name ? settings.name.charAt(0).toUpperCase() : '?'}
             </div>
           )}

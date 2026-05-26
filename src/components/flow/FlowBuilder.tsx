@@ -602,9 +602,9 @@ export default function FlowBuilder() {
         {/* Bottom Map & Controls Area */}
         <Panel position="bottom-right" style={{ margin: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px' }}>
             <div style={{ 
-                display: 'flex', background: 'rgba(30, 41, 59, 0.8)', 
-                backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.1)', 
-                borderRadius: '12px', padding: '4px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' 
+                display: 'flex', background: 'var(--bg-elevated)', 
+                backdropFilter: 'blur(12px)', border: '1px solid var(--border-subtle)', 
+                borderRadius: '12px', padding: '4px', boxShadow: 'var(--shadow-md)' 
             }}>
                 <button className="toolbar-btn" title="Zoom In" onClick={() => zoomIn()}>
                     <ZoomIn size={18} />
