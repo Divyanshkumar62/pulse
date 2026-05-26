@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
-import { Play, FileText } from 'lucide-react';
+import { Play, FileText, Plus, X } from 'lucide-react';
 import '../../styles/components/tabs.css';
 
 export default function TabBar() {
@@ -16,7 +16,10 @@ export default function TabBar() {
   };
 
   const handleConfirmNewTab = () => {
-    if (!newRequestName.trim()) return;
+    if (!newRequestName.trim()) {
+        setIsNamingNew(false);
+        return;
+    }
     
     const newRequest = {
       id: crypto.randomUUID(),
@@ -45,148 +48,156 @@ export default function TabBar() {
   };
 
   return (
-    <div className="tab-bar-premium">
-      {isNamingNew && (
-        <div style={{ display: 'flex', alignItems: 'center', padding: '4px 12px', gap: '8px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <input
-            type="text"
-            value={newRequestName}
-            onChange={(e) => setNewRequestName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleConfirmNewTab()}
-            placeholder="Request name"
-            autoFocus
-            style={{
-              flex: 1,
-              padding: '6px 10px',
-              background: 'var(--bg-input)',
-              border: '1px solid var(--accent-primary)',
-              borderRadius: '4px',
-              color: 'var(--text-primary)',
-              fontSize: '12px',
-              outline: 'none'
-            }}
-          />
-          <button
-            onClick={handleConfirmNewTab}
-            style={{
-              padding: '4px 10px',
-              background: 'var(--accent-primary)',
-              border: 'none',
-              borderRadius: '4px',
-              color: 'white',
-              fontSize: '11px',
-              cursor: 'pointer'
-            }}
-          >
-            Add
-          </button>
-          <button
-            onClick={cancelNewTab}
-            style={{
-              padding: '4px 8px',
-              background: 'transparent',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '4px',
-              color: 'var(--text-tertiary)',
-              fontSize: '11px',
-              cursor: 'pointer'
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-      <div className="tabs-container">
-        {tabs.map(tab => {
-          if (tab.type === 'request' && tab.request) {
-            const methodColor = getMethodColor(tab.request.method);
-            return (
-              <div 
-                key={tab.id} 
-                className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <span className={`method-pill method-${tab.request.method.toLowerCase()}`}>
-                  {tab.request.method}
-                </span>
-                <span className="tab-name">{tab.request.name || 'Untitled Request'}</span>
-                {tab.isDirty && (
-                  <span 
-                    className="tab-dirty-pulse" 
-                    style={{ background: methodColor }}
-                  />
-                )}
-                <button 
-                  className="tab-close-btn" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeTab(tab.id);
-                  }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-            );
-          } else if (tab.type === 'runner') {
-              return (
+    <div className="tab-bar-premium" style={{ display: 'flex', alignItems: 'center' }}>
+      {/* Fixed New Tab Button at the start */}
+      <button 
+        className="add-tab-btn-fixed" 
+        onClick={handleNewTab} 
+        title="New Tab (Ctrl+T)"
+        style={{ 
+            flexShrink: 0, 
+            width: '40px', 
+            height: '40px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            borderRight: '1px solid var(--border-subtle)',
+            background: 'var(--bg-elevated)',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+        }}
+      >
+        <Plus size={18} strokeWidth={2.5} />
+      </button>
+
+      <div style={{ flex: 1, display: 'flex', overflowX: 'hidden', height: '100%' }}>
+        {isNamingNew && (
+            <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', background: 'var(--bg-deep)', borderRight: '1px solid var(--border-subtle)', minWidth: '200px' }}>
+            <input
+                type="text"
+                value={newRequestName}
+                onChange={(e) => setNewRequestName(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleConfirmNewTab();
+                    if (e.key === 'Escape') cancelNewTab();
+                }}
+                onBlur={handleConfirmNewTab}
+                placeholder="Request name..."
+                autoFocus
+                style={{
+                width: '100%',
+                padding: '6px 12px',
+                background: 'var(--bg-input)',
+                border: '1px solid var(--accent-primary)',
+                borderRadius: '6px',
+                color: 'var(--text-primary)',
+                fontSize: '12px',
+                outline: 'none'
+                }}
+            />
+            </div>
+        )}
+
+        <div className="tabs-container" style={{ flex: 1, display: 'flex', overflowX: 'auto' }}>
+            {tabs.map(tab => {
+            if (tab.type === 'request' && tab.request) {
+                const methodColor = getMethodColor(tab.request.method);
+                return (
                 <div 
-                  key={tab.id} 
-                  className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
+                    key={tab.id} 
+                    className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
+                    onClick={() => setActiveTab(tab.id)}
                 >
-                  <Play size={12} style={{ marginRight: '6px', color: '#10b981' }} />
-                  <span className="tab-name">Runner: {tab.collection?.name}</span>
-                  <button 
+                    <span className={`method-pill method-${tab.request.method.toLowerCase()}`}>
+                    {tab.request.method}
+                    </span>
+                    <span className="tab-name">{tab.request.name || 'Untitled Request'}</span>
+                    {tab.isDirty && (
+                    <span 
+                        className="tab-dirty-pulse" 
+                        style={{ background: methodColor }}
+                    />
+                    )}
+                    <button 
                     className="tab-close-btn" 
+                    style={{ padding: '6px' }}
                     onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(tab.id);
+                        e.stopPropagation();
+                        closeTab(tab.id);
                     }}
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  </button>
+                    >
+                        <X size={16} strokeWidth={3} />
+                    </button>
                 </div>
-              );
-          } else if (tab.type === 'docs') {
-            return (
-              <div 
-                key={tab.id} 
-                className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <FileText size={12} style={{ marginRight: '6px', color: 'var(--accent-primary)' }} />
-                <span className="tab-name">Docs: {tab.collection?.name}</span>
-                <button 
-                  className="tab-close-btn" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeTab(tab.id);
-                  }}
+                );
+            } else if (tab.type === 'runner') {
+                return (
+                    <div 
+                    key={tab.id} 
+                    className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
+                    onClick={() => setActiveTab(tab.id)}
+                    >
+                    <Play size={12} style={{ marginRight: '6px', color: '#10b981' }} />
+                    <span className="tab-name">Runner: {tab.collection?.name}</span>
+                    <button 
+                        className="tab-close-btn" 
+                        style={{ padding: '6px' }}
+                        onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(tab.id);
+                        }}
+                    >
+                        <X size={16} strokeWidth={3} />
+                    </button>
+                    </div>
+                );
+            } else if (tab.type === 'docs') {
+                return (
+                <div 
+                    key={tab.id} 
+                    className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
+                    onClick={() => setActiveTab(tab.id)}
                 >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
-            );
-          }
-          return null;
-        })}
-        
-        <button className="add-tab-btn" onClick={handleNewTab} title="New Tab (Ctrl+T)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-        </button>
+                    <FileText size={12} style={{ marginRight: '6px', color: 'var(--accent-primary)' }} />
+                    <span className="tab-name">Docs: {tab.collection?.name}</span>
+                    <button 
+                    className="tab-close-btn" 
+                    style={{ padding: '6px' }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(tab.id);
+                    }}
+                    >
+                        <X size={16} strokeWidth={3} />
+                    </button>
+                </div>
+                );
+            }
+            return null;
+            })}
+        </div>
       </div>
+      
+      <style>{`
+        .add-tab-btn-fixed:hover {
+            background: var(--bg-surface) !important;
+            color: var(--accent-primary) !important;
+        }
+        .tab-close-btn {
+            opacity: 0.6;
+            transition: all 0.2s;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tab-close-btn:hover {
+            opacity: 1;
+            background: rgba(255,255,255,0.1);
+            color: #ef4444;
+        }
+      `}</style>
     </div>
   );
 }

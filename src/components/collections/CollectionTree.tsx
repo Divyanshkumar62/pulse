@@ -38,7 +38,8 @@ export default function CollectionTree() {
   const [creatingInline, setCreatingInline] = useState<{ parentId: string; parentType: 'collection' | 'folder'; itemType: 'request' | 'folder' } | null>(null);
   const [creatingName, setCreatingName] = useState('');
   
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // Use unique editing key to prevent multiple items from opening simultaneously if IDs collide
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
 
   const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'collection' | 'folder' | 'request', name: string, collectionId?: string } | null>(null);
@@ -48,11 +49,11 @@ export default function CollectionTree() {
   const menuDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (editingId && editInputRef.current) {
+    if (editingKey && editInputRef.current) {
       editInputRef.current.focus();
       editInputRef.current.select();
     }
-  }, [editingId]);
+  }, [editingKey]);
 
   useEffect(() => {
     if (creatingInline && createInputRef.current) {
@@ -238,50 +239,51 @@ export default function CollectionTree() {
     });
   };
 
-  const startEdit = (id: string, name: string) => {
-    setEditingId(id);
+  const startEdit = (type: string, id: string, name: string) => {
+    setEditingKey(`${type}-${id}`);
     setEditingValue(name);
   };
 
   const saveEdit = () => {
-    if (!editingId || !editingValue.trim()) {
-      setEditingId(null);
+    if (!editingKey || !editingValue.trim()) {
+      setEditingKey(null);
       return;
     }
     
+    const [type, id] = editingKey.split(/-(.+)/); // Split on first dash
     const newName = editingValue.trim();
     
-    const collection = collections.find(c => c.id === editingId);
+    const collection = collections.find(c => c.id === id);
     if (collection) {
-      updateCollection(editingId, { name: newName }, '');
-      setEditingId(null);
+      updateCollection(id, { name: newName }, '');
+      setEditingKey(null);
       toast.success('Collection renamed');
       return;
     }
     
     for (const col of collections) {
-      const req = col.requests.find(r => r.id === editingId);
+      const req = col.requests.find(r => r.id === id);
       if (req) {
-        updateRequest(col.id, editingId, { name: newName });
+        updateRequest(col.id, id, { name: newName });
         if (updateTabRequestName) {
-            updateTabRequestName(editingId, newName);
+            updateTabRequestName(id, newName);
         }
-        setEditingId(null);
+        setEditingKey(null);
         toast.success('Request renamed');
         return;
       }
       
       const findFolderAndRename = (folders: any[]): boolean => {
         for (const f of folders) {
-          if (f.id === editingId) {
-             updateFolder(col.id, editingId, { name: newName });
+          if (f.id === id) {
+             updateFolder(col.id, id, { name: newName });
              return true;
           }
-          const r = f.requests?.find((r: any) => r.id === editingId);
+          const r = f.requests?.find((r: any) => r.id === id);
           if (r) {
-            updateRequest(col.id, editingId, { name: newName });
+            updateRequest(col.id, id, { name: newName });
             if (updateTabRequestName) {
-                updateTabRequestName(editingId, newName);
+                updateTabRequestName(id, newName);
             }
             return true;
           }
@@ -291,16 +293,16 @@ export default function CollectionTree() {
       };
       
       if (findFolderAndRename(col.folders)) {
-        setEditingId(null);
+        setEditingKey(null);
         return;
       }
     }
     
-    setEditingId(null);
+    setEditingKey(null);
   };
 
   const cancelEdit = () => {
-    setEditingId(null);
+    setEditingKey(null);
     setEditingValue('');
   };
 
@@ -332,7 +334,7 @@ export default function CollectionTree() {
       items.push({ label: 'Run Collection', onClick: () => openRunnerTab(data) });
       items.push({ label: 'View Documentation', onClick: () => openDocsTab(data) });
       items.push({ label: 'Add Folder', onClick: () => handleCreateFolder(data.id, null) });
-      items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
+      items.push({ label: 'Rename', onClick: () => startEdit('collection', data.id, data.name) });
       items.push({ label: 'Duplicate', onClick: () => {
           duplicateCollection(data.id);
           toast.success('Collection duplicated');
@@ -345,7 +347,7 @@ export default function CollectionTree() {
       items.push({ label: 'Run Folder', onClick: () => openRunnerTab({ ...data, requests: data.requests || [] }) });
       items.push({ label: 'Add Request', onClick: () => handleCreateRequest(data.collectionId, data.id) });
       items.push({ label: 'Add Folder', onClick: () => handleCreateFolder(data.collectionId, data.id) });
-      items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
+      items.push({ label: 'Rename', onClick: () => startEdit('folder', data.id, data.name) });
       items.push({ label: 'Duplicate', onClick: () => {
           duplicateFolder(data.collectionId, data.id);
           toast.success('Folder duplicated');
@@ -355,7 +357,7 @@ export default function CollectionTree() {
       }});
       items.push({ label: 'Delete', danger: true, onClick: () => setConfirmDelete({ id: data.id, type: 'folder', name: data.name, collectionId: data.collectionId }) });
     } else if (type === 'request') {
-      items.push({ label: 'Rename', onClick: () => startEdit(data.id, data.name) });
+      items.push({ label: 'Rename', onClick: () => startEdit('request', data.id, data.name) });
       items.push({ label: 'Duplicate', onClick: () => {
           duplicateRequest(data.collectionId, data.id);
           toast.success('Request duplicated');
@@ -371,6 +373,7 @@ export default function CollectionTree() {
 
   const renderTreeItem = (item: TreeItem, idx: number) => {
     const paddingLeft = item.level * 12 + 8;
+    const isEditing = item.type !== 'creating' && editingKey === `${item.type}-${item.id}`;
 
     if (item.type === 'creating') {
       return (
@@ -403,7 +406,7 @@ export default function CollectionTree() {
     }
 
     if (item.type === 'collection' || item.type === 'folder') {
-      if (editingId === item.id) {
+      if (isEditing) {
         return (
           <div key={`editing-${item.id}-${idx}`} style={{ paddingLeft, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
             <span style={{ width: '14px' }}></span>
@@ -438,6 +441,7 @@ export default function CollectionTree() {
         <div 
           key={`${item.type}-${item.id}-${idx}`}
           onClick={() => toggleExpand(item.id)}
+          onDoubleClick={(e) => { e.stopPropagation(); startEdit(item.type, item.id, item.name); }}
           onContextMenu={(e) => handleContextMenu(e, item.type, item.data)}
           style={{ 
             paddingLeft,
@@ -483,7 +487,7 @@ export default function CollectionTree() {
     }
 
     if (item.type === 'request') {
-      if (editingId === item.id) {
+      if (isEditing) {
         return (
           <div key={`editing-${item.id}-${idx}`} style={{ paddingLeft: paddingLeft + 14, display: 'flex', alignItems: 'center', gap: '6px', height: '32px' }}>
             <input
@@ -523,6 +527,7 @@ export default function CollectionTree() {
         <div 
           key={`${item.type}-${item.id}-${idx}`}
           onClick={() => openTab(item.data, item.collectionId)}
+          onDoubleClick={(e) => { e.stopPropagation(); startEdit('request', item.id, item.name); }}
           onContextMenu={(e) => handleContextMenu(e, 'request', item.data)}
           style={{ 
             paddingLeft: paddingLeft + 14,

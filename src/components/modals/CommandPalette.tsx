@@ -3,6 +3,7 @@ import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useTabStore } from '../../stores/useTabStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { CurlParser } from '../../services/curl';
+import { Request } from '../../types';
 
 export default function CommandPalette() {
   const { isCommandPaletteOpen, setCommandPaletteOpen, setSettingsOpen } = useAppStore();
@@ -77,29 +78,46 @@ export default function CommandPalette() {
     // Workspace Collections
     if (activeWorkspace) {
       activeWorkspace.collections.forEach(c => {
-        c.requests.forEach(r => {
-          newItems.push({
-            id: `req-${r.id}`,
-            title: r.name,
-            subtitle: `${r.method} ${r.url}`,
-            icon: '⚡',
-            action: () => openTab(r)
-          });
-        });
-        c.folders.forEach(f => {
-          f.requests.forEach(r => {
-            newItems.push({
-              id: `req-${f.id}-${r.id}`,
-              title: r.name,
-              subtitle: `${c.name} / ${f.name} / ${r.method} ${r.url}`,
-              icon: '⚡',
-              action: () => openTab(r)
+        // Recursively add all requests with unique IDs
+        const addRequestsFromSource = (requests: Request[], pathPrefix: string) => {
+            requests.forEach(r => {
+                newItems.push({
+                    id: `cp-req-${pathPrefix}-${r.id}`, // Add prefix to ensure uniqueness in palette
+                    title: r.name,
+                    subtitle: `${pathPrefix} / ${r.method} ${r.url}`,
+                    icon: '⚡',
+                    action: () => openTab(r, c.id)
+                });
             });
-          });
-        });
+        };
+
+        addRequestsFromSource(c.requests, c.name);
+
+        const processFolders = (folders: any[], currentPath: string) => {
+            folders.forEach(f => {
+                const newPath = `${currentPath} / ${f.name}`;
+                addRequestsFromSource(f.requests || [], newPath);
+                if (f.folders) {
+                    processFolders(f.folders, newPath);
+                }
+            });
+        };
+
+        if (c.folders) {
+            processFolders(c.folders, c.name);
+        }
       });
     }
-    setItems(newItems);
+
+    // Dedup by ID just in case
+    const seen = new Set<string>();
+    const uniqueItems = newItems.filter(item => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+    });
+
+    setItems(uniqueItems);
   }, [workspaces, activeWorkspaceId, openTab, setSettingsOpen]);
 
   if (!isCommandPaletteOpen) return null;

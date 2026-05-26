@@ -43,7 +43,8 @@ export const useTabStore = create<TabStore>()(
     const existing = tabs.find(t => t.id === request.id);
     if (!existing) {
       set({ 
-        tabs: [...tabs, { id: request.id, type: 'request', request, collectionId }],
+        // Prepend new tab to the left
+        tabs: [{ id: request.id, type: 'request', request, collectionId }, ...tabs],
         activeTabId: request.id 
       });
     } else {
@@ -57,7 +58,7 @@ export const useTabStore = create<TabStore>()(
     const existing = tabs.find(t => t.id === id);
     if (!existing) {
       set({ 
-        tabs: [...tabs, { id, type: 'runner', collection, collectionId: collection.id }],
+        tabs: [{ id, type: 'runner', collection, collectionId: collection.id }, ...tabs],
         activeTabId: id 
       });
     } else {
@@ -71,7 +72,7 @@ export const useTabStore = create<TabStore>()(
     const existing = tabs.find(t => t.id === id);
     if (!existing) {
       set({ 
-        tabs: [...tabs, { id, type: 'docs', collection, collectionId: collection.id }],
+        tabs: [{ id, type: 'docs', collection, collectionId: collection.id }, ...tabs],
         activeTabId: id 
       });
     } else {
@@ -87,7 +88,7 @@ export const useTabStore = create<TabStore>()(
     if (activeTabId === id) {
       const idx = tabs.findIndex(t => t.id === id);
       if (newTabs.length > 0) {
-        newActiveId = newTabs[Math.max(0, idx - 1)].id;
+        newActiveId = newTabs[Math.min(idx, newTabs.length - 1)].id;
       } else {
         newActiveId = null;
       }
