@@ -12,6 +12,8 @@ export default function CommandPalette() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   const { workspaces, activeWorkspaceId } = useWorkspaceStore();
   const { openTab } = useTabStore();
@@ -40,6 +42,16 @@ export default function CommandPalette() {
       setSelectedIndex(0);
     }
   }, [isCommandPaletteOpen, mode]);
+
+  // Handle scrolling selected item into view
+  useEffect(() => {
+    if (mode === 'search' && isCommandPaletteOpen) {
+        const selectedEl = itemRefs.current.get(selectedIndex);
+        if (selectedEl) {
+            selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+  }, [selectedIndex, mode, isCommandPaletteOpen]);
 
   useEffect(() => {
     const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
@@ -154,13 +166,14 @@ export default function CommandPalette() {
                     onChange={e => { setSearch(e.target.value); setSelectedIndex(0); }}
                     onKeyDown={handleKeyDown}
                 />
-                <div style={{ overflowY: 'auto', flex: 1, padding: '8px 0' }}>
+                <div ref={scrollContainerRef} style={{ overflowY: 'auto', flex: 1, padding: '8px 0' }}>
                     {filtered.length === 0 ? (
                         <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No results found</div>
                     ) : (
                         filtered.map((item, idx) => (
                         <div 
                             key={item.id}
+                            ref={el => { if (el) itemRefs.current.set(idx, el); else itemRefs.current.delete(idx); }}
                             onClick={() => { item.action(); if(item.id !== 'cmd-import-curl') setCommandPaletteOpen(false); }}
                             style={{ 
                             display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', cursor: 'pointer',
