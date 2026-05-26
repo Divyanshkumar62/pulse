@@ -1,195 +1,166 @@
 import React from 'react';
-import { Plus, Import, BookOpen, Settings, Zap } from 'lucide-react';
-import { useTabStore } from '../../stores/useTabStore';
 import { useAppStore } from '../../stores/useAppStore';
 
 export default function WelcomeScreen() {
-  const { openTab } = useTabStore();
-  const { setImportModalOpen, setSettingsOpen } = useAppStore();
-
-  const handleNewRequest = () => {
-    const newReq = {
-      id: crypto.randomUUID(),
-      name: 'Untitled Request',
-      method: 'GET' as const,
-      url: '',
-      headers: [],
-      body: { type: 'none' as const, content: '' },
-    };
-    openTab(newReq);
-  };
-
-  const cards = [
-    { 
-        title: 'New Request', 
-        description: 'Start testing a new API endpoint immediately.', 
-        icon: Plus, 
-        action: handleNewRequest,
-        color: 'var(--accent-primary)'
-    },
-    { 
-        title: 'Import Collection', 
-        description: 'Migrate from Postman or OpenAPI effortlessly.', 
-        icon: Import, 
-        action: () => setImportModalOpen(true),
-        color: '#10b981'
-    },
-    { 
-        title: 'Documentation', 
-        description: 'Learn how to master Pulse automation and scripts.', 
-        icon: BookOpen, 
-        action: () => window.open('https://docs.pulse-ide.com', '_blank'),
-        color: '#8b5cf6'
-    },
-    { 
-        title: 'Global Settings', 
-        description: 'Configure proxies, certificates, and appearance.', 
-        icon: Settings, 
-        action: () => setSettingsOpen(true),
-        color: '#f59e0b'
-    },
-  ];
+  const { setCommandPaletteOpen } = useAppStore();
 
   return (
     <div style={{ 
       width: '100%', 
       height: '100%', 
-      background: 'radial-gradient(circle at 50% 50%, #0c0e1a 0%, #080a13 100%)',
+      background: 'var(--bg-deep)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
-      position: 'relative'
+      position: 'relative',
+      color: 'var(--text-primary)'
     }}>
-      {/* Background Pulse Effect */}
+      {/* Engineering Dot Grid Background */}
       <div style={{
         position: 'absolute',
-        width: '600px',
-        height: '600px',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%)',
-        filter: 'blur(60px)',
-        animation: 'welcome-pulse 8s infinite ease-in-out',
+        inset: 0,
+        backgroundImage: `radial-gradient(var(--border-subtle) 1px, transparent 1px)`,
+        backgroundSize: '24px 24px',
+        opacity: 0.2,
         zIndex: 0
       }} />
 
-      <div style={{ zIndex: 1, textAlign: 'center', marginBottom: '48px' }}>
-        <div style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            padding: '12px 24px',
-            background: 'rgba(255,255,255,0.03)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.05)',
-            borderRadius: '100px',
-            marginBottom: '24px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
-        }}>
-            <Zap size={16} color="var(--accent-primary)" style={{ marginRight: '8px' }} />
-            <span style={{ fontSize: '12px', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', opacity: 0.8 }}>
-                Welcome to Pulse v0.1.0
-            </span>
-        </div>
-        
-        <h1 style={{ fontSize: '48px', fontWeight: 800, margin: '0 0 16px 0', letterSpacing: '-1px' }}>
-            Pulse <span style={{ color: 'var(--accent-primary)' }}>IDE</span>
-        </h1>
-        <p style={{ fontSize: '18px', color: 'var(--text-secondary)', maxWidth: '500px', margin: '0 auto', lineHeight: 1.6 }}>
-            The next-generation API workspace for professionals. Build, automate, and document your APIs in record time.
-        </p>
-      </div>
-
+      {/* Main Illustration Container */}
       <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(2, 1fr)', 
-        gap: '20px', 
-        width: '100%', 
-        maxWidth: '800px',
-        padding: '0 40px',
-        zIndex: 1
-      }}>
-        {cards.map((card, idx) => (
-          <div 
-            key={idx}
-            onClick={card.action}
-            style={{
-              padding: '24px',
-              background: 'rgba(255,255,255,0.02)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255,255,255,0.05)',
-              borderRadius: '16px',
-              cursor: 'pointer',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px'
-            }}
-            onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                e.currentTarget.style.borderColor = card.color;
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = `0 12px 40px rgba(0,0,0,0.3), 0 0 20px ${card.color}1a`;
-            }}
-            onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <div style={{ 
-                width: '48px', 
-                height: '48px', 
-                borderRadius: '12px', 
-                background: `${card.color}1a`, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                color: card.color
-            }}>
-                <card.icon size={24} />
-            </div>
-            <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 4px 0' }}>{card.title}</h3>
-                <p style={{ fontSize: '13px', color: 'var(--text-tertiary)', lineHeight: 1.5, margin: 0 }}>{card.description}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ 
-          marginTop: '64px', 
+          position: 'relative', 
+          zIndex: 1, 
           display: 'flex', 
-          gap: '32px', 
-          opacity: 0.4, 
-          fontSize: '11px', 
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px'
+          flexDirection: 'column', 
+          alignItems: 'center',
+          gap: '32px'
       }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <kbd style={{ background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: '4px' }}>Ctrl</kbd> + <kbd style={{ background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: '4px' }}>T</kbd>
-              <span>New Tab</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <kbd style={{ background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: '4px' }}>Ctrl</kbd> + <kbd style={{ background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: '4px' }}>P</kbd>
-              <span>Command Palette</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <kbd style={{ background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: '4px' }}>Ctrl</kbd> + <kbd style={{ background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: '4px' }}>S</kbd>
-              <span>Save Changes</span>
-          </div>
+        {/* Animated Isometric Server Node (Blueprint Style) */}
+        <svg width="200" height="200" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <style>{`
+            .blueprint-path {
+              stroke: var(--accent-primary);
+              stroke-width: 0.5;
+              stroke-dasharray: 100;
+              stroke-dashoffset: 100;
+              animation: draw 3s ease-out forwards;
+            }
+            .blueprint-fill {
+              fill: var(--accent-primary);
+              opacity: 0;
+              animation: fadeIn 1s 2s forwards;
+            }
+            @keyframes draw {
+              to { stroke-dashoffset: 0; }
+            }
+            @keyframes fadeIn {
+              to { opacity: 0.1; }
+            }
+            @keyframes float {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-10px); }
+            }
+            .floating {
+                animation: float 6s ease-in-out infinite;
+            }
+          `}</style>
+          <g className="floating">
+            {/* Isometric Cube / Server */}
+            <path className="blueprint-path" d="M50 20 L80 35 L80 65 L50 80 L20 65 L20 35 Z" />
+            <path className="blueprint-path" d="M50 20 L50 80" />
+            <path className="blueprint-path" d="M50 50 L80 35" />
+            <path className="blueprint-path" d="M50 50 L20 35" />
+            
+            {/* Interior Details */}
+            <path className="blueprint-path" d="M30 45 L45 53" style={{ animationDelay: '0.5s' }} />
+            <path className="blueprint-path" d="M30 55 L45 63" style={{ animationDelay: '0.7s' }} />
+            <path className="blueprint-path" d="M70 45 L55 53" style={{ animationDelay: '0.9s' }} />
+            <path className="blueprint-path" d="M70 55 L55 63" style={{ animationDelay: '1.1s' }} />
+            
+            {/* Fills */}
+            <path className="blueprint-fill" d="M50 20 L80 35 L50 50 L20 35 Z" />
+          </g>
+        </svg>
+
+        {/* Minimalist Typography */}
+        <div style={{ textAlign: 'center' }}>
+            <h1 style={{ 
+                fontSize: '14px', 
+                fontWeight: 600, 
+                letterSpacing: '4px', 
+                textTransform: 'uppercase', 
+                opacity: 0.8,
+                margin: '0 0 8px 0'
+            }}>
+                System Idle
+            </h1>
+            <div style={{ 
+                height: '1px', 
+                width: '40px', 
+                background: 'var(--accent-primary)', 
+                margin: '0 auto 16px',
+                opacity: 0.5
+            }} />
+            <p style={{ 
+                fontSize: '12px', 
+                color: 'var(--text-tertiary)', 
+                margin: 0,
+                fontFamily: 'var(--font-mono)'
+            }}>
+                Ready for deployment
+            </p>
+        </div>
       </div>
 
-      <style>{`
-        @keyframes welcome-pulse {
-          0% { transform: scale(1); opacity: 0.8; }
-          50% { transform: scale(1.2); opacity: 1; }
-          100% { transform: scale(1); opacity: 0.8; }
-        }
-      `}</style>
+      {/* Modern Shortcut Hint */}
+      <div 
+        onClick={() => setCommandPaletteOpen(true)}
+        style={{ 
+            position: 'absolute', 
+            bottom: '40px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px',
+            padding: '8px 16px',
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '100px',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            zIndex: 1
+        }}
+        onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            e.currentTarget.style.borderColor = 'var(--accent-primary)';
+        }}
+        onMouseLeave={e => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+            e.currentTarget.style.borderColor = 'var(--border-subtle)';
+        }}
+      >
+          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>Press</span>
+          <div style={{ display: 'flex', gap: '4px' }}>
+              <kbd style={{ 
+                  background: 'var(--bg-elevated)', 
+                  padding: '2px 6px', 
+                  borderRadius: '4px', 
+                  fontSize: '10px',
+                  border: '1px solid var(--border-default)',
+                  boxShadow: '0 2px 0 var(--border-default)'
+              }}>Ctrl</kbd>
+              <span style={{ fontSize: '10px', opacity: 0.5 }}>+</span>
+              <kbd style={{ 
+                  background: 'var(--bg-elevated)', 
+                  padding: '2px 6px', 
+                  borderRadius: '4px', 
+                  fontSize: '10px',
+                  border: '1px solid var(--border-default)',
+                  boxShadow: '0 2px 0 var(--border-default)'
+              }}>P</kbd>
+          </div>
+          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>to launch Command Palette</span>
+      </div>
     </div>
   );
 }

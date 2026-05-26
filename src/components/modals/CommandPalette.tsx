@@ -5,7 +5,7 @@ import { useAppStore } from '../../stores/useAppStore';
 import { CurlParser } from '../../services/curl';
 
 export default function CommandPalette() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isCommandPaletteOpen, setCommandPaletteOpen, setSettingsOpen } = useAppStore();
   const [mode, setMode] = useState<'search' | 'import-curl'>('search');
   const [search, setSearch] = useState('');
   const [curlInput, setCurlInput] = useState('');
@@ -15,37 +15,31 @@ export default function CommandPalette() {
 
   const { workspaces, activeWorkspaceId } = useWorkspaceStore();
   const { openTab } = useTabStore();
-  const { setSidebarTab, setSettingsOpen } = useAppStore();
   const [items, setItems] = useState<Array<{ id: string; title: string; subtitle?: string; action: () => void; icon: string }>>([]);
 
   useEffect(() => {
-    if (isOpen && mode === 'import-curl' && textAreaRef.current) {
+    if (isCommandPaletteOpen && mode === 'import-curl' && textAreaRef.current) {
         textAreaRef.current.focus();
     }
-  }, [isOpen, mode]);
+  }, [isCommandPaletteOpen, mode]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setMode('search');
-        setIsOpen(true);
-      }
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
+      if (e.key === 'Escape' && isCommandPaletteOpen) {
+        setCommandPaletteOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, [isCommandPaletteOpen, setCommandPaletteOpen]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current && mode === 'search') {
+    if (isCommandPaletteOpen && inputRef.current && mode === 'search') {
       inputRef.current.focus();
       setSearch('');
       setSelectedIndex(0);
     }
-  }, [isOpen, mode]);
+  }, [isCommandPaletteOpen, mode]);
 
   useEffect(() => {
     const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
@@ -96,14 +90,14 @@ export default function CommandPalette() {
     setItems(newItems);
   }, [workspaces, activeWorkspaceId, openTab, setSettingsOpen]);
 
-  if (!isOpen) return null;
+  if (!isCommandPaletteOpen) return null;
 
   const handleImportCurl = () => {
     if (!curlInput.trim()) return;
     try {
       const request = CurlParser.parse(curlInput);
       openTab(request);
-      setIsOpen(false);
+      setCommandPaletteOpen(false);
       setCurlInput('');
       setMode('search');
     } catch (e) {
@@ -137,14 +131,14 @@ export default function CommandPalette() {
         filtered[selectedIndex].action();
         // Don't close if switching to import mode
         if (filtered[selectedIndex].id !== 'cmd-import-curl') {
-            setIsOpen(false);
+            setCommandPaletteOpen(false);
         }
       }
     }
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', paddingTop: '10vh', zIndex: 10000 }} onClick={() => setIsOpen(false)}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', paddingTop: '10vh', zIndex: 10000 }} onClick={() => setCommandPaletteOpen(false)}>
       <div 
         style={{ width: '600px', backgroundColor: 'var(--bg-elevated)', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '60vh', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', border: '1px solid var(--border-subtle)' }}
         onClick={e => e.stopPropagation()}
@@ -167,7 +161,7 @@ export default function CommandPalette() {
                         filtered.map((item, idx) => (
                         <div 
                             key={item.id}
-                            onClick={() => { item.action(); if(item.id !== 'cmd-import-curl') setIsOpen(false); }}
+                            onClick={() => { item.action(); if(item.id !== 'cmd-import-curl') setCommandPaletteOpen(false); }}
                             style={{ 
                             display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', cursor: 'pointer',
                             backgroundColor: idx === selectedIndex ? 'var(--bg-overlay)' : 'transparent',

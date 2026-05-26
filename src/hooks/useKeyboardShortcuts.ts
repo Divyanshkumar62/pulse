@@ -4,7 +4,7 @@ import { useAppStore } from '../stores/useAppStore';
 
 export function useKeyboardShortcuts() {
   const { openTab, closeTab, activeTabId } = useTabStore();
-  const { toggleSidebar } = useAppStore();
+  const { toggleSidebar, setCommandPaletteOpen } = useAppStore();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -12,6 +12,14 @@ export function useKeyboardShortcuts() {
       const target = e.target as HTMLElement;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
       
+      // Ctrl+P or Ctrl+K: Command Palette
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'p' || e.key.toLowerCase() === 'k')) {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+
+      if (isInput) return;
+
       // Ctrl+T: New Tab
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') {
         e.preventDefault();
@@ -48,5 +56,5 @@ export function useKeyboardShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [openTab, closeTab, activeTabId, toggleSidebar]);
+  }, [openTab, closeTab, activeTabId, toggleSidebar, setCommandPaletteOpen]);
 }

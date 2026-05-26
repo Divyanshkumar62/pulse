@@ -10,6 +10,7 @@ interface AppStore {
   sidebarVisible: boolean;
   isSettingsOpen: boolean;
   isProfileOpen: boolean;
+  isCommandPaletteOpen: boolean;
   responsePosition: ResponsePosition;
   responseHeight: number;
   responseWidth: number;
@@ -29,6 +30,7 @@ interface AppStore {
   toggleSidebar: () => void;
   setSettingsOpen: (open: boolean) => void;
   setProfileOpen: (open: boolean) => void;
+  setCommandPaletteOpen: (open: boolean) => void;
   setResponsePosition: (position: ResponsePosition) => void;
   setResponseHeight: (height: number) => void;
   setResponseWidth: (width: number) => void;
@@ -47,6 +49,7 @@ export const useAppStore = create<AppStore>((set) => ({
   sidebarVisible: true,
   isSettingsOpen: false,
   isProfileOpen: false,
+  isCommandPaletteOpen: false,
   responsePosition: 'bottom',
   responseHeight: 400,
   responseWidth: 500,
@@ -66,6 +69,7 @@ export const useAppStore = create<AppStore>((set) => ({
   toggleSidebar: () => set((state) => ({ sidebarVisible: !state.sidebarVisible })),
   setSettingsOpen: (open) => set({ isSettingsOpen: open }),
   setProfileOpen: (open) => set({ isProfileOpen: open }),
+  setCommandPaletteOpen: (open) => set({ isCommandPaletteOpen: open }),
   setResponsePosition: (position) => set({ responsePosition: position }),
   setResponseHeight: (height) => set({ responseHeight: height }),
   setResponseWidth: (width) => set({ responseWidth: width }),
