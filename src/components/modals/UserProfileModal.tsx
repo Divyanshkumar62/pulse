@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { toast } from 'sonner';
-import { Camera, Trash2, X } from 'lucide-react';
+import { Camera, Trash2, X, Mail } from 'lucide-react';
+import { getGravatarUrl } from '../../utils/gravatar';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -57,6 +58,9 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Determine display avatar for preview
+  const previewAvatar = avatarUrl || (email ? getGravatarUrl(email, 100) : null);
+
   return (
     <div 
       style={{ 
@@ -103,8 +107,8 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                     width: '100px',
                     height: '100px',
                     borderRadius: '50%',
-                    background: avatarUrl 
-                    ? `url(${avatarUrl}) center/cover no-repeat`
+                    background: previewAvatar 
+                    ? `url(${previewAvatar}) center/cover no-repeat`
                     : 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))',
                     display: 'flex',
                     alignItems: 'center',
@@ -118,7 +122,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                     boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
                 }}
                 >
-                {!avatarUrl && (name ? name.charAt(0).toUpperCase() : '?')}
+                {!previewAvatar && (name ? name.charAt(0).toUpperCase() : '?')}
                 <div style={{
                     position: 'absolute',
                     inset: 0,
@@ -146,7 +150,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
                         }}
-                        title="Remove Image"
+                        title="Remove Local Image"
                     >
                         <Trash2 size={14} />
                     </button>
@@ -160,9 +164,14 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               accept="image/*"
               style={{ display: 'none' }}
             />
-            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-tertiary)' }}>
-                Click to upload profile picture (max 1MB)
-            </p>
+            <div style={{ textAlign: 'center' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                    {avatarUrl ? 'Using custom local image' : (email ? 'Using Gravatar based on email' : 'Using initial fallback')}
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: '11px', opacity: 0.6, color: 'var(--text-tertiary)' }}>
+                    Click image to upload a different local one
+                </p>
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -179,13 +188,18 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
             <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email Address</label>
-                <input
-                type="email"
-                style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' }}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                />
+                <div style={{ position: 'relative' }}>
+                    <input
+                        type="email"
+                        style={{ width: '100%', padding: '10px 12px', paddingRight: '36px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' }}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="your@email.com"
+                    />
+                    <div title="This email is used for your Gravatar" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}>
+                        <Mail size={14} />
+                    </div>
+                </div>
             </div>
           </div>
         </div>

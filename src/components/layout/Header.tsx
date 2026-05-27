@@ -4,11 +4,15 @@ import { useEnvStore } from '../../stores/useEnvStore';
 import CustomSelect from '../ui/CustomSelect';
 import '../../styles/components/header.css';
 import GitSync from './GitSync';
+import { getGravatarUrl } from '../../utils/gravatar';
 
 export default function Header() {
   const { setProfileOpen } = useAppStore();
   const { settings } = useSettingsStore();
   const { environments, activeEnvId, setActiveEnvId } = useEnvStore();
+
+  // Determine which avatar to show: Custom Image > Gravatar > Initial
+  const displayAvatar = settings?.avatarUrl || (settings?.email ? getGravatarUrl(settings.email, 64) : null);
   
   return (
     <header className="app-header" data-tauri-drag-region>
@@ -42,8 +46,8 @@ export default function Header() {
           />
         </div>
         <div className="user-profile" onClick={() => setProfileOpen(true)}>
-          {settings?.avatarUrl ? (
-            <img src={settings.avatarUrl} alt="Profile" />
+          {displayAvatar ? (
+            <img src={displayAvatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <div style={{ 
               width: '100%', 
