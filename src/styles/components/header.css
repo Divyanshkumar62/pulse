@@ -128,3 +128,173 @@
   height: 100%;
   object-fit: cover;
 }
+
+/* Workspace Switcher Styling */
+.workspace-switcher-container {
+  position: relative;
+  margin-left: var(--space-4);
+}
+
+.workspace-switcher-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.workspace-switcher-btn:hover {
+  background: var(--bg-input);
+  border-color: var(--border-default);
+}
+
+.workspace-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.workspace-status-dot.personal {
+  background: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-subtle);
+}
+
+.workspace-status-dot.team {
+  background: #bb9af7; /* A premium purple accent */
+  box-shadow: 0 0 8px rgba(187, 154, 247, 0.4);
+}
+
+.workspace-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  width: 240px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--blur-glass);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dropdownEntry 0.15s ease-out;
+  z-index: 1000;
+}
+
+@keyframes dropdownEntry {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.workspace-dropdown-header {
+  padding: var(--space-3) var(--space-4);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.workspace-options {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workspace-option-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.workspace-option-item .workspace-status-dot {
+  /* margin-top: 5px; - Removed for vertical centering */
+}
+
+.workspace-option-item:hover {
+  background: var(--bg-elevated);
+}
+
+.workspace-option-item.active {
+  background: var(--bg-input);
+  border-color: var(--border-subtle);
+}
+
+.workspace-option-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workspace-option-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.workspace-option-type {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.workspace-dropdown-footer {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  padding: var(--space-2);
+}
+
+.manage-teams-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  background: transparent;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.manage-teams-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: var(--bg-deep);
+}

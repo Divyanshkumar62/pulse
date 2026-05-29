@@ -12,6 +12,7 @@ import MockServerPanel from '../sidebar/MockServerPanel';
 import MonitorSidebar from '../monitor/MonitorSidebar';
 import FlowSidebar from '../flow/FlowSidebar';
 import { useCollectionStore } from '../../stores/useCollectionStore';
+import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { v4 as uuidv4 } from 'uuid';
 import '../../styles/components/activity-panel.css';
 
@@ -101,19 +102,7 @@ export default function ActivityPanel() {
       case 'collections':
         return <CollectionTree />;
       case 'teams':
-        if (!settings) return <div style={{ padding: '12px' }}>Loading...</div>;
-        return (
-          <TeamPanel
-            teams={teams}
-            invitations={invitations}
-            currentUserEmail={settings.email}
-            currentUserName={settings.name}
-            onCreateTeam={createNewTeam}
-            onInvite={inviteMember}
-            onAcceptInvitation={acceptInvite}
-            onDeclineInvitation={declineInvite}
-          />
-        );
+        return <TeamSidebarList />;
       case 'history':
         return <ActivityFeed />;
       case 'environments':
@@ -131,33 +120,6 @@ export default function ActivityPanel() {
 
   return (
     <aside className="activity-panel" style={{ width: `${width}px` }}>
-      {sidebarTab === 'teams' && (
-        <div className="panel-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div className="panel-context">
-              <div className="context-icon">
-                {getContextIcon()}
-              </div>
-              <div className="context-info">
-                <span className="context-title">{getContextTitle()}</span>
-                <span className="context-subtitle">API Development</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {sidebarTab === 'teams' && (
-        <div className="panel-nav">
-          <div className={`panel-nav-item active`}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-            </svg>
-            {sidebarTab.charAt(0).toUpperCase() + sidebarTab.slice(1)}
-          </div>
-        </div>
-      )}
-      
       <div className="panel-content">
         {renderContent()}
       </div>
@@ -167,5 +129,67 @@ export default function ActivityPanel() {
         onMouseDown={startDrag}
       />
     </aside>
+  );
+}
+
+function TeamSidebarList() {
+  const { teams } = useTeamStore();
+  const { workspaces, activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore();
+
+  return (
+    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        Workspaces
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {workspaces.map(w => {
+          const isActive = activeWorkspaceId === w.id;
+          return (
+            <button 
+              key={w.id}
+              onClick={() => setActiveWorkspace(w.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 12px',
+                background: isActive ? 'var(--bg-elevated)' : 'transparent',
+                border: isActive ? '1px solid var(--border-subtle)' : '1px solid transparent',
+                borderRadius: '8px',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                textAlign: 'left',
+                cursor: 'pointer',
+                width: '100%',
+                fontWeight: isActive ? 600 : 500,
+                transition: 'all 0.2s',
+                outline: 'none'
+              }}
+              onMouseEnter={e => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }
+              }}
+            >
+              <span style={{ 
+                width: '8px', 
+                height: '8px', 
+                borderRadius: '50%', 
+                background: w.type === 'team' ? '#bb9af7' : 'var(--accent-primary)',
+                boxShadow: w.type === 'team' ? '0 0 6px rgba(187, 154, 247, 0.4)' : '0 0 6px var(--accent-subtle)',
+                flexShrink: 0
+              }}></span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontSize: '13px' }}>{w.name}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

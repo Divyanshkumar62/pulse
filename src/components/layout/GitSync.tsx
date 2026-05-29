@@ -32,27 +32,35 @@ export default function GitSync() {
 
   useEffect(() => {
     refreshStatus();
-    const interval = setInterval(refreshStatus, 10000);
-    return () => clearInterval(interval);
   }, [refreshStatus]);
 
-  const handlePull = async () => {
+  const handleSync = async () => {
     if (!activeWorkspace?.path) return;
     setIsSyncing(true);
     try {
+      toast.loading('Fetching and pulling remote changes...', { id: 'git-sync' });
       await gitPull(activeWorkspace.path);
-      await refreshStatus();
-      toast.success('Pulled latest changes from remote');
+      
+      const freshStatus = await getGitStatus(activeWorkspace.path);
+      setStatus(freshStatus);
+      
+      if (freshStatus.has_changes) {
+        toast.success('Pulled latest changes. Local changes found - ready to sync!', { id: 'git-sync' });
+        setCommitModalOpen(true, freshStatus, activeWorkspace.path, refreshStatus);
+      } else {
+        toast.success('Workspace is fully synced and up to date!', { id: 'git-sync' });
+      }
     } catch (e: any) {
       const errMsg = String(e?.message || e);
       if (errMsg.includes('No remote configured') || errMsg.includes('Remote') || errMsg.includes('origin')) {
+        toast.dismiss('git-sync');
         setShowRemoteModal(true);
       } else if (errMsg.includes('CONFLICT')) {
-        toast.error('Pull failed: Merge conflicts detected.');
+        toast.error('Pull failed: Merge conflicts detected.', { id: 'git-sync' });
         const freshStatus = await getGitStatus(activeWorkspace.path);
         setCommitModalOpen(true, freshStatus, activeWorkspace.path, refreshStatus);
       } else {
-        toast.error('Pull failed: ' + errMsg);
+        toast.error('Sync failed: ' + errMsg, { id: 'git-sync' });
       }
     } finally {
       setIsSyncing(false);
@@ -89,12 +97,12 @@ export default function GitSync() {
       <div className="git-sync-widget">
         <div className="git-branch-info">
           <GitBranch size={14} className={isRebasing ? "icon-red" : "icon-blue"} />
-          <span className="branch-name">{status?.branch || 'main'}</span>
+          <span className="branch-name" title={status?.branch || 'main'}>{status?.branch || 'main'}</span>
         </div>
 
         <div className="git-status-actions">
           {isRebasing ? (
-              <button 
+            <button 
               className="git-btn git-btn-dirty" 
               onClick={openCommitModal}
               title="Conflict Resolution in Progress"
@@ -102,37 +110,26 @@ export default function GitSync() {
               <AlertTriangle size={14} color="#ef4444" />
               <span>Resolve</span>
             </button>
-          ) : status?.has_changes ? (
-            <button 
-              className="git-btn git-btn-dirty" 
-              onClick={openCommitModal}
-              title={`${status.modified.length + status.untracked.length} changes to sync`}
-            >
-              <div className="status-dot pulsing" />
-              <span>Sync Changes</span>
-              <ArrowUp size={14} />
-            </button>
           ) : (
-            <div className="git-status-clean" title="All changes synced">
-              <CheckCircle size={14} className="icon-green" />
-              <span>Synced</span>
-            </div>
+            <button 
+              className={`git-sync-now-btn ${status?.has_changes ? 'has-changes' : ''} ${isSyncing ? 'loading' : ''}`}
+              onClick={handleSync}
+              disabled={isSyncing}
+              title={status?.has_changes ? `${status.modified.length + status.untracked.length} changes to sync. Click to pull & push.` : 'Sync workspace with remote'}
+            >
+              <RefreshCw size={12} className={isSyncing ? 'spinning' : ''} />
+              <span>Sync Now</span>
+              {status?.has_changes && <span className="sync-dot-badge" />}
+            </button>
           )}
-
-          <button 
-            className={`git-btn-icon ${isSyncing ? 'spinning' : ''}`} 
-            onClick={handlePull}
-            title="Pull from remote"
-          >
-            <RefreshCw size={14} />
-          </button>
 
           <button 
             className="git-btn-icon" 
             onClick={() => setShowRemoteModal(true)}
             title="Configure Remote"
+            disabled={isSyncing}
           >
-            <Settings size={14} />
+            <Settings size={13} />
           </button>
         </div>
       </div>

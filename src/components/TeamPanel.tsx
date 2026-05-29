@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Team, Invitation, TeamRole } from '../types';
 import '../styles/components/teams.css';
 import CustomSelect from './ui/CustomSelect';
@@ -12,6 +13,9 @@ interface TeamPanelProps {
   onInvite: (teamId: string, teamName: string, email: string, role: TeamRole) => void;
   onAcceptInvitation: (id: string) => void;
   onDeclineInvitation: (id: string) => void;
+  onRenameTeam: (id: string, newName: string) => Promise<void>;
+  onDeleteTeam: (id: string) => Promise<void>;
+  onTogglePin: (id: string) => Promise<void>;
 }
 
 export default function TeamPanel({
@@ -23,20 +27,33 @@ export default function TeamPanel({
   onInvite,
   onAcceptInvitation,
   onDeclineInvitation,
+  onRenameTeam,
+  onDeleteTeam,
+  onTogglePin,
 }: TeamPanelProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState<string | null>(null);
+  const [showRenameModal, setShowRenameModal] = useState<string | null>(null);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<string | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
+  const [renameTeamName, setRenameTeamName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<TeamRole>('member');
   const [activeTab, setActiveTab] = useState<'teams' | 'invitations'>('teams');
   const [isCreating, setIsCreating] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const incomingInvitations = invitations.filter(i => i.status === 'pending' && i.email === currentUserEmail);
   const sentInvitations = invitations.filter(i => i.status === 'pending' && i.invited_by === currentUserEmail);
   
-  // Show all teams (including owned teams)
-  const userTeams = teams;
+  // Sort teams: Pinned teams first, then alphabetical by name
+  const sortedTeams = [...teams].sort((a, b) => {
+    const aPinned = a.pinned ? 1 : 0;
+    const bPinned = b.pinned ? 1 : 0;
+    if (aPinned !== bPinned) return bPinned - aPinned;
+    return a.name.localeCompare(b.name);
+  });
 
   const handleCreateTeam = async () => {
     if (newTeamName.trim() && !isCreating) {
@@ -69,6 +86,35 @@ export default function TeamPanel({
     }
   };
 
+  const handleRenameTeam = async () => {
+    if (showRenameModal && renameTeamName.trim() && !isRenaming) {
+      setIsRenaming(true);
+      try {
+        await onRenameTeam(showRenameModal, renameTeamName.trim());
+        setRenameTeamName('');
+        setShowRenameModal(null);
+      } catch (error) {
+        console.error('Failed to rename team:', error);
+      } finally {
+        setIsRenaming(false);
+      }
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    if (showDeleteConfirmModal && !isDeleting) {
+      setIsDeleting(true);
+      try {
+        await onDeleteTeam(showDeleteConfirmModal);
+        setShowDeleteConfirmModal(null);
+      } catch (error) {
+        console.error('Failed to delete team:', error);
+      } finally {
+        setIsDeleting(false);
+      }
+    }
+  };
+
   const getRoleBadgeClass = (role: TeamRole) => {
     switch (role) {
       case 'owner': return 'role-owner';
@@ -77,169 +123,242 @@ export default function TeamPanel({
     }
   };
 
+  const getTeamGradient = (name: string) => {
+    const colors = [
+      'linear-gradient(135deg, #4f46e5, #3730a3)', // Indigo
+      'linear-gradient(135deg, #0d9488, #115e59)', // Teal
+      'linear-gradient(135deg, #2563eb, #1e40af)', // Blue
+      'linear-gradient(135deg, #ea580c, #9a3412)', // Orange
+      'linear-gradient(135deg, #db2777, #9d174d)', // Pink
+      'linear-gradient(135deg, #16a34a, #166534)'  // Green
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
   return (
     <div className="team-panel">
-      <div className="team-tabs">
-        <button 
-          className={`team-tab ${activeTab === 'teams' ? 'active' : ''}`}
-          onClick={() => setActiveTab('teams')}
-        >
-          Teams ({userTeams.length})
-        </button>
-        <button 
-          className={`team-tab ${activeTab === 'invitations' ? 'active' : ''}`}
-          onClick={() => setActiveTab('invitations')}
-        >
-          Invites ({incomingInvitations.length})
-        </button>
+      {/* Header bar structure */}
+      <div className="teams-header-bar">
+        <div className="teams-header-left">
+          <div className="teams-title-row">
+            <h1 className="teams-page-title">Teams</h1>
+            <span className="teams-count-badge">{sortedTeams.length}</span>
+          </div>
+          <p className="teams-page-subtitle">
+            Manage your collaborative environments and team members.
+          </p>
+        </div>
+        <div className="teams-header-right">
+          <button 
+            className={`invites-toggle-btn ${activeTab === 'invitations' ? 'active' : ''}`}
+            onClick={() => setActiveTab(activeTab === 'teams' ? 'invitations' : 'teams')}
+          >
+            {activeTab === 'invitations' ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'translateY(-0.5px)' }}>
+                  <line x1="19" y1="12" x2="5" y2="12" />
+                  <polyline points="12 19 5 12 12 5" />
+                </svg>
+                Back to Teams
+              </span>
+            ) : (
+              <>
+                <span>Invites</span>
+                <span className="invites-count-badge">{incomingInvitations.length}</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+      <div className="teams-container">
         {activeTab === 'teams' && (
-          <div className="teams-content" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            {userTeams.length === 0 ? (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '48px 24px', 
-                background: 'rgba(255,255,255,0.03)', 
-                borderRadius: 'var(--radius-xl)', 
-                border: '1px dashed var(--border-default)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center'
-              }}>
-                <div style={{ fontSize: '40px', marginBottom: '20px', filter: 'drop-shadow(0 0 10px var(--accent-subtle))' }}>👥</div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>No Teams Found</h3>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.6, maxWidth: '200px' }}>
-                  Collaborate and sync collections with your colleagues.
-                </p>
-                <button className="btn-primary" style={{ width: '100%' }} onClick={() => setShowCreateModal(true)}>
-                  Create Team
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                {userTeams.map(team => (
-                  <div key={team.id} style={{ 
-                    background: 'var(--bg-elevated)', 
-                    borderRadius: 'var(--radius-xl)', 
-                    border: '1px solid var(--border-subtle)',
-                    padding: '16px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    transition: 'all var(--transition-base)'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <h3 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{team.name}</h3>
-                      <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '11px', borderRadius: 'var(--radius-md)' }} onClick={() => setShowInviteModal(team.id)}>
-                        Invite
-                      </button>
+          <div className="teams-grid">
+            {sortedTeams.map(team => {
+              const currentUserMember = team.members.find(m => m.email === currentUserEmail);
+              const role = currentUserMember?.role || 'member';
+              
+              // Sent invitations for this team
+              const teamSentInvites = sentInvitations.filter(i => i.team_id === team.id);
+              const totalExtraCount = team.members.length + teamSentInvites.length - 1; // excluding user
+
+              return (
+                <div key={team.id} className="premium-team-card">
+                  {/* Card Header Info */}
+                  <div className="team-card-header">
+                    <div className="team-card-info-left">
+                      <div 
+                        className="team-square-avatar" 
+                        style={{ background: getTeamGradient(team.name) }}
+                      >
+                        {team.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="team-card-meta">
+                        <h3 className="team-card-title">{team.name}</h3>
+                        <span className="team-card-subtitle">User (you)</span>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {team.members.map(member => (
-                        <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ 
-                            width: '28px', 
-                            height: '28px', 
-                            borderRadius: '50%', 
-                            background: member.role === 'owner' ? 'var(--accent-primary)' : 'var(--bg-surface)', 
-                            color: member.role === 'owner' ? '#FFF' : 'var(--accent-primary)',
-                            fontSize: '11px', 
-                            fontWeight: 800, 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            border: '1px solid var(--accent-subtle)',
-                            boxShadow: member.role === 'owner' ? '0 0 10px var(--accent-subtle)' : 'none'
-                          }}>
-                            {member.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                            {member.name}
-                            {member.email === currentUserEmail && <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, marginLeft: '6px' }}>(you)</span>}
-                          </div>
-                          <span style={{ 
-                            fontSize: '9px', 
-                            fontWeight: 800, 
-                            padding: '3px 8px', 
-                            background: 'rgba(255,255,255,0.05)', 
-                            borderRadius: 'var(--radius-sm)', 
-                            border: '1px solid var(--border-subtle)',
-                            color: member.role === 'owner' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                            letterSpacing: '0.04em'
-                          }}>
-                            {member.role}
-                          </span>
-                        </div>
-                      ))}
-                      
-                      {/* Show pending invitations sent for this team */}
-                      {sentInvitations.filter(i => i.team_id === team.id).map(invitation => (
-                        <div key={invitation.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: 0.6 }}>
-                          <div style={{ 
-                            width: '28px', 
-                            height: '28px', 
-                            borderRadius: '50%', 
-                            background: 'var(--bg-deep)',
-                            color: 'var(--text-tertiary)',
-                            fontSize: '11px', 
-                            fontWeight: 800, 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            border: '1px dashed var(--border-default)'
-                          }}>
-                            ?
-                          </div>
-                          <div style={{ flex: 1, fontSize: '13px', fontWeight: 400, color: 'var(--text-secondary)' }}>
-                            {invitation.email}
-                          </div>
-                          <span style={{ 
-                            fontSize: '9px', 
-                            fontWeight: 700, 
-                            padding: '2px 6px', 
-                            background: 'var(--bg-deep)', 
-                            borderRadius: 'var(--radius-sm)', 
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-tertiary)',
-                            letterSpacing: '0.04em'
-                          }}>
-                            Pending
-                          </span>
-                        </div>
-                      ))}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className={`premium-role-badge ${getRoleBadgeClass(role)}`}>
+                        {role.toUpperCase()}
+                      </span>
+                      <div className="team-card-actions-top">
+                        {/* Pin Button */}
+                        <button 
+                          className={`team-action-icon-btn pin-btn ${team.pinned ? 'pinned' : ''}`}
+                          title={team.pinned ? "Unpin Team" : "Pin Team"}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onTogglePin(team.id);
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill={team.pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2.5" style={{ transform: 'rotate(45deg)', transition: 'all 0.2s' }}>
+                            <path d="M15 3h6v2h-2v7l2 2v2h-7v6l-1 1-1-1v-6H5v-2l2-2V5H5V3h10z" />
+                          </svg>
+                        </button>
+                        
+                        {/* Edit Button */}
+                        <button 
+                          className="team-action-icon-btn edit-btn"
+                          title="Rename Team"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRenameTeamName(team.name);
+                            setShowRenameModal(team.id);
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                        </button>
+
+                        {/* Delete Button */}
+                        <button 
+                          className="team-action-icon-btn delete-btn"
+                          title="Delete Team"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDeleteConfirmModal(team.id);
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                ))}
-                <button 
-                  className="btn-secondary" 
-                  style={{ width: '100%', padding: '12px', borderStyle: 'dashed', background: 'transparent' }}
-                  onClick={() => setShowCreateModal(true)}
-                >
-                  <span style={{ fontSize: '18px', fontWeight: 400 }}>+</span> Create New Team
-                </button>
+
+                  {/* Pending Invites Row (if any) */}
+                  {teamSentInvites.length > 0 && (
+                    <div className="team-pending-invites">
+                      {teamSentInvites.map(inv => (
+                        <div key={inv.id} className="team-pending-row">
+                          <span className="pending-email" title={inv.email}>{inv.email}</span>
+                          <span className="pending-badge">PENDING</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Card Footer: Avatar Stack & Invite Button */}
+                  <div className="team-card-footer">
+                    <div className="avatar-stack-container">
+                      <div className="avatar-stack">
+                        {/* Render the user's avatar */}
+                        <div 
+                          className="avatar-stack-item user-avatar-item"
+                          title={`${currentUserName || 'You'} (${role})`}
+                          style={{ zIndex: 10 }}
+                        >
+                          {(currentUserName || 'Y').charAt(0).toUpperCase()}
+                        </div>
+                        
+                        {/* Render other members */}
+                        {team.members
+                          .filter(m => m.email !== currentUserEmail)
+                          .slice(0, 2)
+                          .map((member, idx) => (
+                            <div 
+                              key={member.user_id} 
+                              className="avatar-stack-item"
+                              title={`${member.name} (${member.role})`}
+                              style={{ zIndex: 9 - idx }}
+                            >
+                              {member.name.charAt(0).toUpperCase()}
+                            </div>
+                          ))
+                        }
+                        
+                        {/* Show +N badge if there are remaining members/invites */}
+                        {totalExtraCount > 0 && (
+                          <div className="avatar-stack-item extra-count-item" style={{ zIndex: 1 }} title={`${totalExtraCount} other members`}>
+                            +{totalExtraCount}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <button 
+                      className="card-invite-btn"
+                      onClick={() => setShowInviteModal(team.id)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <line x1="19" y1="8" x2="19" y2="14" />
+                        <line x1="22" y1="11" x2="16" y2="11" />
+                      </svg>
+                      Invite
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Create New Team dashed card */}
+            <div 
+              className="create-team-dashed-card"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <div className="create-team-plus-circle">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
               </div>
-            )}
+              <span className="create-team-text">Create New Team</span>
+            </div>
           </div>
         )}
 
         {activeTab === 'invitations' && (
-          <div className="invitations-content" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          <div className="premium-invitation-list">
             {incomingInvitations.length === 0 ? (
                <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-tertiary)', fontSize: '13px', fontWeight: 500 }}>
                   No pending invitations.
                </div>
             ) : incomingInvitations.map(invitation => (
-              <div key={invitation.id} className="invitation-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>{invitation.team_name}</span>
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--accent-primary)', letterSpacing: '0.05em' }}>{invitation.role}</span>
+              <div key={invitation.id} className="premium-invitation-card">
+                <div className="invitation-card-header">
+                  <h3 className="invitation-team-name">{invitation.team_name}</h3>
+                  <span className="invitation-role-badge">{invitation.role}</span>
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                  Invited by <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{invitation.invited_by}</span>
+                <div className="invitation-details">
+                  Invited by <span className="inviter-highlight">{invitation.invited_by}</span> to join the team.
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn-primary" style={{ flex: 1, padding: '8px' }} onClick={() => onAcceptInvitation(invitation.id)}>Accept</button>
-                  <button className="btn-secondary" style={{ flex: 1, padding: '8px' }} onClick={() => onDeclineInvitation(invitation.id)}>Decline</button>
+                <div className="invitation-actions">
+                  <button className="btn-accept" onClick={() => onAcceptInvitation(invitation.id)}>Accept</button>
+                  <button className="btn-decline" onClick={() => onDeclineInvitation(invitation.id)}>Decline</button>
                 </div>
               </div>
             ))}
@@ -247,76 +366,132 @@ export default function TeamPanel({
         )}
       </div>
 
-      {(showCreateModal || showInviteModal) && (
-        <div className="modal-overlay" onClick={() => { setShowCreateModal(false); setShowInviteModal(null); }}>
+      {showCreateModal && createPortal(
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            {showCreateModal && (
-              <>
-                <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Create Team</h2>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
-                  Set up a shared space for your projects and collaborate in real-time.
-                </p>
-                <div style={{ marginBottom: '32px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Team Name</label>
-                  <input
-                    type="text"
-                    className="text-input"
-                    placeholder="e.g., Engineering Team, Side Project"
-                    value={newTeamName}
-                    onChange={e => setNewTeamName(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleCreateTeam()}
-                    autoFocus
-                  />
-                </div>
-                <div className="modal-actions">
-                  <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
-                  <button 
-                    className="btn-primary" 
-                    onClick={handleCreateTeam} 
-                    disabled={!newTeamName.trim() || isCreating}
-                  >
-                    {isCreating ? 'Creating...' : 'Create Team'}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {showInviteModal && (
-              <>
-                <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Invite Member</h2>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
-                  Add a colleague to <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{teams.find(t => t.id === showInviteModal)?.name}</span>.
-                </p>
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Email Address</label>
-                  <input
-                    type="email"
-                    className="text-input"
-                    placeholder="name@company.com"
-                    value={inviteEmail}
-                    onChange={e => setInviteEmail(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-                <div style={{ marginBottom: '32px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Role</label>
-                  <CustomSelect 
-                    value={inviteRole}
-                    onChange={(val) => setInviteRole(val as TeamRole)}
-                    options={[
-                      { value: 'member', label: 'Member' },
-                      { value: 'admin', label: 'Admin' },
-                    ]}
-                  />
-                </div>
-                <div className="modal-actions">
-                  <button className="btn-secondary" onClick={() => setShowInviteModal(null)}>Cancel</button>
-                  <button className="btn-primary" onClick={handleInvite} disabled={!inviteEmail.trim()}>Send Invite</button>
-                </div>
-              </>
-            )}
+            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Create Team</h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
+              Set up a shared space for your projects and collaborate in real-time.
+            </p>
+            <div style={{ marginBottom: '32px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Team Name</label>
+              <input
+                type="text"
+                className="text-input"
+                placeholder="e.g., Engineering Team, Side Project"
+                value={newTeamName}
+                onChange={e => setNewTeamName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleCreateTeam()}
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
+              <button 
+                className="btn-primary" 
+                onClick={handleCreateTeam} 
+                disabled={!newTeamName.trim() || isCreating}
+              >
+                {isCreating ? 'Creating...' : 'Create Team'}
+              </button>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {showInviteModal && createPortal(
+        <div className="modal-overlay" onClick={() => setShowInviteModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Invite Member</h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
+              Add a colleague to <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{teams.find(t => t.id === showInviteModal)?.name}</span>.
+            </p>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Email Address</label>
+              <input
+                type="email"
+                className="text-input"
+                placeholder="name@company.com"
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div style={{ marginBottom: '32px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Role</label>
+              <CustomSelect 
+                value={inviteRole}
+                onChange={(val) => setInviteRole(val as TeamRole)}
+                options={[
+                  { value: 'member', label: 'Member' },
+                  { value: 'admin', label: 'Admin' },
+                ]}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowInviteModal(null)}>Cancel</button>
+              <button className="btn-primary" onClick={handleInvite} disabled={!inviteEmail.trim()}>Send Invite</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showRenameModal && createPortal(
+        <div className="modal-overlay" onClick={() => setShowRenameModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Rename Team</h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
+              Choose a new name for your team workspace.
+            </p>
+            <div style={{ marginBottom: '32px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>New Team Name</label>
+              <input
+                type="text"
+                className="text-input"
+                placeholder="e.g., Engineering Team, Side Project"
+                value={renameTeamName}
+                onChange={e => setRenameTeamName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleRenameTeam()}
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowRenameModal(null)}>Cancel</button>
+              <button 
+                className="btn-primary" 
+                onClick={handleRenameTeam} 
+                disabled={!renameTeamName.trim() || isRenaming}
+              >
+                {isRenaming ? 'Renaming...' : 'Rename Team'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showDeleteConfirmModal && createPortal(
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirmModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Delete Team</h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
+              Are you sure you want to delete <span style={{ color: '#ef4444', fontWeight: 700 }}>{teams.find(t => t.id === showDeleteConfirmModal)?.name}</span>? This action is permanent and cannot be undone. All shared configurations for this team workspace will be lost.
+            </p>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowDeleteConfirmModal(null)}>Cancel</button>
+              <button 
+                className="btn-danger" 
+                onClick={handleDeleteTeam} 
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Team'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

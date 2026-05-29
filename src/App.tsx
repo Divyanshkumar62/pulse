@@ -5,6 +5,7 @@ import TabContent from './components/tabs/TabContent';
 import MonitorDashboard from './components/monitor/MonitorDashboardView';
 import EnvironmentVariableEditor from './components/environments/EnvironmentVariableEditor';
 import FlowBuilder from './components/flow/FlowBuilder';
+import TeamPanel from './components/TeamPanel';
 import { useEnvStore } from './stores/useEnvStore';
 import { useTeamStore } from './stores/useTeamStore';
 import { useSettingsStore } from './stores/useSettingsStore';
@@ -23,8 +24,21 @@ export default function App() {
   const initWorkspaceStore = useWorkspaceStore(state => state.initialize);
   const initHistoryStore = useHistoryStore(state => state.initialize);
   const initMockStore = useMockStore(state => state.initialize);
+  
   const { sidebarTab, selectedMonitorId, selectedEnvironmentId } = useAppStore();
   const activeMockServerId = useMockStore(state => state.activeMockServerId);
+  const { 
+    teams, 
+    invitations, 
+    createNewTeam, 
+    inviteMember, 
+    acceptInvite, 
+    declineInvite,
+    renameTeamAction,
+    deleteTeamAction,
+    togglePinTeamAction
+  } = useTeamStore();
+  const { settings } = useSettingsStore();
 
   useEffect(() => {
     initSettingsStore().then(() => {
@@ -42,6 +56,7 @@ export default function App() {
   const showEnvironmentEditor = sidebarTab === 'environments' && selectedEnvironmentId;
   const showFlowBuilder = sidebarTab === 'flows';
   const showMockServerEditor = sidebarTab === 'mock-servers' && activeMockServerId;
+  const showTeamDashboard = sidebarTab === 'teams';
 
   return (
     <ErrorBoundary>
@@ -58,6 +73,20 @@ export default function App() {
           </ReactFlowProvider>
         ) : showMockServerEditor ? (
           <MockServerEditor />
+        ) : showTeamDashboard ? (
+          <TeamPanel
+            teams={teams}
+            invitations={invitations}
+            currentUserEmail={settings?.email || ''}
+            currentUserName={settings?.name || ''}
+            onCreateTeam={createNewTeam}
+            onInvite={inviteMember}
+            onAcceptInvitation={acceptInvite}
+            onDeclineInvitation={declineInvite}
+            onRenameTeam={renameTeamAction}
+            onDeleteTeam={deleteTeamAction}
+            onTogglePin={togglePinTeamAction}
+          />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <TabBar />

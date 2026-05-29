@@ -116,3 +116,55 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Redesigned Manual Sync Now Button */
+.git-sync-now-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-primary);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: 12px;
+  transition: all var(--transition-fast) ease;
+  position: relative;
+}
+
+.git-sync-now-btn:hover {
+  background: var(--accent-primary);
+  color: white;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.git-sync-now-btn.has-changes {
+  background: rgba(249, 115, 22, 0.1);
+  border-color: rgba(249, 115, 22, 0.3);
+  color: #f97316;
+}
+
+.git-sync-now-btn.has-changes:hover {
+  background: #f97316;
+  color: white;
+  box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+}
+
+.sync-dot-badge {
+  width: 6px;
+  height: 6px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  box-shadow: 0 0 6px #ef4444;
+  animation: pulse-glow 2s infinite;
+}
+
+.git-sync-now-btn.loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

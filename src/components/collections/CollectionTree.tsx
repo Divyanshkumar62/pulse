@@ -17,7 +17,7 @@ type TreeItem =
   | { type: 'creating'; itemType: 'request' | 'folder'; parentId: string; parentType: 'collection' | 'folder'; level: number };
 
 export default function CollectionTree() {
-  const { workspaces, activeWorkspaceId } = useWorkspaceStore();
+  const { workspaces, activeWorkspaceId, linkWorkspaceToFolder } = useWorkspaceStore();
   const { openTab, openRunnerTab, openDocsTab, updateTabRequestName } = useTabStore();
   const { 
     collections, addCollection, addFolder, addRequest, 
@@ -27,6 +27,9 @@ export default function CollectionTree() {
   } = useCollectionStore();
   const { setImportModalOpen } = useAppStore();
   
+  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
+  const isTeamWorkspaceUnlinked = activeWorkspace?.type === 'team' && !activeWorkspace?.path;
+
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, items: ContextMenuItem[]} | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
@@ -712,44 +715,101 @@ export default function CollectionTree() {
         </div>
       </div>
 
-      <div style={{ flex: 1, padding: '8px', overflowY: 'auto' }} className="custom-scrollbar-mini">
-        {isCreatingCollection && (
-            <div style={{ marginBottom: '8px' }}>
-                <input 
-                    autoFocus
-                    placeholder="Collection Name..."
-                    value={newCollectionName}
-                    onChange={e => setNewCollectionName(e.target.value)}
-                    onKeyDown={e => {
-                        if (e.key === 'Enter') handleCreateCollection();
-                        if (e.key === 'Escape') setIsCreatingCollection(false);
-                    }}
-                    onBlur={() => {
-                        if (!newCollectionName.trim()) setIsCreatingCollection(false);
-                        else handleCreateCollection();
-                    }}
-                    style={{ 
-                        width: '100%', padding: '8px', 
-                        background: 'var(--bg-input)', border: '1px solid var(--accent-primary)', 
-                        borderRadius: '6px', fontSize: '13px', outline: 'none'
-                    }}
-                />
+      <div style={{ flex: 1, padding: '8px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }} className="custom-scrollbar-mini">
+        {isTeamWorkspaceUnlinked ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '32px 16px',
+            margin: 'auto',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              fontSize: '40px',
+              marginBottom: '16px',
+              filter: 'drop-shadow(0 0 10px rgba(187, 154, 247, 0.4))'
+            }}>
+              👥
             </div>
-        )}
-
-        {visibleItems.length === 0 && !isCreatingCollection ? (
-            <EmptyState 
-                icon={FolderOpen}
-                title={searchQuery ? 'No results found' : 'No collections'}
-                description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : 'Create your first collection or import an existing one to get started.'}
-                actionLabel={searchQuery ? undefined : 'Import'}
-                onAction={() => setImportModalOpen(true)}
-                compact
-            />
+            <h3 style={{
+              fontSize: '14px',
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+              marginBottom: '8px'
+            }}>
+              Folder Required
+            </h3>
+            <p style={{
+              fontSize: '11px',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.5,
+              marginBottom: '20px',
+              maxWidth: '180px'
+            }}>
+              To sync collections, link this team workspace to a local folder.
+            </p>
+            <button 
+              className="btn-primary"
+              style={{
+                width: '100%',
+                padding: '8px 16px',
+                background: 'linear-gradient(135deg, #bb9af7, #9b6ef3)',
+                boxShadow: '0 4px 12px rgba(155, 110, 243, 0.25)',
+                border: 'none',
+                borderRadius: '6px',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+              onClick={() => linkWorkspaceToFolder(activeWorkspaceId || '')}
+            >
+              Select Folder
+            </button>
+          </div>
         ) : (
-            <div className="tree-items">
-                {visibleItems.map((item, idx) => renderTreeItem(item, idx))}
-            </div>
+          <>
+            {isCreatingCollection && (
+                <div style={{ marginBottom: '8px' }}>
+                    <input 
+                        autoFocus
+                        placeholder="Collection Name..."
+                        value={newCollectionName}
+                        onChange={e => setNewCollectionName(e.target.value)}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') handleCreateCollection();
+                            if (e.key === 'Escape') setIsCreatingCollection(false);
+                        }}
+                        onBlur={() => {
+                            if (!newCollectionName.trim()) setIsCreatingCollection(false);
+                            else handleCreateCollection();
+                        }}
+                        style={{ 
+                            width: '100%', padding: '8px', 
+                            background: 'var(--bg-input)', border: '1px solid var(--accent-primary)', 
+                            borderRadius: '6px', fontSize: '13px', outline: 'none'
+                        }}
+                    />
+                </div>
+            )}
+
+            {visibleItems.length === 0 && !isCreatingCollection ? (
+                <EmptyState 
+                    icon={FolderOpen}
+                    title={searchQuery ? 'No results found' : 'No collections'}
+                    description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : 'Create your first collection or import an existing one to get started.'}
+                    actionLabel={searchQuery ? undefined : 'Import'}
+                    onAction={() => setImportModalOpen(true)}
+                    compact
+                />
+            ) : (
+                <div className="tree-items" style={{ flex: 1 }}>
+                    {visibleItems.map((item, idx) => renderTreeItem(item, idx))}
+                </div>
+            )}
+          </>
         )}
       </div>
 
