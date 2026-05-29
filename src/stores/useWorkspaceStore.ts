@@ -87,7 +87,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       
       // Step 3: Map Team Workspaces (restore their meta too)
       const teams = useTeamStore.getState().teams;
-      const teamWorkspaces: Workspace[] = (teams || []).map(t => {
+      const sortedTeams = [...(teams || [])].sort((a, b) => {
+        const aPinned = a.pinned ? 1 : 0;
+        const bPinned = b.pinned ? 1 : 0;
+        if (aPinned !== bPinned) return bPinned - aPinned;
+        return a.name.localeCompare(b.name);
+      });
+      const teamWorkspaces: Workspace[] = sortedTeams.map(t => {
         const teamMeta = meta[`team_${t.id}`] || {};
         return {
           id: `team_${t.id}`,

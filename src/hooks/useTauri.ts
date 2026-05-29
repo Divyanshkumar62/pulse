@@ -66,7 +66,7 @@ export async function saveUserSettings(settings: UserSettings): Promise<void> {
 }
 
 export async function createTeam(name: string, ownerEmail: string, ownerName: string): Promise<Team> {
-  return invoke('create_team', { name, owner_email: ownerEmail, owner_name: ownerName });
+  return invoke('create_team', { name, ownerEmail, ownerName });
 }
 
 export async function getTeams(): Promise<Team[]> {
@@ -82,12 +82,12 @@ export async function inviteToTeam(
   invitedByName: string
 ): Promise<Invitation> {
   return invoke('invite_to_team', { 
-    team_id: teamId, 
-    team_name: teamName, 
+    teamId, 
+    teamName, 
     email, 
     role, 
-    invited_by: invitedBy, 
-    invited_by_name: invitedByName 
+    invitedBy, 
+    invitedByName 
   });
 }
 
@@ -100,11 +100,23 @@ export async function getAllInvitations(): Promise<Invitation[]> {
 }
 
 export async function acceptInvitation(invitationId: string): Promise<void> {
-  return invoke('accept_invitation', { invitation_id: invitationId });
+  return invoke('accept_invitation', { invitationId });
 }
 
 export async function declineInvitation(invitationId: string): Promise<void> {
-  return invoke('decline_invitation', { invitation_id: invitationId });
+  return invoke('decline_invitation', { invitationId });
+}
+
+export async function renameTeam(teamId: string, newName: string): Promise<void> {
+  return invoke('rename_team', { teamId, newName });
+}
+
+export async function deleteTeam(teamId: string): Promise<void> {
+  return invoke('delete_team', { teamId });
+}
+
+export async function pinTeam(teamId: string, pinned: boolean): Promise<void> {
+  return invoke('pin_team', { teamId, pinned });
 }
 export interface OAuthResult {
   code: string;

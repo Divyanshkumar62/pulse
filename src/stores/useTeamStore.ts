@@ -12,6 +12,9 @@ interface TeamStore {
   inviteMember: (teamId: string, teamName: string, email: string, role: TeamRole) => Promise<void>;
   acceptInvite: (id: string) => Promise<void>;
   declineInvite: (id: string) => Promise<void>;
+  renameTeamAction: (id: string, newName: string) => Promise<void>;
+  deleteTeamAction: (id: string) => Promise<void>;
+  togglePinTeamAction: (id: string) => Promise<void>;
 }
 
 export const useTeamStore = create<TeamStore>((set, get) => ({
@@ -71,5 +74,59 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
     set(state => ({
       invitations: state.invitations.map(i => i.id === id ? { ...i, status: 'declined' as const } : i)
     }));
+  },
+
+  renameTeamAction: async (id, newName) => {
+    try {
+      const { renameTeam } = await import('../hooks/useTauri');
+      await renameTeam(id, newName);
+      
+      set(state => ({
+        teams: state.teams.map(t => t.id === id ? { ...t, name: newName } : t)
+      }));
+
+      const { initialize } = (await import('./useWorkspaceStore')).useWorkspaceStore.getState();
+      await initialize();
+    } catch (e) {
+      console.error('Failed to rename team:', e);
+      throw e;
+    }
+  },
+
+  deleteTeamAction: async (id) => {
+    try {
+      const { deleteTeam } = await import('../hooks/useTauri');
+      await deleteTeam(id);
+      
+      set(state => ({
+        teams: state.teams.filter(t => t.id !== id)
+      }));
+
+      const { initialize } = (await import('./useWorkspaceStore')).useWorkspaceStore.getState();
+      await initialize();
+    } catch (e) {
+      console.error('Failed to delete team:', e);
+      throw e;
+    }
+  },
+
+  togglePinTeamAction: async (id) => {
+    try {
+      const { pinTeam } = await import('../hooks/useTauri');
+      const team = get().teams.find(t => t.id === id);
+      if (!team) return;
+      const nextPinned = !team.pinned;
+      await pinTeam(id, nextPinned);
+      
+      set(state => ({
+        teams: state.teams.map(t => t.id === id ? { ...t, pinned: nextPinned } : t)
+      }));
+
+      const { initialize } = (await import('./useWorkspaceStore')).useWorkspaceStore.getState();
+      await initialize();
+    } catch (e) {
+      console.error('Failed to toggle pin team:', e);
+      throw e;
+    }
   }
 }));
