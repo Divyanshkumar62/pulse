@@ -112,6 +112,7 @@ export interface Team {
   name: string;
   owner_id: string;
   members: TeamMember[];
+  pinned?: boolean;
 }
 
 export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired';

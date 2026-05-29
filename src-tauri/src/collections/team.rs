@@ -8,6 +8,8 @@ pub struct Team {
     pub owner_id: String,
     pub members: Vec<TeamMember>,
     pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    pub pinned: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +20,7 @@ pub struct TeamMember {
     pub role: TeamRole,
     pub joined_at: DateTime<Utc>,
 }
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -78,6 +81,7 @@ impl Team {
                 joined_at: Utc::now(),
             }],
             created_at: Utc::now(),
+            pinned: false,
         }
     }
 }

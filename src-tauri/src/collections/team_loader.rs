@@ -144,3 +144,48 @@ pub fn decline_invitation<P: AsRef<Path>>(path: P, invitation_id: String) -> Res
 
     Ok(())
 }
+
+pub fn rename_team(
+    teams_path: &str,
+    team_id: String,
+    new_name: String,
+) -> Result<(), String> {
+    let mut teams = load_teams(teams_path).map_err(|e| e.to_string())?;
+    if let Some(team) = teams.iter_mut().find(|t| t.id == team_id) {
+        team.name = new_name;
+        save_teams(&teams, teams_path).map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("Team not found".to_string())
+    }
+}
+
+pub fn delete_team(
+    teams_path: &str,
+    team_id: String,
+) -> Result<(), String> {
+    let mut teams = load_teams(teams_path).map_err(|e| e.to_string())?;
+    let initial_len = teams.len();
+    teams.retain(|t| t.id != team_id);
+    if teams.len() < initial_len {
+        save_teams(&teams, teams_path).map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("Team not found".to_string())
+    }
+}
+
+pub fn pin_team(
+    teams_path: &str,
+    team_id: String,
+    pinned: bool,
+) -> Result<(), String> {
+    let mut teams = load_teams(teams_path).map_err(|e| e.to_string())?;
+    if let Some(team) = teams.iter_mut().find(|t| t.id == team_id) {
+        team.pinned = pinned;
+        save_teams(&teams, teams_path).map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("Team not found".to_string())
+    }
+}

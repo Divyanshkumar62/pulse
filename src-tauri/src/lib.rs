@@ -461,6 +461,24 @@ fn decline_invitation(invitation_id: String) -> Result<(), String> {
     team_loader::decline_invitation(invitations_path, invitation_id)
 }
 
+#[tauri::command]
+fn rename_team(team_id: String, new_name: String) -> Result<(), String> {
+    let teams_path = get_data_dir().join("teams.yaml");
+    team_loader::rename_team(teams_path.to_str().unwrap_or("teams.yaml"), team_id, new_name)
+}
+
+#[tauri::command]
+fn delete_team(team_id: String) -> Result<(), String> {
+    let teams_path = get_data_dir().join("teams.yaml");
+    team_loader::delete_team(teams_path.to_str().unwrap_or("teams.yaml"), team_id)
+}
+
+#[tauri::command]
+fn pin_team(team_id: String, pinned: bool) -> Result<(), String> {
+    let teams_path = get_data_dir().join("teams.yaml");
+    team_loader::pin_team(teams_path.to_str().unwrap_or("teams.yaml"), team_id, pinned)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _ = get_data_dir();
@@ -492,6 +510,9 @@ pub fn run() {
             get_all_invitations,
             accept_invitation,
             decline_invitation,
+            rename_team,
+            delete_team,
+            pin_team,
             load_collections,
             create_data_dir,
             save_collection_to_disk,
