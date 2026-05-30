@@ -189,3 +189,29 @@ pub fn pin_team(
         Err("Team not found".to_string())
     }
 }
+
+pub fn remove_member(
+    teams_path: &str,
+    team_id: String,
+    user_id: String,
+) -> Result<(), String> {
+    let mut teams = load_teams(teams_path).map_err(|e| e.to_string())?;
+    if let Some(team) = teams.iter_mut().find(|t| t.id == team_id) {
+        // Prevent removing the owner
+        if team.owner_id == user_id {
+            return Err("Cannot remove the team owner. Transfer ownership first.".to_string());
+        }
+        
+        let initial_len = team.members.len();
+        team.members.retain(|m| m.user_id != user_id);
+        
+        if team.members.len() < initial_len {
+            save_teams(&teams, teams_path).map_err(|e| e.to_string())?;
+            Ok(())
+        } else {
+            Err("Member not found in team".to_string())
+        }
+    } else {
+        Err("Team not found".to_string())
+    }
+}

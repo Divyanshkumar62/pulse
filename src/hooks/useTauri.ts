@@ -118,6 +118,19 @@ export async function deleteTeam(teamId: string): Promise<void> {
 export async function pinTeam(teamId: string, pinned: boolean): Promise<void> {
   return invoke('pin_team', { teamId, pinned });
 }
+
+export async function removeTeamMember(teamId: string, userId: string): Promise<void> {
+  return invoke('remove_team_member', { teamId, userId });
+}
+
+export async function gitUpdatePresence(path: string, email: string, itemId: string): Promise<void> {
+  return invoke('git_update_presence', { path, email, itemId });
+}
+
+export async function gitGetPresence(path: string): Promise<any[]> {
+  return invoke('git_get_presence', { path });
+}
+
 export interface OAuthResult {
   code: string;
   code_verifier: string;

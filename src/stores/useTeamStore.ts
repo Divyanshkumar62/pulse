@@ -15,6 +15,7 @@ interface TeamStore {
   renameTeamAction: (id: string, newName: string) => Promise<void>;
   deleteTeamAction: (id: string) => Promise<void>;
   togglePinTeamAction: (id: string) => Promise<void>;
+  removeMemberAction: (teamId: string, userId: string) => Promise<void>;
 }
 
 export const useTeamStore = create<TeamStore>((set, get) => ({
@@ -126,6 +127,24 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
       await initialize();
     } catch (e) {
       console.error('Failed to toggle pin team:', e);
+      throw e;
+    }
+  },
+
+  removeMemberAction: async (teamId, userId) => {
+    try {
+      const { removeTeamMember } = await import('../hooks/useTauri');
+      await removeTeamMember(teamId, userId);
+      
+      set(state => ({
+        teams: state.teams.map(t => 
+          t.id === teamId 
+            ? { ...t, members: t.members.filter(m => m.user_id !== userId) } 
+            : t
+        )
+      }));
+    } catch (e) {
+      console.error('Failed to remove team member:', e);
       throw e;
     }
   }

@@ -16,6 +16,7 @@ interface TeamPanelProps {
   onRenameTeam: (id: string, newName: string) => Promise<void>;
   onDeleteTeam: (id: string) => Promise<void>;
   onTogglePin: (id: string) => Promise<void>;
+  onRemoveMember: (teamId: string, userId: string) => Promise<void>;
 }
 
 export default function TeamPanel({
@@ -30,11 +31,13 @@ export default function TeamPanel({
   onRenameTeam,
   onDeleteTeam,
   onTogglePin,
+  onRemoveMember,
 }: TeamPanelProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState<string | null>(null);
   const [showRenameModal, setShowRenameModal] = useState<string | null>(null);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<string | null>(null);
+  const [showManageMembersModal, setShowManageMembersModal] = useState<string | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
   const [renameTeamName, setRenameTeamName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -112,6 +115,14 @@ export default function TeamPanel({
       } finally {
         setIsDeleting(false);
       }
+    }
+  };
+
+  const handleRemoveMember = async (teamId: string, userId: string) => {
+    try {
+      await onRemoveMember(teamId, userId);
+    } catch (error) {
+      console.error('Failed to remove member:', error);
     }
   };
 
@@ -200,7 +211,7 @@ export default function TeamPanel({
                       </div>
                       <div className="team-card-meta">
                         <h3 className="team-card-title">{team.name}</h3>
-                        <span className="team-card-subtitle">User (you)</span>
+                        <span className="team-card-subtitle">{team.members.length} {team.members.length === 1 ? 'Member' : 'Members'}</span>
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -272,7 +283,12 @@ export default function TeamPanel({
 
                   {/* Card Footer: Avatar Stack & Invite Button */}
                   <div className="team-card-footer">
-                    <div className="avatar-stack-container">
+                    <div 
+                      className="avatar-stack-container"
+                      onClick={() => setShowManageMembersModal(team.id)}
+                      title="Manage Team Members"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div className="avatar-stack">
                         {/* Render the user's avatar */}
                         <div 
@@ -487,6 +503,91 @@ export default function TeamPanel({
                 disabled={isDeleting}
               >
                 {isDeleting ? 'Deleting...' : 'Delete Team'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showManageMembersModal && createPortal(
+        <div className="modal-overlay" onClick={() => setShowManageMembersModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ width: '480px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Manage Members</h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>
+              Members of <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{teams.find(t => t.id === showManageMembersModal)?.name}</span>.
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto', marginBottom: '24px', paddingRight: '4px' }}>
+              {teams.find(t => t.id === showManageMembersModal)?.members.map(member => {
+                const team = teams.find(t => t.id === showManageMembersModal);
+                const isOwner = team?.owner_id === member.user_id;
+                const isCurrentUser = member.email === currentUserEmail;
+                const currentUserMember = team?.members.find(m => m.email === currentUserEmail);
+                const currentUserIsOwner = team?.owner_id === currentUserMember?.user_id;
+                const canActuallyRemove = currentUserIsOwner && !isOwner && !isCurrentUser;
+
+                return (
+                  <div key={member.user_id} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '12px', 
+                    padding: '12px', 
+                    background: 'var(--bg-surface)', 
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--border-subtle)'
+                  }}>
+                    <div style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '50%', 
+                      background: 'var(--bg-deep)', 
+                      color: 'var(--accent-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      border: '1px solid var(--accent-subtle)'
+                    }}>
+                      {member.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {member.name} {isCurrentUser && <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(you)</span>}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{member.email}</div>
+                    </div>
+                    <span className={`premium-role-badge ${getRoleBadgeClass(member.role)}`} style={{ fontSize: '9px' }}>
+                      {member.role.toUpperCase()}
+                    </span>
+                    {canActuallyRemove && (
+                      <button 
+                        className="team-action-icon-btn delete-btn"
+                        title="Remove Member"
+                        onClick={() => handleRemoveMember(showManageMembersModal, member.user_id)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowManageMembersModal(null)}>Close</button>
+              <button 
+                className="btn-primary" 
+                onClick={() => {
+                  setShowManageMembersModal(null);
+                  setShowInviteModal(showManageMembersModal);
+                }}
+              >
+                Invite New Member
               </button>
             </div>
           </div>

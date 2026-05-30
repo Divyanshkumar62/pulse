@@ -479,6 +479,12 @@ fn pin_team(team_id: String, pinned: bool) -> Result<(), String> {
     team_loader::pin_team(teams_path.to_str().unwrap_or("teams.yaml"), team_id, pinned)
 }
 
+#[tauri::command]
+fn remove_team_member(team_id: String, user_id: String) -> Result<(), String> {
+    let teams_path = get_data_dir().join("teams.yaml");
+    team_loader::remove_member(teams_path.to_str().unwrap_or("teams.yaml"), team_id, user_id)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _ = get_data_dir();
@@ -513,6 +519,7 @@ pub fn run() {
             rename_team,
             delete_team,
             pin_team,
+            remove_team_member,
             load_collections,
             create_data_dir,
             save_collection_to_disk,
@@ -530,6 +537,8 @@ pub fn run() {
             collections::git::git_resolve_conflict,
             collections::git::git_rebase_continue,
             collections::git::git_rebase_abort,
+            collections::git::git_update_presence,
+            collections::git::git_get_presence,
             collections::flow_runner::run_flow,
             save_flows_to_disk,
             load_flows_from_workspace,

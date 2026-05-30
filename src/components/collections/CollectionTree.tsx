@@ -3,12 +3,15 @@ import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useTabStore } from '../../stores/useTabStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
 import { useAppStore } from '../../stores/useAppStore';
+import { usePresenceStore } from '../../stores/usePresenceStore';
+import { useSettingsStore } from '../../stores/useSettingsStore';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import ConfirmModal from '../ui/ConfirmModal';
 import EmptyState from '../ui/EmptyState';
-import { MoreVertical, Pin, FolderOpen } from 'lucide-react';
+import { MoreVertical, Pin, FolderOpen, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
+import { getGravatarUrl } from '../../utils/gravatar';
 
 type TreeItem = 
   | { type: 'collection'; id: string; name: string; data: any; level: number }
@@ -26,6 +29,8 @@ export default function CollectionTree() {
     deleteCollection, deleteFolder, deleteRequest 
   } = useCollectionStore();
   const { setImportModalOpen } = useAppStore();
+  const { presence } = usePresenceStore();
+  const { settings } = useSettingsStore();
   
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
   const isTeamWorkspaceUnlinked = activeWorkspace?.type === 'team' && !activeWorkspace?.path;
@@ -477,6 +482,25 @@ export default function CollectionTree() {
           <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
           
           <div className="tree-item-actions">
+            {presence
+              .filter(p => p.item_id === item.id && p.email !== settings?.email)
+              .map(p => (
+                <img 
+                  key={p.email}
+                  src={getGravatarUrl(p.email, 32)} 
+                  alt={p.email}
+                  title={`${p.email} is viewing this`}
+                  style={{ 
+                    width: '16px', 
+                    height: '16px', 
+                    borderRadius: '50%', 
+                    marginLeft: '4px',
+                    border: '1px solid var(--accent-primary)',
+                    boxShadow: '0 0 8px var(--accent-subtle)'
+                  }}
+                />
+              ))
+            }
             {item.data.pinned && <Pin size={10} style={{ opacity: 0.6, marginRight: '4px', color: '#f59e0b' }} />}
             <button 
                 className="tree-action-btn"
@@ -559,6 +583,25 @@ export default function CollectionTree() {
           <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
           
           <div className="tree-item-actions">
+            {presence
+              .filter(p => p.item_id === item.id && p.email !== settings?.email)
+              .map(p => (
+                <img 
+                  key={p.email}
+                  src={getGravatarUrl(p.email, 32)} 
+                  alt={p.email}
+                  title={`${p.email} is viewing this`}
+                  style={{ 
+                    width: '16px', 
+                    height: '16px', 
+                    borderRadius: '50%', 
+                    marginLeft: '4px',
+                    border: '1px solid var(--accent-primary)',
+                    boxShadow: '0 0 8px var(--accent-subtle)'
+                  }}
+                />
+              ))
+            }
             {item.data.pinned && <Pin size={10} style={{ opacity: 0.6, marginRight: '4px', color: '#f59e0b' }} />}
             <button 
                 className="tree-action-btn"

@@ -2,7 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
+import { usePresenceStore } from '../../stores/usePresenceStore';
+import { useSettingsStore } from '../../stores/useSettingsStore';
 import { v4 as uuidv4 } from 'uuid';
+import { getGravatarUrl } from '../../utils/gravatar';
 import { LayoutDashboard, Folder, ChevronDown, ChevronRight, Clock, Globe, GitBranch, MoreVertical, Pin } from 'lucide-react';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import ConfirmModal from '../ui/ConfirmModal';
@@ -17,6 +20,8 @@ export default function FlowSidebar() {
   const { addFlow, setActiveFlowId, flows, activeFlowId, updateFlow, deleteFlow } = useFlowStore();
   const { collections } = useCollectionStore();
   const { setCreateFlowModalOpen } = useAppStore();
+  const { presence } = usePresenceStore();
+  const { settings } = useSettingsStore();
   
   const [menuPos, setMenuPos] = useState<{ x: number, y: number, flowId: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -184,6 +189,24 @@ export default function FlowSidebar() {
                           ) : (
                             <>
                               <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{flow.name}</span>
+                              {presence
+                                .filter(p => p.item_id === flow.id && p.email !== settings?.email)
+                                .map(p => (
+                                  <img 
+                                    key={p.email}
+                                    src={getGravatarUrl(p.email, 32)} 
+                                    alt={p.email}
+                                    title={`${p.email} is viewing this flow`}
+                                    style={{ 
+                                      width: '14px', 
+                                      height: '14px', 
+                                      borderRadius: '50%', 
+                                      border: '1px solid var(--accent-primary)',
+                                      boxShadow: '0 0 6px var(--accent-subtle)'
+                                    }}
+                                  />
+                                ))
+                              }
                               {flow.pinned && <Pin size={10} style={{ opacity: 0.6, color: '#f59e0b' }} />}
                             </>
                           )}

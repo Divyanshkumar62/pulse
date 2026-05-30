@@ -16,6 +16,7 @@ import { useMockStore } from './stores/useMockStore';
 import { ReactFlowProvider } from '@xyflow/react';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import MockServerEditor from './components/mock/MockServerEditor';
+import { usePresence } from './hooks/usePresence';
 
 export default function App() {
   const initEnvStore = useEnvStore(state => state.initialize);
@@ -25,6 +26,8 @@ export default function App() {
   const initHistoryStore = useHistoryStore(state => state.initialize);
   const initMockStore = useMockStore(state => state.initialize);
   
+  usePresence();
+
   const { sidebarTab, selectedMonitorId, selectedEnvironmentId } = useAppStore();
   const activeMockServerId = useMockStore(state => state.activeMockServerId);
   const { 
@@ -36,7 +39,8 @@ export default function App() {
     declineInvite,
     renameTeamAction,
     deleteTeamAction,
-    togglePinTeamAction
+    togglePinTeamAction,
+    removeMemberAction
   } = useTeamStore();
   const { settings } = useSettingsStore();
 
@@ -86,6 +90,7 @@ export default function App() {
             onRenameTeam={renameTeamAction}
             onDeleteTeam={deleteTeamAction}
             onTogglePin={togglePinTeamAction}
+            onRemoveMember={removeMemberAction}
           />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

@@ -327,6 +327,47 @@ pub async fn git_rebase_continue(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn git_update_presence(path: String, email: String, item_id: String) -> Result<(), String> {
+    let presence_dir = Path::new(&path).join(".pulse").join("presence");
+    std::fs::create_dir_all(&presence_dir).map_err(|e| e.to_string())?;
+
+    let presence_file = presence_dir.join(format!("{}.json", email.replace("@", "_").replace(".", "_")));
+    let data = serde_json::json!({
+        "email": email,
+        "item_id": item_id,
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+    });
+
+    std::fs::write(presence_file, serde_json::to_string(&data).unwrap())
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn git_get_presence(path: String) -> Result<Vec<serde_json::Value>, String> {
+    let presence_dir = Path::new(&path).join(".pulse").join("presence");
+    if !presence_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut presence_list = vec![];
+    let entries = std::fs::read_dir(presence_dir).map_err(|e| e.to_string())?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| e.to_string())?;
+        if entry.path().extension().and_then(|s| s.to_str()) == Some("json") {
+            let content = std::fs::read_to_string(entry.path()).map_err(|e| e.to_string())?;
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+                presence_list.push(val);
+            }
+        }
+    }
+
+    Ok(presence_list)
+}
+
+#[tauri::command]
 pub async fn git_rebase_abort(path: String) -> Result<(), String> {
     let output = Command::new("git")
         .args(["rebase", "--abort"])
