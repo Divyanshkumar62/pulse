@@ -6,6 +6,7 @@ import { useSettingsStore } from '../../stores/useSettingsStore';
 import TeamPanel from '../TeamPanel';
 import CollectionTree from '../collections/CollectionTree';
 import ActivityFeed from '../ActivityFeed';
+import TeamActivityFeed from '../TeamActivityFeed';
 import EnvironmentsPanel from '../sidebar/EnvironmentsPanel';
 import CustomSelect from '../ui/CustomSelect';
 import MockServerPanel from '../sidebar/MockServerPanel';
@@ -190,6 +191,8 @@ function TeamSidebarList() {
           );
         })}
       </div>
+      
+      <TeamActivityFeed />
     </div>
   );
 }

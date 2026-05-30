@@ -16,11 +16,14 @@ interface TeamStore {
   deleteTeamAction: (id: string) => Promise<void>;
   togglePinTeamAction: (id: string) => Promise<void>;
   removeMemberAction: (teamId: string, userId: string) => Promise<void>;
+  fetchActivityLogAction: (workspacePath: string) => Promise<void>;
+  activityLog: any[];
 }
 
 export const useTeamStore = create<TeamStore>((set, get) => ({
   teams: [],
   invitations: [],
+  activityLog: [],
   isLoading: false,
   
   initialize: async () => {
@@ -146,6 +149,16 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
     } catch (e) {
       console.error('Failed to remove team member:', e);
       throw e;
+    }
+  },
+
+  fetchActivityLogAction: async (workspacePath) => {
+    try {
+      const { gitGetActivityLog } = await import('../hooks/useTauri');
+      const logs = await gitGetActivityLog(workspacePath);
+      set({ activityLog: logs });
+    } catch (e) {
+      console.error('Failed to fetch activity log:', e);
     }
   }
 }));

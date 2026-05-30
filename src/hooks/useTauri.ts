@@ -131,6 +131,10 @@ export async function gitGetPresence(path: string): Promise<any[]> {
   return invoke('git_get_presence', { path });
 }
 
+export async function gitGetActivityLog(path: string): Promise<any[]> {
+  return invoke('git_get_activity_log', { path });
+}
+
 export interface OAuthResult {
   code: string;
   code_verifier: string;

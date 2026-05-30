@@ -327,6 +327,38 @@ pub async fn git_rebase_continue(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn git_get_activity_log(path: String) -> Result<Vec<serde_json::Value>, String> {
+    let output = Command::new("git")
+        .args(&["log", "-n", "50", "--pretty=format:%H|%an|%ae|%ar|%s"])
+        .current_dir(&path)
+        .output()
+        .map_err(|e| format!("Failed to run git log: {}", e))?;
+
+    if !output.status.success() {
+        // If not a git repo or no commits, return empty
+        return Ok(vec![]);
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut logs = vec![];
+
+    for line in stdout.lines() {
+        let parts: Vec<&str> = line.split('|').collect();
+        if parts.len() == 5 {
+            logs.push(serde_json::json!({
+                "hash": parts[0],
+                "author_name": parts[1],
+                "author_email": parts[2],
+                "relative_time": parts[3],
+                "message": parts[4],
+            }));
+        }
+    }
+
+    Ok(logs)
+}
+
+#[tauri::command]
 pub async fn git_update_presence(path: String, email: String, item_id: String) -> Result<(), String> {
     let presence_dir = Path::new(&path).join(".pulse").join("presence");
     std::fs::create_dir_all(&presence_dir).map_err(|e| e.to_string())?;

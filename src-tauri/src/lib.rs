@@ -539,6 +539,7 @@ pub fn run() {
             collections::git::git_rebase_abort,
             collections::git::git_update_presence,
             collections::git::git_get_presence,
+            collections::git::git_get_activity_log,
             collections::flow_runner::run_flow,
             save_flows_to_disk,
             load_flows_from_workspace,
