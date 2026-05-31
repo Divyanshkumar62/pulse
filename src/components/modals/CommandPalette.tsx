@@ -4,9 +4,25 @@ import { useTabStore } from '../../stores/useTabStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { CurlParser } from '../../services/curl';
 import { Request } from '../../types';
+import { 
+  Search, Globe, Layout, Command, Settings as SettingsIcon, 
+  Plus, User, Terminal, GitCommit, ArrowRightLeft,
+  FileText, Activity, Server, Zap, Shield
+} from 'lucide-react';
+import { createPortal } from 'react-dom';
+
+interface PaletteItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  category: string;
+  action: () => void;
+  icon: React.ReactNode;
+  shortcut?: string;
+}
 
 export default function CommandPalette() {
-  const { isCommandPaletteOpen, setCommandPaletteOpen, setSettingsOpen } = useAppStore();
+  const { isCommandPaletteOpen, setCommandPaletteOpen, setSettingsOpen, sidebarTab, setSidebarTab, toggleSidebar } = useAppStore();
   const [mode, setMode] = useState<'search' | 'import-curl'>('search');
   const [search, setSearch] = useState('');
   const [curlInput, setCurlInput] = useState('');
@@ -16,9 +32,9 @@ export default function CommandPalette() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  const { workspaces, activeWorkspaceId } = useWorkspaceStore();
+  const { workspaces, activeWorkspaceId, setActiveWorkspaceId } = useWorkspaceStore();
   const { openTab } = useTabStore();
-  const [items, setItems] = useState<Array<{ id: string; title: string; subtitle?: string; action: () => void; icon: string }>>([]);
+  const [items, setItems] = useState<PaletteItem[]>([]);
 
   useEffect(() => {
     if (isCommandPaletteOpen && mode === 'import-curl' && textAreaRef.current) {
@@ -30,6 +46,10 @@ export default function CommandPalette() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isCommandPaletteOpen) {
         setCommandPaletteOpen(false);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(!isCommandPaletteOpen);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -44,7 +64,6 @@ export default function CommandPalette() {
     }
   }, [isCommandPaletteOpen, mode]);
 
-  // Handle scrolling selected item into view
   useEffect(() => {
     if (mode === 'search' && isCommandPaletteOpen) {
         const selectedEl = itemRefs.current.get(selectedIndex);
@@ -55,70 +74,89 @@ export default function CommandPalette() {
   }, [selectedIndex, mode, isCommandPaletteOpen]);
 
   useEffect(() => {
-    const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
-    const newItems: typeof items = [];
+    const newItems: PaletteItem[] = [];
     
-    // App Commands
+    // 1. GLOBAL ACTIONS
     newItems.push({
-      id: 'cmd-new-tab', title: 'New Request Tab', subtitle: 'Ctrl+T', icon: '📝', action: () => {
-        openTab({ id: crypto.randomUUID(), name: 'New Request', method: 'GET', url: '', headers: [], body: { type: 'none', content: '' } });
-      }
+      id: 'cmd-new-tab', title: 'New Request', subtitle: 'Open a blank request tab', 
+      category: 'Actions', icon: <Plus size={16} />, shortcut: 'Ctrl+T',
+      action: () => openTab({ id: crypto.randomUUID(), name: 'New Request', method: 'GET', url: '', headers: [], body: { type: 'none', content: '' } })
     });
 
     newItems.push({
-        id: 'cmd-import-curl', title: 'Import from cURL', subtitle: 'Paste a cURL command', icon: '⚡', action: () => {
-          setMode('import-curl');
-        }
+      id: 'cmd-import-curl', title: 'Import from cURL', subtitle: 'Create request from raw curl string', 
+      category: 'Actions', icon: <Terminal size={16} />,
+      action: () => setMode('import-curl')
     });
 
     newItems.push({
-      id: 'cmd-settings', title: 'Open Settings', icon: '⚙️', action: () => setSettingsOpen(true)
+      id: 'cmd-settings', title: 'Settings', subtitle: 'Manage Pulse configuration', 
+      category: 'Actions', icon: <SettingsIcon size={16} />, shortcut: 'Ctrl+,',
+      action: () => setSettingsOpen(true)
     });
 
-    // Workspace Collections
-    if (activeWorkspace) {
-      activeWorkspace.collections.forEach(c => {
-        // Recursively add all requests with unique IDs
-        const addRequestsFromSource = (requests: Request[], pathPrefix: string) => {
-            requests.forEach(r => {
-                newItems.push({
-                    id: `cp-req-${pathPrefix}-${r.id}`, // Add prefix to ensure uniqueness in palette
-                    title: r.name,
-                    subtitle: `${pathPrefix} / ${r.method} ${r.url}`,
-                    icon: '⚡',
-                    action: () => openTab(r, c.id)
-                });
-            });
-        };
+    // 2. NAVIGATION
+    newItems.push({
+      id: 'nav-collections', title: 'Switch to Collections', category: 'Navigation', 
+      icon: <Layout size={16} />, action: () => setSidebarTab('collections')
+    });
+    newItems.push({
+      id: 'nav-env', title: 'Switch to Environments', category: 'Navigation', 
+      icon: <Globe size={16} />, action: () => setSidebarTab('environments')
+    });
+    newItems.push({
+      id: 'nav-teams', title: 'Switch to Team activity', category: 'Navigation', 
+      icon: <User size={16} />, action: () => setSidebarTab('teams')
+    });
+    newItems.push({
+      id: 'nav-history', title: 'Switch to History', category: 'Navigation', 
+      icon: <Activity size={16} />, action: () => setSidebarTab('history')
+    });
+    newItems.push({
+      id: 'nav-mocks', title: 'Switch to Mock Servers', category: 'Navigation', 
+      icon: <Server size={16} />, action: () => setSidebarTab('mock')
+    });
 
-        addRequestsFromSource(c.requests, c.name);
-
-        const processFolders = (folders: any[], currentPath: string) => {
-            folders.forEach(f => {
-                const newPath = `${currentPath} / ${f.name}`;
-                addRequestsFromSource(f.requests || [], newPath);
-                if (f.folders) {
-                    processFolders(f.folders, newPath);
-                }
-            });
-        };
-
-        if (c.folders) {
-            processFolders(c.folders, c.name);
-        }
+    // 3. WORKSPACES
+    workspaces.forEach(w => {
+      newItems.push({
+        id: `ws-${w.id}`, title: `Switch to Workspace: ${w.name}`, 
+        subtitle: w.id === activeWorkspaceId ? 'Currently Active' : 'Change workspace',
+        category: 'Workspaces', icon: <ArrowRightLeft size={16} />,
+        action: () => setActiveWorkspaceId(w.id)
       });
-    }
 
-    // Dedup by ID just in case
-    const seen = new Set<string>();
-    const uniqueItems = newItems.filter(item => {
-        if (seen.has(item.id)) return false;
-        seen.add(item.id);
-        return true;
+      // 4. CROSS-WORKSPACE REQUESTS
+      w.collections.forEach(c => {
+        const addRequests = (requests: Request[], path: string) => {
+          requests.forEach(r => {
+            newItems.push({
+              id: `req-${w.id}-${r.id}`, title: r.name,
+              subtitle: `${w.name} • ${path} • ${r.method} ${r.url}`,
+              category: 'Requests', icon: <Zap size={16} color="var(--accent-primary)" />,
+              action: () => {
+                if (w.id !== activeWorkspaceId) setActiveWorkspaceId(w.id);
+                openTab(r, c.id);
+              }
+            });
+          });
+        };
+
+        addRequests(c.requests, c.name);
+        
+        const processFolders = (folders: any[], currentPath: string) => {
+          folders.forEach(f => {
+            const newPath = `${currentPath} / ${f.name}`;
+            addRequests(f.requests || [], newPath);
+            if (f.folders) processFolders(f.folders, newPath);
+          });
+        };
+        if (c.folders) processFolders(c.folders, c.name);
+      });
     });
 
-    setItems(uniqueItems);
-  }, [workspaces, activeWorkspaceId, openTab, setSettingsOpen]);
+    setItems(newItems);
+  }, [workspaces, activeWorkspaceId, openTab, setSettingsOpen, setSidebarTab, setActiveWorkspaceId]);
 
   if (!isCommandPaletteOpen) return null;
 
@@ -131,14 +169,14 @@ export default function CommandPalette() {
       setCurlInput('');
       setMode('search');
     } catch (e) {
-      console.error('Failed to parse cURL', e);
+      toast.error('Failed to parse cURL command');
     }
   };
 
-  // Filter
   const filtered = items.filter(item => 
     item.title.toLowerCase().includes(search.toLowerCase()) || 
-    (item.subtitle && item.subtitle.toLowerCase().includes(search.toLowerCase()))
+    (item.subtitle && item.subtitle.toLowerCase().includes(search.toLowerCase())) ||
+    item.category.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -159,7 +197,6 @@ export default function CommandPalette() {
       e.preventDefault();
       if (filtered[selectedIndex]) {
         filtered[selectedIndex].action();
-        // Don't close if switching to import mode
         if (filtered[selectedIndex].id !== 'cmd-import-curl') {
             setCommandPaletteOpen(false);
         }
@@ -167,74 +204,112 @@ export default function CommandPalette() {
     }
   };
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', paddingTop: '10vh', zIndex: 10000 }} onClick={() => setCommandPaletteOpen(false)}>
+  // Group by category
+  const categories = Array.from(new Set(filtered.map(i => i.category)));
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', paddingTop: '12vh', zIndex: 11000, backdropFilter: 'blur(8px)' }} onClick={() => setCommandPaletteOpen(false)}>
       <div 
-        style={{ width: '600px', backgroundColor: 'var(--bg-elevated)', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '60vh', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', border: '1px solid var(--border-subtle)' }}
+        style={{ 
+          width: '640px', backgroundColor: 'var(--bg-elevated)', borderRadius: '14px', overflow: 'hidden', 
+          display: 'flex', flexDirection: 'column', maxHeight: '70vh', boxShadow: '0 24px 64px rgba(0,0,0,0.6)', 
+          border: '1px solid var(--border-default)', animation: 'palette-in 0.2s ease-out' 
+        }}
         onClick={e => e.stopPropagation()}
       >
         {mode === 'search' ? (
             <>
-                <input 
-                    ref={inputRef}
-                    type="text"
-                    placeholder="Search requests, actions... (↑↓ to navigate, Enter to select)"
-                    style={{ padding: '16px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
-                    value={search}
-                    onChange={e => { setSearch(e.target.value); setSelectedIndex(0); }}
-                    onKeyDown={handleKeyDown}
-                />
-                <div ref={scrollContainerRef} style={{ overflowY: 'auto', flex: 1, padding: '8px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '0 20px', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.02)' }}>
+                    <Search size={18} color="var(--text-tertiary)" />
+                    <input 
+                        ref={inputRef}
+                        type="text"
+                        placeholder="Search anything or run commands..."
+                        style={{ flex: 1, padding: '20px 16px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '15px', outline: 'none', fontWeight: 500 }}
+                        value={search}
+                        onChange={e => { setSearch(e.target.value); setSelectedIndex(0); }}
+                        onKeyDown={handleKeyDown}
+                    />
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                        <kbd style={{ padding: '2px 6px', background: 'var(--bg-deep)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-tertiary)', border: '1px solid var(--border-subtle)' }}>ESC</kbd>
+                    </div>
+                </div>
+
+                <div ref={scrollContainerRef} className="custom-scrollbar" style={{ overflowY: 'auto', flex: 1, padding: '12px 0' }}>
                     {filtered.length === 0 ? (
-                        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No results found</div>
-                    ) : (
-                        filtered.map((item, idx) => (
-                        <div 
-                            key={item.id}
-                            ref={el => { if (el) itemRefs.current.set(idx, el); else itemRefs.current.delete(idx); }}
-                            onClick={() => { item.action(); if(item.id !== 'cmd-import-curl') setCommandPaletteOpen(false); }}
-                            style={{ 
-                            display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', cursor: 'pointer',
-                            backgroundColor: idx === selectedIndex ? 'var(--bg-overlay)' : 'transparent',
-                            borderLeft: `3px solid ${idx === selectedIndex ? 'var(--accent-primary)' : 'transparent'}`
-                            }}
-                            onMouseEnter={() => setSelectedIndex(idx)}
-                        >
-                            <div style={{ fontSize: '14px', width: '20px', textAlign: 'center' }}>{item.icon}</div>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{item.title}</span>
-                            {item.subtitle && <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{item.subtitle}</span>}
-                            </div>
+                        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                            <div style={{ marginBottom: '12px', opacity: 0.5 }}><Search size={32} style={{ margin: '0 auto' }} /></div>
+                            <div style={{ fontSize: '14px', fontWeight: 600 }}>No results for "{search}"</div>
+                            <div style={{ fontSize: '12px', marginTop: '4px' }}>Try searching for a different keyword</div>
                         </div>
+                    ) : (
+                        categories.map(category => (
+                            <div key={category}>
+                                <div style={{ padding: '8px 20px', fontSize: '10px', fontWeight: 800, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8 }}>{category}</div>
+                                {filtered.filter(i => i.category === category).map((item) => {
+                                    const globalIdx = filtered.indexOf(item);
+                                    const isActive = globalIdx === selectedIndex;
+                                    return (
+                                        <div 
+                                            key={item.id}
+                                            ref={el => { if (el) itemRefs.current.set(globalIdx, el); else itemRefs.current.delete(globalIdx); }}
+                                            onClick={() => { item.action(); if(item.id !== 'cmd-import-curl') setCommandPaletteOpen(false); }}
+                                            style={{ 
+                                                display: 'flex', alignItems: 'center', gap: '14px', padding: '10px 20px', cursor: 'pointer',
+                                                backgroundColor: isActive ? 'rgba(37, 99, 235, 0.15)' : 'transparent',
+                                                transition: 'all 0.1s'
+                                            }}
+                                            onMouseEnter={() => setSelectedIndex(globalIdx)}
+                                        >
+                                            <div style={{ 
+                                                width: '32px', height: '32px', borderRadius: '8px', background: isActive ? 'var(--accent-primary)' : 'var(--bg-deep)', 
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: isActive ? 'white' : 'var(--text-tertiary)',
+                                                transition: 'all 0.2s', border: `1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-subtle)'}`
+                                            }}>
+                                                {item.icon}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                                                <span style={{ fontSize: '13px', fontWeight: 600, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</span>
+                                                {item.subtitle && <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.subtitle}</span>}
+                                            </div>
+                                            {item.shortcut && <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', fontWeight: 600, background: 'var(--bg-deep)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>{item.shortcut}</div>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         ))
                     )}
                 </div>
             </>
         ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', padding: '16px', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', padding: '24px', gap: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>Import from cURL</span>
-                    <button onClick={() => setMode('search')} style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: '12px' }}>Back (Esc)</button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Terminal size={20} color="var(--accent-primary)" />
+                        <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>Import from cURL</h2>
+                    </div>
+                    <button onClick={() => setMode('search')} style={{ background: 'var(--bg-deep)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '6px' }}>BACK</button>
                 </div>
                 <textarea 
                     ref={textAreaRef}
-                    placeholder="Paste your curl command here..."
+                    placeholder="Paste your cURL command here (e.g. curl -X GET https://api.example.com)..."
                     style={{ 
-                        width: '100%', height: '150px', background: 'var(--bg-deep)', border: '1px solid var(--border-default)', 
-                        borderRadius: '4px', color: 'var(--text-primary)', fontSize: '12px', padding: '12px', 
-                        fontFamily: 'var(--font-mono)', outline: 'none', resize: 'none' 
+                        width: '100%', height: '180px', background: 'var(--bg-deep)', border: '1px solid var(--border-default)', 
+                        borderRadius: '10px', color: 'var(--text-primary)', fontSize: '13px', padding: '16px', 
+                        fontFamily: 'var(--font-mono)', outline: 'none', resize: 'none', lineHeight: 1.6
                     }}
                     value={curlInput}
                     onChange={e => setCurlInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Press Ctrl + Enter to import</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Tip: Press <strong>Ctrl + Enter</strong> to quickly import</span>
                     <button 
                         onClick={handleImportCurl}
                         style={{ 
-                            padding: '8px 16px', backgroundColor: 'var(--accent-primary)', border: 'none', 
-                            borderRadius: '4px', color: 'white', fontWeight: 500, cursor: 'pointer' 
+                            padding: '12px 24px', backgroundColor: 'var(--accent-primary)', border: 'none', 
+                            borderRadius: '8px', color: 'white', fontWeight: 700, cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(37,99,235,0.3)'
                         }}
                     >
                         Import Request
@@ -243,6 +318,13 @@ export default function CommandPalette() {
             </div>
         )}
       </div>
-    </div>
+      <style>{`
+        @keyframes palette-in {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
+    </div>,
+    document.body
   );
 }
