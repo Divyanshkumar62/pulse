@@ -28,6 +28,7 @@ interface FlowStore {
   addLog: (log: ExecutionLog) => void;
   clearLogs: () => void;
   updateNodeData: (nodeId: string, data: Partial<FlowNode['data']>) => void;
+  resetFlowStatus: (flowId: string) => void;
   
   saveFlowsToDisk: () => Promise<void>;
   loadFlowsFromDisk: (workspacePath: string) => Promise<void>;
@@ -78,6 +79,21 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
         };
       })
     });
+  },
+
+  resetFlowStatus: (flowId) => {
+    set(state => ({
+      flows: state.flows.map(f => {
+        if (f.id !== flowId) return f;
+        return {
+          ...f,
+          nodes: f.nodes.map(n => ({
+            ...n,
+            data: { ...n.data, status: 'idle', lastResponse: undefined, triggeredHandle: undefined }
+          }))
+        };
+      })
+    }));
   },
 
   saveFlowsToDisk: async () => {

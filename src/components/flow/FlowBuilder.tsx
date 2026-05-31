@@ -33,6 +33,7 @@ const nodeTypes = {
   logic: LogicNode,
   delay: LogicNode,
   loop: LogicNode,
+  assertion: LogicNode,
 };
 
 const edgeTypes = {
@@ -297,13 +298,22 @@ export default function FlowBuilder() {
           }));
           
           const edgesWithArrows = storeEdges.map(edge => {
-            const isNegative = edge.sourceHandle === 'failure' || edge.sourceHandle === 'false' || edge.sourceHandle === 'done';
-            const strokeColor = isNegative ? '#ef4444' : '#3b82f6';
+            const isNegative = edge.sourceHandle === 'failure' || edge.sourceHandle === 'false' || edge.sourceHandle === 'done' || edge.sourceHandle === 'failed';
+            const sourceNode = storeNodes.find(n => n.id === edge.source);
+            const isTriggered = sourceNode?.data?.triggeredHandle === edge.sourceHandle;
+            
+            const strokeColor = isTriggered ? '#fbbf24' : (isNegative ? '#ef4444' : '#3b82f6');
+            const strokeWidth = isTriggered ? 4 : 2;
+            
             return {
               ...edge,
-              animated: true,
+              animated: isTriggered || edge.animated,
               type: 'custom',
-              style: { stroke: strokeColor, strokeWidth: 2 },
+              style: { 
+                stroke: strokeColor, 
+                strokeWidth,
+                filter: isTriggered ? 'drop-shadow(0 0 8px #fbbf24)' : undefined
+              },
               markerEnd: {
                 type: MarkerType.ArrowClosed,
                 width: 20,

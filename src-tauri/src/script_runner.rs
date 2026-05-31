@@ -95,6 +95,31 @@ pub fn run_script(
     execute_js(script, context)
 }
 
+pub fn evaluate_boolean_script(
+    script: String,
+    context_data: ScriptContext,
+) -> Result<bool, String> {
+    let mut context = Context::default();
+
+    // Setup pm object (minimal for logic evaluation)
+    let pm = ObjectInitializer::new(&mut context).build();
+    context.register_global_property(JsString::from("pm"), pm, Attribute::all());
+
+    // Add environment and collection variables to context as global vars for easy access
+    for (k, v) in &context_data.environment {
+        let _ = context.register_global_property(JsString::from(k.as_str()), JsString::from(v.clone()), Attribute::all());
+    }
+    for (k, v) in &context_data.collection {
+        let _ = context.register_global_property(JsString::from(k.as_str()), JsString::from(v.clone()), Attribute::all());
+    }
+
+    let result = context
+        .eval(Source::from_bytes(script.as_bytes()))
+        .map_err(|e| format!("Logic Error: {}", e))?;
+
+    Ok(result.to_boolean())
+}
+
 pub fn execute_js(
     script: String,
     context_data: ScriptContext,

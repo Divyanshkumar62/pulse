@@ -12,20 +12,25 @@ export class FlowRunner {
   }
 
   async run() {
-    const { setExecutionState, clearLogs, updateNodeData, addLog } = useFlowStore.getState();
+    const { setExecutionState, clearLogs, updateNodeData, addLog, resetFlowStatus } = useFlowStore.getState();
     const { environments } = useEnvStore.getState();
     
     const environment = environments.find(e => e.id === this.flow.environmentId);
     
+    resetFlowStatus(this.flow.id);
     setExecutionState('running');
     clearLogs();
 
     // 1. Setup listeners for real-time updates from Rust
-    const unlistenStatus = await listen<{ node_id: string, status: string, last_response?: HttpResponse }>(
+    const unlistenStatus = await listen<{ node_id: string, status: string, last_response?: HttpResponse, triggered_handle?: string }>(
       'flow-node-status', 
       (event) => {
-        const { node_id, status, last_response } = event.payload as any;
-        updateNodeData(node_id, { status, lastResponse: last_response });
+        const { node_id, status, last_response, triggered_handle } = event.payload as any;
+        updateNodeData(node_id, { 
+          status, 
+          lastResponse: last_response,
+          triggeredHandle: triggered_handle 
+        });
       }
     );
 

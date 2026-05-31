@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { getGitStatus, gitPull, gitAddRemote, GitStatus } from '../../hooks/useTauri';
-import { GitBranch, RefreshCw, CheckCircle, ArrowUp, Settings, X, Link2, AlertTriangle } from 'lucide-react';
+import { GitBranch, RefreshCw, CheckCircle, ArrowUp, Settings, X, Link2, AlertTriangle, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import '../../styles/components/git-sync.css';
 
@@ -120,6 +120,18 @@ export default function GitSync() {
               <RefreshCw size={12} className={isSyncing ? 'spinning' : ''} />
               <span>Sync Now</span>
               {status?.has_changes && <span className="sync-dot-badge" />}
+            </button>
+          )}
+
+          {status?.has_changes && !isRebasing && (
+            <button 
+              className="git-btn-icon" 
+              onClick={openCommitModal}
+              title="Inspect Changes"
+              disabled={isSyncing}
+              style={{ color: 'var(--accent-primary)', background: 'rgba(37,99,235,0.1)' }}
+            >
+              <Eye size={13} />
             </button>
           )}
 

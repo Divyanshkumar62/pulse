@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 use crate::collections::types::{Flow, FlowNode, FlowEdge, Environment, HistoryResponse, Header};
 use crate::http::client::send_request;
-use crate::script_runner::{execute_js, ScriptContext, RequestInfo};
+use crate::script_runner::{evaluate_boolean_script, execute_js, ScriptContext, RequestInfo};
 use tauri::{Window, Emitter};
 use serde::{Serialize, Deserialize};
 use async_recursion::async_recursion;
@@ -13,6 +13,7 @@ pub struct FlowNodeStatusEvent {
     pub node_id: String,
     pub status: String, // "running", "success", "error", "idle"
     pub last_response: Option<HistoryResponse>,
+    pub triggered_handle: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -86,6 +87,9 @@ impl FlowRunner {
                 "logic" => {
                     if result.as_deref() == Some("true") { vec![Some("true".to_string())] } else { vec![Some("false".to_string())] }
                 },
+                "assertion" => {
+                    if result.as_deref() == Some("passed") { vec![Some("passed".to_string())] } else { vec![Some("failed".to_string())] }
+                },
                 "request" => {
                     if result.as_deref() == Some("success") { vec![Some("success".to_string())] } else { vec![Some("failure".to_string())] }
                 },
@@ -117,18 +121,18 @@ impl FlowRunner {
 
     #[async_recursion]
     async fn execute_node(&mut self, node: &FlowNode) -> Result<Option<String>, String> {
-        self.emit_status(&node.id, "running", None);
+        self.emit_status(&node.id, "running", None, None);
         
         match node.r#type.as_str() {
             "request" => {
                 match self.run_request_node(node).await {
                     Ok(res) => {
-                        self.emit_status(&node.id, "success", Some(res));
+                        self.emit_status(&node.id, "success", Some(res), Some("success".to_string()));
                         Ok(Some("success".to_string()))
                     },
                     Err(e) => {
                         self.emit_log(&node.id, &e, "error");
-                        self.emit_status(&node.id, "error", None);
+                        self.emit_status(&node.id, "error", None, Some("failure".to_string()));
                         Ok(Some("failure".to_string()))
                     }
                 }
@@ -136,28 +140,37 @@ impl FlowRunner {
             "logic" => {
                 let condition = node.data.condition.as_deref().unwrap_or("true");
                 let is_true = self.evaluate_logic(condition).await?;
-                self.emit_status(&node.id, if is_true { "success" } else { "error" }, None);
+                let handle = if is_true { "true" } else { "false" };
+                self.emit_status(&node.id, if is_true { "success" } else { "error" }, None, Some(handle.to_string()));
                 self.emit_log(&node.id, &format!("Condition '{}' evaluated to {}", condition, is_true), "info");
-                Ok(Some(if is_true { "true" } else { "false" }.to_string()))
+                Ok(Some(handle.to_string()))
+            },
+            "assertion" => {
+                let condition = node.data.condition.as_deref().unwrap_or("true");
+                let is_true = self.evaluate_logic(condition).await?;
+                let handle = if is_true { "passed" } else { "failed" };
+                self.emit_status(&node.id, if is_true { "success" } else { "error" }, None, Some(handle.to_string()));
+                self.emit_log(&node.id, &format!("Assertion '{}' {}", condition, if is_true { "passed" } else { "failed" }), if is_true { "success" } else { "error" });
+                Ok(Some(handle.to_string()))
             },
             "loop" => {
                 self.run_loop_node(node).await?;
-                self.emit_status(&node.id, "success", None);
+                self.emit_status(&node.id, "success", None, Some("done".to_string()));
                 Ok(Some("done".to_string()))
             },
             "delay" => {
                 let ms = node.data.delay_ms.unwrap_or(1000);
                 tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
-                self.emit_status(&node.id, "success", None);
+                self.emit_status(&node.id, "success", None, None);
                 Ok(None)
             },
             "start" | "end" => {
-                self.emit_status(&node.id, "success", None);
+                self.emit_status(&node.id, "success", None, None);
                 Ok(None)
             },
             _ => {
                 self.emit_log(&node.id, &format!("Unknown node type: {}", node.r#type), "warn");
-                self.emit_status(&node.id, "success", None);
+                self.emit_status(&node.id, "success", None, None);
                 Ok(None)
             }
         }
@@ -268,9 +281,7 @@ impl FlowRunner {
             request: RequestInfo { url: "".to_string(), method: "".to_string(), headers: HashMap::new() },
             response: None,
         };
-        let script = format!("(function() {{ return !!({}); }})()", condition);
-        let _ = execute_js(script, context)?;
-        Ok(true) 
+        evaluate_boolean_script(condition.to_string(), context)
     }
 
     fn resolve_variables(&self, input: &str) -> String {
@@ -296,12 +307,13 @@ impl FlowRunner {
         }
     }
 
-    fn emit_status(&self, node_id: &str, status: &str, resp: Option<HistoryResponse>) {
+    fn emit_status(&self, node_id: &str, status: &str, resp: Option<HistoryResponse>, handle: Option<String>) {
         let _ = self.window.emit("flow-node-status", FlowNodeStatusEvent {
             flow_id: self.flow.id.clone(),
             node_id: node_id.to_string(),
             status: status.to_string(),
             last_response: resp,
+            triggered_handle: handle,
         });
     }
 

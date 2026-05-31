@@ -12,6 +12,7 @@ const nodeTypeOptions = [
   { type: 'request', label: 'HTTP Request', description: 'Make an HTTP API call' },
   { type: 'delay', label: 'Delay', description: 'Wait for a specified time' },
   { type: 'logic', label: 'Condition', description: 'Branch based on a condition' },
+  { type: 'assertion', label: 'Assertion', description: 'Verify response data' },
   { type: 'loop', label: 'Loop', description: 'Iterate over an array' },
 ];
 

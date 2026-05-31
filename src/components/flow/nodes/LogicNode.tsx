@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Clock, GitBranch, Repeat, Settings2, Plus, MoreVertical, Play } from 'lucide-react';
+import { Clock, GitBranch, Repeat, Settings2, Plus, MoreVertical, Play, CheckSquare } from 'lucide-react';
 import '../../../styles/components/flow/flow-nodes.css';
 
 export function LogicNode({ data, id }: { data: any, id: string }) {
@@ -9,11 +9,13 @@ export function LogicNode({ data, id }: { data: any, id: string }) {
   const isDelay = data.type === 'delay';
   const isBranch = data.type === 'logic';
   const isLoop = data.type === 'loop';
+  const isAssertion = data.type === 'assertion';
 
   const getIcon = () => {
     if (isDelay) return <Clock size={16} className="text-blue-400" />;
     if (isBranch) return <GitBranch size={16} className="text-purple-400" />;
     if (isLoop) return <Repeat size={16} className="text-orange-400" />;
+    if (isAssertion) return <CheckSquare size={16} className="text-green-400" />;
     return <Settings2 size={16} className="text-slate-400" />;
   };
 
@@ -109,30 +111,30 @@ export function LogicNode({ data, id }: { data: any, id: string }) {
 
       <div className="logic-node-info">
         <span className="node-active-tag">
-          {isDelay ? 'Delay' : isBranch ? 'Logic' : isLoop ? 'Loop' : 'Control'}
+          {isDelay ? 'Delay' : isBranch ? 'Condition' : isLoop ? 'Loop' : isAssertion ? 'Assertion' : 'Control'}
         </span>
         <span className="node-name">
-          {isDelay ? `${data.delayMs || 1000}ms Wait` : isBranch ? (data.condition || 'Condition') : data.name}
+          {isDelay ? `${data.delayMs || 1000}ms Wait` : (isBranch || isAssertion) ? (data.condition || 'New Logic') : data.name}
         </span>
       </div>
 
-      {isBranch ? (
+      {(isBranch || isAssertion) ? (
         <>
           <Handle 
             type="source" 
             position={Position.Right} 
-            id="true"
+            id={isBranch ? "true" : "passed"}
             className="flow-handle flow-handle-right flow-handle-true"
           />
-          <div className="handle-label success-label top">True</div>
+          <div className="handle-label success-label top">{isBranch ? 'True' : 'Passed'}</div>
 
           <Handle 
             type="source" 
             position={Position.Right} 
-            id="false"
+            id={isBranch ? "false" : "failed"}
             className="flow-handle flow-handle-right flow-handle-false"
           />
-          <div className="handle-label failure-label bottom">False</div>
+          <div className="handle-label failure-label bottom">{isBranch ? 'False' : 'Failed'}</div>
         </>
       ) : isLoop ? (
         <>

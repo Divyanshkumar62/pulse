@@ -159,14 +159,14 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
             </div>
           )}
 
-          {node.type === 'logic' && (
+          {(node.type === 'logic' || node.type === 'assertion') && (
             <div className="config-section">
-              <label className="config-label">Condition</label>
+              <label className="config-label">{node.type === 'logic' ? 'Condition' : 'Assertion'}</label>
               <input 
                 type="text" 
                 value={condition}
                 onChange={(e) => setCondition(e.target.value)}
-                placeholder="{{variable}} === true"
+                placeholder={node.type === 'logic' ? "{{variable}} === true" : "pm.response.code === 200"}
                 className="kv-input"
                 style={{ width: '100%', marginTop: '8px' }}
               />

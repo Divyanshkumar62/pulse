@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { X, Check, Undo, ArrowLeft, ArrowRight, ArrowDown } from 'lucide-react';
+import { X, Check, Undo, ArrowLeft, ArrowRight, ArrowDown, Columns, LayoutList } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPortal } from 'react-dom';
 import { resolveGitConflict } from '../../hooks/useTauri';
@@ -23,6 +23,7 @@ export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath,
   const [diffLines, setDiffLines] = useState<DiffLine[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
+  const [isSideBySide, setIsSideBySide] = useState(true);
 
   useEffect(() => {
     if (isOpen && workspacePath && filePath) {
@@ -73,6 +74,37 @@ export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath,
 
   if (!isOpen) return null;
 
+  // Split lines for side-by-side view
+  const leftLines: (DiffLine | null)[] = [];
+  const rightLines: (DiffLine | null)[] = [];
+
+  if (isSideBySide) {
+    let i = 0;
+    while (i < diffLines.length) {
+      const current = diffLines[i];
+      if (current.type === 'equal') {
+        leftLines.push(current);
+        rightLines.push(current);
+        i++;
+      } else if (current.type === 'removed') {
+        // Look ahead for matching added line to align them
+        if (i + 1 < diffLines.length && diffLines[i + 1].type === 'added') {
+          leftLines.push(current);
+          rightLines.push(diffLines[i + 1]);
+          i += 2;
+        } else {
+          leftLines.push(current);
+          rightLines.push(null);
+          i++;
+        }
+      } else if (current.type === 'added') {
+        leftLines.push(null);
+        rightLines.push(current);
+        i++;
+      }
+    }
+  }
+
   return createPortal(
     <div
       style={{
@@ -89,9 +121,9 @@ export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath,
     >
       <div
         style={{
-          width: '80vw',
-          maxWidth: '1000px',
-          height: '80vh',
+          width: '90vw',
+          maxWidth: '1200px',
+          height: '85vh',
           backgroundColor: 'var(--bg-deep)',
           borderRadius: '12px',
           border: '1px solid var(--border-default)',
@@ -103,11 +135,40 @@ export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath,
         onClick={e => e.stopPropagation()}
       >
         <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-default)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              {mode === 'resolve' ? 'Resolve Conflict' : 'Review Changes'}
-            </h2>
-            <code style={{ fontSize: '11px', color: 'var(--accent-primary)', background: 'rgba(37,99,235,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{filePath}</code>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                {mode === 'resolve' ? 'Resolve Conflict' : 'Review Changes'}
+              </h2>
+              <code style={{ fontSize: '11px', color: 'var(--accent-primary)', background: 'rgba(37,99,235,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{filePath}</code>
+            </div>
+
+            <div style={{ display: 'flex', background: 'var(--bg-surface)', borderRadius: '6px', border: '1px solid var(--border-subtle)', padding: '2px' }}>
+              <button 
+                onClick={() => setIsSideBySide(false)}
+                style={{ 
+                  padding: '4px 8px', borderRadius: '4px', border: 'none', cursor: 'pointer',
+                  background: !isSideBySide ? 'var(--bg-elevated)' : 'transparent',
+                  color: !isSideBySide ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                  display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600
+                }}
+              >
+                <LayoutList size={14} />
+                Unified
+              </button>
+              <button 
+                onClick={() => setIsSideBySide(true)}
+                style={{ 
+                  padding: '4px 8px', borderRadius: '4px', border: 'none', cursor: 'pointer',
+                  background: isSideBySide ? 'var(--bg-elevated)' : 'transparent',
+                  color: isSideBySide ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                  display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600
+                }}
+              >
+                <Columns size={14} />
+                Split
+              </button>
+            </div>
           </div>
           
           <div style={{ display: 'flex', gap: '12px' }}>
@@ -184,7 +245,7 @@ export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath,
           </div>
         </div>
 
-        <div style={{ flex: 1, overflow: 'auto', background: '#0d1117', padding: '12px 0' }}>
+        <div style={{ flex: 1, overflow: 'auto', background: '#0d1117' }}>
           {isLoading ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-tertiary)' }}>
               Calculating differences...
@@ -193,8 +254,58 @@ export default function GitDiffModal({ isOpen, onClose, workspacePath, filePath,
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-tertiary)' }}>
               No changes detected.
             </div>
+          ) : isSideBySide ? (
+            <div style={{ display: 'flex', minWidth: '100%', minHeight: '100%' }}>
+              {/* Left Pane (Original) */}
+              <div style={{ flex: 1, borderRight: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.1)' }}>
+                <div style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.03)', fontSize: '10px', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>ORIGINAL</div>
+                <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-mono)', fontSize: '11px', lineHeight: '1.6', padding: '12px 0' }}>
+                  {leftLines.map((line, idx) => (
+                    <div 
+                      key={idx} 
+                      style={{ 
+                        display: 'flex', 
+                        width: '100%',
+                        background: line?.type === 'removed' ? 'rgba(248,81,70,0.15)' : 'transparent',
+                        opacity: line ? 1 : 0.2,
+                        minHeight: '1.6em'
+                      }}
+                    >
+                      <span style={{ width: '35px', textAlign: 'right', paddingRight: '8px', color: 'var(--text-tertiary)', userSelect: 'none', opacity: 0.4 }}>{line ? idx + 1 : ''}</span>
+                      <pre style={{ margin: 0, padding: '0 8px', whiteSpace: 'pre-wrap', color: line?.type === 'removed' ? '#ffdcd7' : '#c9d1d9', flex: 1 }}>
+                        {line?.content || (line === null ? '' : ' ')}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Pane (Modified) */}
+              <div style={{ flex: 1 }}>
+                <div style={{ padding: '8px 16px', background: 'rgba(37,99,235,0.05)', fontSize: '10px', fontWeight: 700, color: 'var(--accent-primary)', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-subtle)' }}>MODIFIED</div>
+                <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-mono)', fontSize: '11px', lineHeight: '1.6', padding: '12px 0' }}>
+                  {rightLines.map((line, idx) => (
+                    <div 
+                      key={idx} 
+                      style={{ 
+                        display: 'flex', 
+                        width: '100%',
+                        background: line?.type === 'added' ? 'rgba(46,160,67,0.15)' : 'transparent',
+                        opacity: line ? 1 : 0.2,
+                        minHeight: '1.6em'
+                      }}
+                    >
+                      <span style={{ width: '35px', textAlign: 'right', paddingRight: '8px', color: 'var(--text-tertiary)', userSelect: 'none', opacity: 0.4 }}>{line ? idx + 1 : ''}</span>
+                      <pre style={{ margin: 0, padding: '0 8px', whiteSpace: 'pre-wrap', color: line?.type === 'added' ? '#aff5b4' : '#c9d1d9', flex: 1 }}>
+                        {line?.content || (line === null ? '' : ' ')}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-mono)', fontSize: '12px', lineHeight: '1.6' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-mono)', fontSize: '12px', lineHeight: '1.6', padding: '12px 0' }}>
               {diffLines.map((line, idx) => (
                 <div 
                   key={idx} 
