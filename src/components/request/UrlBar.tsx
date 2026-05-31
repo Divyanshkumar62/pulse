@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
 import { HttpMethod } from '../../types';
 import { toast } from 'sonner';
+import { FileText, Server } from 'lucide-react';
+import { useMockStore } from '../../stores/useMockStore';
 
 interface UrlBarProps {
   onSend: () => void;
@@ -23,7 +25,8 @@ const METHOD_COLORS: Record<string, string> = {
 };
 
 export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
-  const { tabs, activeTabId, updateActiveTabRequest } = useTabStore();
+  const { updateActiveTabRequest, tabs, activeTabId } = useTabStore();
+  const { createMockFromRequest } = useMockStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const request = activeTab?.request;
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -105,6 +108,15 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
           {!isWebSocket && (
             <>
               <button 
+                className={`icon-action-btn ${request.showDocs ? 'active' : ''}`}
+                onClick={() => updateActiveTabRequest({ showDocs: !request.showDocs })}
+                title="Toggle Live Documentation"
+                style={{ color: request.showDocs ? 'var(--accent-primary)' : 'inherit' }}
+              >
+                <FileText size={16} strokeWidth={2.5} />
+              </button>
+
+              <button 
                 className="icon-action-btn"
                 onClick={onCode}
                 title="Generate Code Snippet"
@@ -125,6 +137,17 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
                   <polyline points="17 21 17 13 7 13 7 21"></polyline>
                   <polyline points="7 3 7 8 15 8"></polyline>
                 </svg>
+              </button>
+
+              <button 
+                className="icon-action-btn"
+                onClick={() => {
+                  createMockFromRequest(request);
+                  toast.success('Mock created from request!');
+                }}
+                title="Create Mock from Request"
+              >
+                <Server size={16} strokeWidth={2.5} />
               </button>
 
               <button 

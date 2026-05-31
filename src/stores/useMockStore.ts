@@ -16,6 +16,7 @@ interface MockStore {
   startMockServer: (id: string) => Promise<void>;
   stopMockServer: (id: string) => Promise<void>;
   saveMockServersToDisk: () => Promise<void>;
+  createMockFromRequest: (request: any) => Promise<void>;
 }
 
 const getWorkspacePath = () => {
@@ -210,6 +211,74 @@ export const useMockStore = create<MockStore>((set, get) => ({
       }
     } else {
       localStorage.setItem('pulse_mock_servers', JSON.stringify(servers));
+    }
+  },
+
+  createMockFromRequest: async (request) => {
+    let servers = get().mockServers;
+    
+    // 1. Ensure we have at least one server
+    if (servers.length === 0) {
+      const defaultServer: MockServer = {
+        id: crypto.randomUUID(),
+        name: 'Team Mock Server',
+        port: 4000,
+        routes: [],
+        status: 'inactive'
+      };
+      servers = [defaultServer];
+    }
+
+    const targetServer = servers[0];
+
+    // 2. Robust Path Parsing
+    let path = '/';
+    if (request.url) {
+      try {
+        // Try parsing as full URL
+        if (request.url.startsWith('http')) {
+          const url = new URL(request.url);
+          path = url.pathname;
+        } else {
+          // Try parsing as relative/partial path
+          path = request.url.startsWith('/') ? request.url : `/${request.url}`;
+          // Strip query params
+          path = path.split('?')[0];
+        }
+      } catch (e) {
+        path = request.url;
+      }
+    }
+
+    // 3. Create the Route
+    const newRoute: MockRoute = {
+      id: crypto.randomUUID(),
+      name: request.name || `Mock: ${request.method} ${path}`,
+      path: path || '/',
+      method: request.method || 'GET',
+      statusCode: 200,
+      responseBody: '{}',
+      headers: []
+    };
+
+    // 4. Update and Persist
+    const updatedServers = servers.map(s => 
+      s.id === targetServer.id 
+        ? { ...s, routes: [...s.routes, newRoute] } 
+        : s
+    );
+
+    set({ 
+      mockServers: updatedServers, 
+      activeMockServerId: targetServer.id 
+    });
+
+    await get().saveMockServersToDisk();
+
+    // 5. Auto-restart if active
+    const serverAfterUpdate = updatedServers.find(s => s.id === targetServer.id);
+    if (serverAfterUpdate && serverAfterUpdate.status === 'active') {
+      await get().startMockServer(targetServer.id);
     }
   }
 }));

@@ -61,4 +61,5 @@ Cargo.lock
 # Agent Skills
 .agent/skills/
 
+*.md
 nul

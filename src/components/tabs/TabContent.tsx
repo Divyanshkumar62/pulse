@@ -3,16 +3,22 @@ import { useAppStore } from '../../stores/useAppStore';
 import RequestBuilder from '../request/RequestBuilder';
 import ResponseViewer from '../response/ResponseViewer';
 import CollectionRunner from '../collections/CollectionRunner';
-import CollectionDocs from '../collections/CollectionDocs';
+import DocumentationView from '../collections/CollectionDocs';
 import WelcomeScreen from '../layout/WelcomeScreen';
 import { useResizable } from '../../hooks/useResizable';
 import '../../styles/components/tab-content.css';
 
 export default function TabContent() {
   const { tabs, activeTabId, closeTab } = useTabStore();
-  const { responsePosition, responseHeight, setResponseHeight, responseWidth, setResponseWidth } = useAppStore();
+  const { responsePosition, responseHeight, setResponseHeight, responseWidth, setResponseWidth, sidebarTab } = useAppStore();
 
   const activeTab = tabs.find(t => t.id === activeTabId);
+
+  // Pillar B: Documentation Split Mode
+  // If we are in 'collections' tab and have a request open, we can toggle docs split
+  // For now, let's use a simple state or derived logic.
+  // In a future step, we'll add a toggle button to the UI.
+  const showDocsSplit = activeTab?.type === 'request' && activeTab?.request?.showDocs;
 
   const isBottom = responsePosition === 'bottom';
   
@@ -81,7 +87,7 @@ export default function TabContent() {
         className="response-pane" 
         style={isBottom ? { height: `${resHeight}px` } : { width: `${resWidth}px` }}
       >
-        <ResponseViewer />
+        {showDocsSplit ? <DocumentationView /> : <ResponseViewer />}
       </div>
     </div>
   );
