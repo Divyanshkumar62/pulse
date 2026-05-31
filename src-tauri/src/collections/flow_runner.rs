@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 use crate::collections::types::{Flow, FlowNode, FlowEdge, Environment, HistoryResponse, Header};
 use crate::http::client::send_request;
-use crate::script_runner::{evaluate_boolean_script, execute_js, ScriptContext, RequestInfo};
+use crate::script_runner::{evaluate_boolean_script, ScriptContext, RequestInfo};
 use tauri::{Window, Emitter};
 use serde::{Serialize, Deserialize};
 use async_recursion::async_recursion;
@@ -55,7 +55,7 @@ impl FlowRunner {
         self.emit_log("system", "Starting flow execution...", "info");
 
         for node in &self.flow.nodes {
-            self.emit_status(&node.id, "idle", None);
+            self.emit_status(&node.id, "idle", None, None);
         }
 
         let mut adj: HashMap<String, Vec<FlowEdge>> = HashMap::new();
