@@ -1,79 +1,54 @@
-import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 interface VirtualListProps<T> {
   items: T[];
-  height: number;
+  height: number | string;
   itemHeight: number;
   renderItem: (item: T, index: number) => React.ReactNode;
-  overscan?: number;
   className?: string;
 }
 
-export default function VirtualList<T>({
-  items,
-  height,
-  itemHeight,
-  renderItem,
-  overscan = 5,
-  className = ''
-}: VirtualListProps<T>) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export default function VirtualList<T>({ items, height, itemHeight, renderItem, className }: VirtualListProps<T>) {
   const [scrollTop, setScrollTop] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+  const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(e.currentTarget.scrollTop);
-  }, []);
+  };
 
+  const visibleCount = typeof height === 'number' 
+    ? Math.ceil(height / itemHeight) 
+    : 30; // Fallback for string heights like '100%'
+
+  const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - 5);
+  const endIndex = Math.min(items.length, startIndex + visibleCount + 10);
+
+  const visibleItems = items.slice(startIndex, endIndex);
   const totalHeight = items.length * itemHeight;
-  
-  const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
-  const endIndex = Math.min(
-    items.length - 1,
-    Math.floor((scrollTop + height) / itemHeight) + overscan
-  );
-
-  const visibleItems = useMemo(() => {
-    const visible = [];
-    for (let i = startIndex; i <= endIndex; i++) {
-        if (!items[i]) continue;
-      visible.push({
-        item: items[i],
-        index: i,
-        top: i * itemHeight
-      });
-    }
-    return visible;
-  }, [items, startIndex, endIndex, itemHeight]);
+  const offsetY = startIndex * itemHeight;
 
   return (
-    <div
+    <div 
       ref={containerRef}
       onScroll={onScroll}
       className={className}
-      style={{
-        height,
+      style={{ 
+        height, 
         overflowY: 'auto',
-        position: 'relative',
-        width: '100%',
-        scrollbarWidth: 'thin',
-        scrollbarColor: 'var(--border-default) transparent'
+        position: 'relative'
       }}
     >
-      <div style={{ height: totalHeight, width: '100%', position: 'relative' }}>
-        {visibleItems.map(({ item, index, top }) => (
-          <div
-            key={index}
-            style={{
-              position: 'absolute',
-              top,
-              left: 0,
-              width: '100%',
-              height: itemHeight
-            }}
-          >
-            {renderItem(item, index)}
-          </div>
-        ))}
+      <div style={{ height: totalHeight, width: '100%', pointerEvents: 'none' }} />
+      <div 
+        style={{ 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          transform: `translateY(${offsetY}px)`
+        }}
+      >
+        {visibleItems.map((item, index) => renderItem(item, startIndex + index))}
       </div>
     </div>
   );

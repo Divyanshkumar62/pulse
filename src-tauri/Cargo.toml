@@ -46,6 +46,7 @@ fake = "2.9.2"
 clap = { version = "4", features = ["derive"] }
 openapiv3 = "2"
 diff = "0.1"
+fuzzy-matcher = "0.3.7"
 tauri-plugin-notification = "2"
 async-recursion = "1.1.1"
 

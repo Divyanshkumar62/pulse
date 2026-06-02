@@ -10,6 +10,7 @@ import {
   FileText, Activity, Server, Zap, Shield
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { invoke } from '@tauri-apps/api/core';
 
 interface PaletteItem {
   id: string;
@@ -35,6 +36,8 @@ export default function CommandPalette() {
   const { workspaces, activeWorkspaceId, setActiveWorkspaceId } = useWorkspaceStore();
   const { openTab } = useTabStore();
   const [items, setItems] = useState<PaletteItem[]>([]);
+  const [filtered, setFiltered] = useState<PaletteItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     if (isCommandPaletteOpen && mode === 'import-curl' && textAreaRef.current) {
@@ -158,26 +161,54 @@ export default function CommandPalette() {
     setItems(newItems);
   }, [workspaces, activeWorkspaceId, openTab, setSettingsOpen, setSidebarTab, setActiveWorkspaceId]);
 
+  useEffect(() => {
+    if (mode !== 'search') return;
+    
+    const triggerSearch = async () => {
+        if (!search.trim()) {
+            setFiltered(items);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            // Map items to simple searchable format for Rust
+            const searchItems = items.map(item => ({
+                id: item.id,
+                title: item.title,
+                subtitle: item.subtitle,
+                category: item.category
+            }));
+
+            const results = await invoke<any[]>('fuzzy_search', { 
+                query: search, 
+                items: searchItems 
+            });
+
+            // Map back to original items to preserve actions and icons
+            const matchedItems = results.map(res => 
+                items.find(i => i.id === res.item.id)
+            ).filter(Boolean) as PaletteItem[];
+
+            setFiltered(matchedItems);
+        } catch (e) {
+            console.error('Fuzzy search failed:', e);
+            // Fallback to simple filtering if Rust fails
+            const simpleFiltered = items.filter(item => 
+                item.title.toLowerCase().includes(search.toLowerCase()) || 
+                (item.subtitle && item.subtitle.toLowerCase().includes(search.toLowerCase()))
+            );
+            setFiltered(simpleFiltered);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const timer = setTimeout(triggerSearch, 50);
+    return () => clearTimeout(timer);
+  }, [search, items, mode]);
+
   if (!isCommandPaletteOpen) return null;
-
-  const handleImportCurl = () => {
-    if (!curlInput.trim()) return;
-    try {
-      const request = CurlParser.parse(curlInput);
-      openTab(request);
-      setCommandPaletteOpen(false);
-      setCurlInput('');
-      setMode('search');
-    } catch (e) {
-      toast.error('Failed to parse cURL command');
-    }
-  };
-
-  const filtered = items.filter(item => 
-    item.title.toLowerCase().includes(search.toLowerCase()) || 
-    (item.subtitle && item.subtitle.toLowerCase().includes(search.toLowerCase())) ||
-    item.category.toLowerCase().includes(search.toLowerCase())
-  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (mode === 'import-curl') {

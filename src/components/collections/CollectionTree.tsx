@@ -12,6 +12,7 @@ import { MoreVertical, Pin, FolderOpen, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { getGravatarUrl } from '../../utils/gravatar';
+import VirtualList from '../ui/VirtualList';
 
 type TreeItem = 
   | { type: 'collection'; id: string; name: string; data: any; level: number }
@@ -848,8 +849,13 @@ export default function CollectionTree() {
                     compact
                 />
             ) : (
-                <div className="tree-items" style={{ flex: 1 }}>
-                    {visibleItems.map((item, idx) => renderTreeItem(item, idx))}
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <VirtualList
+                        items={visibleItems}
+                        itemHeight={32}
+                        height="100%"
+                        renderItem={(item, idx) => renderTreeItem(item, idx)}
+                    />
                 </div>
             )}
           </>
