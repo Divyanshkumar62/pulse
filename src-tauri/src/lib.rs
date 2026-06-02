@@ -3,6 +3,7 @@ pub mod collections;
 mod http;
 mod mock_server;
 pub mod script_runner;
+mod search;
 
 #[tauri::command]
 async fn start_oauth_flow(
@@ -155,12 +156,14 @@ async fn send_http_request(
 
 #[tauri::command]
 fn load_collection(path: String) -> Result<collections::types::Collection, String> {
-    loader::load_from_file(&path).map_err(|e| e.to_string())
+    let sanitized_path = collections::utils::sanitize_path(&path)?;
+    loader::load_from_file(sanitized_path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn save_collection(collection: collections::types::Collection, path: String) -> Result<(), String> {
-    loader::save_to_file(&collection, &path).map_err(|e| e.to_string())
+    let sanitized_path = collections::utils::sanitize_path(&path)?;
+    loader::save_to_file(&collection, sanitized_path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -263,58 +266,69 @@ fn export_collection(collection: Collection, format: String) -> Result<serde_jso
 // Workspace Sync Commands
 #[tauri::command]
 async fn save_collection_to_disk(workspace_path: String, collection: Collection) -> Result<(), String> {
-    collections::workspace::save_collection_to_disk(workspace_path, collection).await
+    let sanitized_path = collections::utils::validate_workspace_path(&workspace_path)?;
+    collections::workspace::save_collection_to_disk(sanitized_path.to_string_lossy().to_string(), collection).await
 }
 
 #[tauri::command]
 async fn load_collections_from_workspace(workspace_path: String) -> Result<Vec<Collection>, String> {
-    collections::workspace::load_collections_from_workspace(workspace_path).await
+    let sanitized_path = collections::utils::validate_workspace_path(&workspace_path)?;
+    collections::workspace::load_collections_from_workspace(sanitized_path.to_string_lossy().to_string()).await
 }
 
 #[tauri::command]
 async fn save_workspace_to_disk(workspace_path: String, environments: Vec<Environment>) -> Result<(), String> {
-    collections::workspace::save_workspace_to_disk(workspace_path, environments).await
+    let sanitized_path = collections::utils::validate_workspace_path(&workspace_path)?;
+    collections::workspace::save_workspace_to_disk(sanitized_path.to_string_lossy().to_string(), environments).await
 }
 
 #[tauri::command]
 async fn save_flows_to_disk(workspace_path: String, flows: Vec<crate::collections::types::Flow>) -> Result<(), String> {
-    collections::workspace::save_flows_to_disk(workspace_path, flows).await
+    let sanitized_path = collections::utils::validate_workspace_path(&workspace_path)?;
+    collections::workspace::save_flows_to_disk(sanitized_path.to_string_lossy().to_string(), flows).await
 }
 
 #[tauri::command]
 async fn load_flows_from_workspace(workspace_path: String) -> Result<Vec<crate::collections::types::Flow>, String> {
-    collections::workspace::load_flows_from_workspace(workspace_path).await
+    let sanitized_path = collections::utils::validate_workspace_path(&workspace_path)?;
+    collections::workspace::load_flows_from_workspace(sanitized_path.to_string_lossy().to_string()).await
 }
 
 // Git Commands
 #[tauri::command]
 async fn git_init_repo(path: String) -> Result<(), String> {
-    collections::git::git_init(&path)
+    let sanitized_path = collections::utils::validate_workspace_path(&path)?;
+    collections::git::git_init(sanitized_path.to_str().unwrap_or(&path))
 }
 
 #[tauri::command]
 async fn get_git_status(path: String) -> Result<collections::git::GitStatus, String> {
-    collections::git::git_status(&path)
+    let sanitized_path = collections::utils::validate_workspace_path(&path)?;
+    collections::git::git_status(sanitized_path.to_str().unwrap_or(&path))
 }
 
 #[tauri::command]
 async fn git_commit_changes(path: String, message: String) -> Result<(), String> {
-    collections::git::git_commit(&path, &message)
+    let sanitized_path = collections::utils::validate_workspace_path(&path)?;
+    collections::git::git_commit(sanitized_path.to_str().unwrap_or(&path), &message)
 }
 
 #[tauri::command]
 async fn git_push_repo(path: String) -> Result<bool, String> {
-    collections::git::git_push(&path)
+    let sanitized_path = collections::utils::validate_workspace_path(&path)?;
+    collections::git::git_push(sanitized_path.to_str().unwrap_or(&path))
 }
 
 #[tauri::command]
 async fn git_pull_repo(path: String) -> Result<(), String> {
-    collections::git::git_pull(&path)
+    let sanitized_path = collections::utils::validate_workspace_path(&path)?;
+    collections::git::git_pull(sanitized_path.to_str().unwrap_or(&path))
 }
 
 #[tauri::command]
 async fn git_add_remote(path: String, remote_name: String, remote_url: String) -> Result<(), String> {
-    collections::git::git_add_remote(&path, &remote_name, &remote_url)
+    let sanitized_path = collections::utils::validate_workspace_path(&path)?;
+    collections::git::git_add_remote(sanitized_path.to_str().unwrap_or(&path), &remote_name, &remote_url)
 }
 
 #[tauri::command]
@@ -485,6 +499,31 @@ fn remove_team_member(team_id: String, user_id: String) -> Result<(), String> {
     team_loader::remove_member(teams_path.to_str().unwrap_or("teams.yaml"), team_id, user_id)
 }
 
+#[tauri::command]
+fn write_file_content(path: String, file_path: String, content: String) -> Result<(), String> {
+    let sanitized_path = collections::utils::validate_workspace_path(&path)?;
+    let full_path = sanitized_path.join(file_path);
+    std::fs::write(full_path, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn read_conflicted_file(path: String, file_path: String, stage: u8) -> Result<String, String> {
+    let sanitized_path = collections::utils::validate_workspace_path(&path)?;
+    let path_str = sanitized_path.to_str().unwrap_or(&path);
+    
+    let output = std::process::Command::new("git")
+        .args(["show", &format!(":{}:{}", stage, file_path)])
+        .current_dir(path_str)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _ = get_data_dir();
@@ -551,6 +590,9 @@ pub fn run() {
             save_workspace_mock_servers,
             load_workspace_mock_servers,
             script_runner::run_script,
+            search::fuzzy_search,
+            read_conflicted_file,
+            write_file_content,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

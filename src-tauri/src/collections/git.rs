@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 use std::path::Path;
+use crate::collections::utils;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GitStatus {
@@ -226,9 +227,12 @@ pub fn git_add_remote(path: &str, remote_name: &str, remote_url: &str) -> Result
 
 #[tauri::command]
 pub async fn get_git_diff(path: String, file_path: String) -> Result<Vec<DiffLine>, String> {
+    let sanitized_path = utils::validate_workspace_path(&path)?;
+    let path_str = sanitized_path.to_str().unwrap_or(&path);
+
     let output = Command::new("git")
         .args(["show", &format!("HEAD:{}", file_path)])
-        .current_dir(&path)
+        .current_dir(path_str)
         .output();
 
     let old_content = if let Ok(o) = output {
@@ -268,9 +272,12 @@ pub async fn get_git_diff(path: String, file_path: String) -> Result<Vec<DiffLin
 
 #[tauri::command]
 pub async fn git_discard_changes(path: String, file_path: String) -> Result<(), String> {
+    let sanitized_path = utils::validate_workspace_path(&path)?;
+    let path_str = sanitized_path.to_str().unwrap_or(&path);
+
     let output = Command::new("git")
         .args(["checkout", "--", &file_path])
-        .current_dir(&path)
+        .current_dir(path_str)
         .output()
         .map_err(|e| format!("Failed to run git checkout: {}", e))?;
 
@@ -282,6 +289,9 @@ pub async fn git_discard_changes(path: String, file_path: String) -> Result<(), 
 
 #[tauri::command]
 pub async fn git_resolve_conflict(path: String, file_path: String, resolution: String) -> Result<(), String> {
+    let sanitized_path = utils::validate_workspace_path(&path)?;
+    let path_str = sanitized_path.to_str().unwrap_or(&path);
+
     let strategy = match resolution.as_str() {
         "ours" => "--ours",
         "theirs" => "--theirs",
@@ -290,7 +300,7 @@ pub async fn git_resolve_conflict(path: String, file_path: String, resolution: S
 
     let checkout_output = Command::new("git")
         .args(["checkout", strategy, &file_path])
-        .current_dir(&path)
+        .current_dir(path_str)
         .output()
         .map_err(|e| format!("Failed to checkout {}: {}", strategy, e))?;
 
@@ -300,7 +310,7 @@ pub async fn git_resolve_conflict(path: String, file_path: String, resolution: S
 
     let add_output = Command::new("git")
         .args(["add", &file_path])
-        .current_dir(&path)
+        .current_dir(path_str)
         .output()
         .map_err(|e| format!("Failed to git add resolved file: {}", e))?;
 
@@ -313,10 +323,13 @@ pub async fn git_resolve_conflict(path: String, file_path: String, resolution: S
 
 #[tauri::command]
 pub async fn git_rebase_continue(path: String) -> Result<(), String> {
+    let sanitized_path = utils::validate_workspace_path(&path)?;
+    let path_str = sanitized_path.to_str().unwrap_or(&path);
+
     let output = Command::new("git")
         .args(["rebase", "--continue"])
         .env("GIT_EDITOR", "true")
-        .current_dir(&path)
+        .current_dir(path_str)
         .output()
         .map_err(|e| format!("Failed to run git rebase --continue: {}", e))?;
 
@@ -328,9 +341,12 @@ pub async fn git_rebase_continue(path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn git_get_activity_log(path: String) -> Result<Vec<serde_json::Value>, String> {
+    let sanitized_path = utils::validate_workspace_path(&path)?;
+    let path_str = sanitized_path.to_str().unwrap_or(&path);
+
     let output = Command::new("git")
         .args(&["log", "-n", "50", "--pretty=format:%H|%an|%ae|%ar|%s"])
-        .current_dir(&path)
+        .current_dir(path_str)
         .output()
         .map_err(|e| format!("Failed to run git log: {}", e))?;
 
@@ -360,7 +376,9 @@ pub async fn git_get_activity_log(path: String) -> Result<Vec<serde_json::Value>
 
 #[tauri::command]
 pub async fn git_update_presence(path: String, email: String, item_id: String) -> Result<(), String> {
-    let presence_dir = Path::new(&path).join(".pulse").join("presence");
+    let sanitized_path = utils::validate_workspace_path(&path)?;
+    
+    let presence_dir = sanitized_path.join(".pulse").join("presence");
     std::fs::create_dir_all(&presence_dir).map_err(|e| e.to_string())?;
 
     let presence_file = presence_dir.join(format!("{}.json", email.replace("@", "_").replace(".", "_")));
@@ -378,7 +396,9 @@ pub async fn git_update_presence(path: String, email: String, item_id: String) -
 
 #[tauri::command]
 pub async fn git_get_presence(path: String) -> Result<Vec<serde_json::Value>, String> {
-    let presence_dir = Path::new(&path).join(".pulse").join("presence");
+    let sanitized_path = utils::validate_workspace_path(&path)?;
+    
+    let presence_dir = sanitized_path.join(".pulse").join("presence");
     if !presence_dir.exists() {
         return Ok(vec![]);
     }
@@ -401,9 +421,12 @@ pub async fn git_get_presence(path: String) -> Result<Vec<serde_json::Value>, St
 
 #[tauri::command]
 pub async fn git_rebase_abort(path: String) -> Result<(), String> {
+    let sanitized_path = utils::validate_workspace_path(&path)?;
+    let path_str = sanitized_path.to_str().unwrap_or(&path);
+
     let output = Command::new("git")
         .args(["rebase", "--abort"])
-        .current_dir(&path)
+        .current_dir(path_str)
         .output()
         .map_err(|e| format!("Failed to run git rebase --abort: {}", e))?;
 

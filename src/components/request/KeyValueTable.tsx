@@ -1,5 +1,6 @@
 import { KeyValuePair } from '../../types';
 import '../../styles/components/key-value-table.css';
+import { Shield, ShieldOff } from 'lucide-react';
 
 interface KeyValueTableProps {
   items: KeyValuePair[];
@@ -59,12 +60,28 @@ export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key',
               value={item.key || ''}
               onChange={(e) => handleChange(index, 'key', e.target.value)}
             />
-            <input
-              className="kv-input mono"
-              placeholder={valuePlaceholder}
-              value={item.value || ''}
-              onChange={(e) => handleChange(index, 'value', e.target.value)}
-            />
+            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+                <input
+                className="kv-input mono"
+                placeholder={valuePlaceholder}
+                type={item.secret ? 'password' : 'text'}
+                value={item.value || ''}
+                onChange={(e) => handleChange(index, 'value', e.target.value)}
+                style={{ width: '100%', paddingRight: '24px' }}
+                />
+                <button 
+                    onClick={() => handleChange(index, 'secret', !item.secret)}
+                    style={{ 
+                        position: 'absolute', right: '4px', background: 'none', border: 'none', 
+                        padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                        color: item.secret ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                        opacity: (item.key || item.value) ? 1 : 0.2
+                    }}
+                    title={item.secret ? "Unmask Secret" : "Mark as Secret"}
+                >
+                    {item.secret ? <Shield size={12} strokeWidth={2.5} /> : <ShieldOff size={12} strokeWidth={2.5} />}
+                </button>
+            </div>
             <input
               className="kv-input"
               placeholder="Description"

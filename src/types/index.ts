@@ -3,6 +3,7 @@ export interface KeyValuePair {
   value: string;
   enabled?: boolean;
   description?: string;
+  secret?: boolean;
 }
 
 export type Header = KeyValuePair;
