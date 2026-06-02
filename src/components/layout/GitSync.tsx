@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
 import { useAppStore } from '../../stores/useAppStore';
 import { getGitStatus, gitPull, gitAddRemote, GitStatus } from '../../hooks/useTauri';
-import { GitBranch, RefreshCw, CheckCircle, ArrowUp, Settings, X, Link2, AlertTriangle, Eye } from 'lucide-react';
+import { GitBranch, RefreshCw, CheckCircle, ArrowUp, Settings, X, Link2, AlertTriangle, Eye, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import '../../styles/components/git-sync.css';
+import ConflictResolver from '../modals/ConflictResolver';
 
 export default function GitSync() {
   const { workspaces, activeWorkspaceId } = useWorkspaceStore();
@@ -16,6 +17,7 @@ export default function GitSync() {
   const [showRemoteModal, setShowRemoteModal] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState('');
   const [isSettingRemote, setIsSettingRemote] = useState(false);
+  const [showConflictResolver, setShowConflictResolver] = useState(false);
   
   const refreshStatus = useCallback(async () => {
     if (activeWorkspace?.path) {

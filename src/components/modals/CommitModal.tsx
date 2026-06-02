@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { gitCommit, gitPush, gitRebaseContinue, gitRebaseAbort, GitStatus } from '../../hooks/useTauri';
-import { Send, CheckCircle, X, Database, FileText, Eye, AlertTriangle, Play, Ban } from 'lucide-react';
+import { Send, CheckCircle, X, Database, FileText, Eye, AlertTriangle, Play, Ban, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPortal } from 'react-dom';
 import GitDiffModal from './GitDiffModal';
+import ConflictResolver from './ConflictResolver';
 
 interface CommitModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export default function CommitModal({ isOpen, onClose, status, workspacePath, re
   const [isSyncing, setIsSyncing] = useState(false);
   const [synced, setSynced] = useState(false);
   const [diffFile, setDiffFile] = useState<{ path: string, mode: 'view' | 'resolve' } | null>(null);
+  const [showConflictResolver, setShowConflictResolver] = useState(false);
 
   if (!isOpen) return null;
 

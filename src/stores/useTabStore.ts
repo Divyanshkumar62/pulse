@@ -19,7 +19,9 @@ export interface Tab {
 interface TabStore {
   tabs: Tab[];
   activeTabId: string | null;
+  isInitialized: boolean;
   
+  initialize: () => Promise<void>;
   openTab: (request: Request, collectionId?: string) => void;
   openRunnerTab: (collection: Collection) => void;
   openDocsTab: (collection: Collection) => void;
@@ -31,12 +33,73 @@ interface TabStore {
   addWsMessage: (tabId: string, message: WebSocketMessage) => void;
   setWsStatus: (tabId: string, status: WebSocketStatus) => void;
   clearWsMessages: (tabId: string) => void;
+  persistSession: () => void;
 }
 
 export const useTabStore = create<TabStore>()(
   subscribeWithSelector((set, get) => ({
   tabs: [],
   activeTabId: null,
+  isInitialized: false,
+
+  initialize: async () => {
+    if (get().isInitialized) return;
+
+    try {
+      const saved = localStorage.getItem('pulse_session');
+      if (saved) {
+        const { activeTabId, tabIds } = JSON.parse(saved);
+        
+        // Re-hydrate tabs from collection store
+        // Since this is a client-side app, we can simplify the import
+        const collectionModule = await import('./useCollectionStore');
+        const { collections } = collectionModule.useCollectionStore.getState();
+        
+        const allRequests: Request[] = [];
+        const extract = (items: any[]) => {
+            items.forEach(item => {
+                if (item.requests) allRequests.push(...item.requests);
+                if (item.folders) extract(item.folders);
+            });
+        };
+        extract(collections);
+
+        const restoredTabs: Tab[] = [];
+        (tabIds as string[]).forEach(id => {
+            const req = allRequests.find(r => r.id === id);
+            if (req) {
+                restoredTabs.push({ id, type: 'request', request: req });
+            } else if (id.startsWith('runner-')) {
+                const colId = id.replace('runner-', '');
+                const col = collections.find(c => c.id === colId);
+                if (col) restoredTabs.push({ id, type: 'runner', collection: col, collectionId: colId });
+            } else if (id.startsWith('docs-')) {
+                const colId = id.replace('docs-', '');
+                const col = collections.find(c => c.id === colId);
+                if (col) restoredTabs.push({ id, type: 'docs', collection: col, collectionId: colId });
+            }
+        });
+
+        set({ 
+            tabs: restoredTabs, 
+            activeTabId: restoredTabs.some(t => t.id === activeTabId) ? activeTabId : (restoredTabs[0]?.id || null)
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load session:', e);
+    } finally {
+      set({ isInitialized: true });
+    }
+  },
+
+  persistSession: () => {
+    const { activeTabId, tabs } = get();
+    const session = {
+      activeTabId,
+      tabIds: tabs.map(t => t.id)
+    };
+    localStorage.setItem('pulse_session', JSON.stringify(session));
+  },
 
   openTab: (request, collectionId) => {
     const { tabs } = get();
@@ -161,4 +224,15 @@ export const useTabStore = create<TabStore>()(
     });
   }
 }))
+);
+
+// Auto-persist session changes
+useTabStore.subscribe(
+  (state) => ({ tabs: state.tabs, activeTabId: state.activeTabId }),
+  (state) => {
+    useTabStore.getState().persistSession();
+  },
+  { 
+    equalityFn: (a, b) => JSON.stringify(a) === JSON.stringify(b) 
+  }
 );

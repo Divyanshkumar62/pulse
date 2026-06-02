@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { X, Check, Undo, ArrowLeft, ArrowRight, ArrowDown, Columns, LayoutList } from 'lucide-react';
+import { X, Check, Undo, ArrowLeft, ArrowRight, ArrowDown, Columns, LayoutList, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPortal } from 'react-dom';
 import { resolveGitConflict } from '../../hooks/useTauri';
+import ConflictResolver from './ConflictResolver';
 
 interface DiffLine {
   type: 'added' | 'removed' | 'equal';

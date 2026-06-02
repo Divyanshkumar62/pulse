@@ -13,6 +13,7 @@ import { useWorkspaceStore } from './stores/useWorkspaceStore';
 import { useHistoryStore } from './stores/useHistoryStore';
 import { useAppStore } from './stores/useAppStore';
 import { useMockStore } from './stores/useMockStore';
+import { useTabStore } from './stores/useTabStore';
 import { ReactFlowProvider } from '@xyflow/react';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import MockServerEditor from './components/mock/MockServerEditor';
@@ -25,6 +26,7 @@ export default function App() {
   const initWorkspaceStore = useWorkspaceStore(state => state.initialize);
   const initHistoryStore = useHistoryStore(state => state.initialize);
   const initMockStore = useMockStore(state => state.initialize);
+  const initTabStore = useTabStore(state => state.initialize);
   
   usePresence();
 
@@ -48,13 +50,15 @@ export default function App() {
     initSettingsStore().then(() => {
       initTeamStore().then(() => {
         initWorkspaceStore().then(() => {
-          initMockStore();
+          initMockStore().then(() => {
+            initTabStore();
+          });
         });
       });
     });
     initEnvStore();
     initHistoryStore();
-  }, [initEnvStore, initSettingsStore, initTeamStore, initWorkspaceStore, initHistoryStore, initMockStore]);
+  }, [initEnvStore, initSettingsStore, initTeamStore, initWorkspaceStore, initHistoryStore, initMockStore, initTabStore]);
 
   const showMonitorDashboard = sidebarTab === 'monitor' && selectedMonitorId;
   const showEnvironmentEditor = sidebarTab === 'environments' && selectedEnvironmentId;
