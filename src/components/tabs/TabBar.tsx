@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
-import { Play, FileText, Plus, X } from 'lucide-react';
+import { Play, FileText, Plus, X, Pin, PinOff } from 'lucide-react';
+import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import '../../styles/components/tabs.css';
 
 export default function TabBar() {
-  const { tabs, activeTabId, setActiveTab, closeTab, openTab } = useTabStore();
+  const { tabs, activeTabId, setActiveTab, closeTab, openTab, togglePinTab } = useTabStore();
   const { collections, addRequest } = useCollectionStore();
   const [isNamingNew, setIsNamingNew] = useState(false);
   const [newRequestName, setNewRequestName] = useState('');
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, tabId: string } | null>(null);
 
   const handleNewTab = () => {
     setIsNamingNew(true);
@@ -45,6 +47,31 @@ export default function TabBar() {
   const cancelNewTab = () => {
     setIsNamingNew(false);
     setNewRequestName('');
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, tabId: string) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, tabId });
+  };
+
+  const getContextMenuItems = (): ContextMenuItem[] => {
+    if (!contextMenu) return [];
+    const tab = tabs.find(t => t.id === contextMenu.tabId);
+    if (!tab) return [];
+
+    return [
+      {
+        label: tab.isPinned ? 'Unpin Tab' : 'Pin Tab',
+        icon: tab.isPinned ? '📍' : '📌',
+        onClick: () => togglePinTab(tab.id)
+      },
+      {
+        label: 'Close Tab',
+        icon: '✕',
+        onClick: () => closeTab(tab.id),
+        danger: true
+      }
+    ];
   };
 
   return (
@@ -106,19 +133,27 @@ export default function TabBar() {
                 return (
                 <div 
                     key={tab.id} 
-                    className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
+                    className={`tab-premium ${activeTabId === tab.id ? 'active' : ''} ${tab.isPinned ? 'pinned' : ''}`}
                     onClick={() => setActiveTab(tab.id)}
+                    onContextMenu={(e) => handleContextMenu(e, tab.id)}
+                    title={tab.request.name || 'Untitled Request'}
                 >
                     <span className={`method-pill method-${tab.request.method.toLowerCase()}`}>
-                    {tab.request.method}
+                    {tab.isPinned ? tab.request.method.substring(0, 3) : tab.request.method}
                     </span>
-                    <span className="tab-name">{tab.request.name || 'Untitled Request'}</span>
+                    {!tab.isPinned && <span className="tab-name">{tab.request.name || 'Untitled Request'}</span>}
                     {tab.isDirty && (
                     <span 
                         className="tab-dirty-pulse" 
-                        style={{ background: methodColor }}
+                        style={{ 
+                          background: methodColor,
+                          position: tab.isPinned ? 'absolute' : 'relative',
+                          right: tab.isPinned ? '4px' : 'auto',
+                          top: tab.isPinned ? '4px' : 'auto'
+                        }}
                     />
                     )}
+                    {!tab.isPinned && (
                     <button 
                     className="tab-close-btn" 
                     style={{ padding: '4px', marginLeft: '4px' }}
@@ -129,18 +164,21 @@ export default function TabBar() {
                     >
                         <X size={18} />
                     </button>
+                    )}
                 </div>
                 );
             } else if (tab.type === 'runner') {
                 return (
                     <div 
                     key={tab.id} 
-                    className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
+                    className={`tab-premium ${activeTabId === tab.id ? 'active' : ''} ${tab.isPinned ? 'pinned' : ''}`}
                     onClick={() => setActiveTab(tab.id)}
+                    onContextMenu={(e) => handleContextMenu(e, tab.id)}
+                    title={`Runner: ${tab.collection?.name}`}
                     >
-                    <Play size={12} style={{ marginRight: '6px', color: '#10b981' }} />
-                    <span className="tab-name">Runner: {tab.collection?.name}</span>
-                    <button 
+                    <Play size={12} style={{ marginRight: tab.isPinned ? '0' : '6px', color: '#10b981' }} />
+                    {!tab.isPinned && <span className="tab-name">Runner: {tab.collection?.name}</span>}
+                    {!tab.isPinned && <button 
                         className="tab-close-btn" 
                         style={{ padding: '4px', marginLeft: '4px' }}
                         onClick={(e) => {
@@ -149,19 +187,21 @@ export default function TabBar() {
                         }}
                     >
                         <X size={18} />
-                    </button>
+                    </button>}
                     </div>
                 );
             } else if (tab.type === 'docs') {
                 return (
                 <div 
                     key={tab.id} 
-                    className={`tab-premium ${activeTabId === tab.id ? 'active' : ''}`}
+                    className={`tab-premium ${activeTabId === tab.id ? 'active' : ''} ${tab.isPinned ? 'pinned' : ''}`}
                     onClick={() => setActiveTab(tab.id)}
+                    onContextMenu={(e) => handleContextMenu(e, tab.id)}
+                    title={`Docs: ${tab.collection?.name}`}
                 >
-                    <FileText size={12} style={{ marginRight: '6px', color: 'var(--accent-primary)' }} />
-                    <span className="tab-name">Docs: {tab.collection?.name}</span>
-                    <button 
+                    <FileText size={12} style={{ marginRight: tab.isPinned ? '0' : '6px', color: 'var(--accent-primary)' }} />
+                    {!tab.isPinned && <span className="tab-name">Docs: {tab.collection?.name}</span>}
+                    {!tab.isPinned && <button 
                     className="tab-close-btn" 
                     style={{ padding: '4px', marginLeft: '4px' }}
                     onClick={(e) => {
@@ -170,7 +210,7 @@ export default function TabBar() {
                     }}
                     >
                         <X size={18} />
-                    </button>
+                    </button>}
                 </div>
                 );
             }
@@ -179,6 +219,15 @@ export default function TabBar() {
         </div>
       </div>
       
+      {contextMenu && (
+        <ContextMenu 
+          x={contextMenu.x} 
+          y={contextMenu.y} 
+          items={getContextMenuItems()} 
+          onClose={() => setContextMenu(null)} 
+        />
+      )}
+
       <style>{`
         .add-tab-btn-fixed:hover {
             background: var(--bg-surface) !important;

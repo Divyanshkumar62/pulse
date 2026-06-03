@@ -14,6 +14,7 @@ export interface Tab {
   isDirty?: boolean;
   wsMessages?: WebSocketMessage[];
   wsStatus?: WebSocketStatus;
+  isPinned?: boolean;
 }
 
 interface TabStore {
@@ -26,6 +27,7 @@ interface TabStore {
   openRunnerTab: (collection: Collection) => void;
   openDocsTab: (collection: Collection) => void;
   closeTab: (id: string) => void;
+  togglePinTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateActiveTabRequest: (updates: Partial<Request>) => void;
   updateTabRequestName: (requestId: string, newName: string) => void;
@@ -48,7 +50,7 @@ export const useTabStore = create<TabStore>()(
     try {
       const saved = localStorage.getItem('pulse_session');
       if (saved) {
-        const { activeTabId, tabIds } = JSON.parse(saved);
+        const { activeTabId, tabIds, pinnedTabIds = [] } = JSON.parse(saved);
         
         // Re-hydrate tabs from collection store
         // Since this is a client-side app, we can simplify the import
@@ -66,18 +68,26 @@ export const useTabStore = create<TabStore>()(
 
         const restoredTabs: Tab[] = [];
         (tabIds as string[]).forEach(id => {
+            const isPinned = pinnedTabIds.includes(id);
             const req = allRequests.find(r => r.id === id);
             if (req) {
-                restoredTabs.push({ id, type: 'request', request: req });
+                restoredTabs.push({ id, type: 'request', request: req, isPinned });
             } else if (id.startsWith('runner-')) {
                 const colId = id.replace('runner-', '');
                 const col = collections.find(c => c.id === colId);
-                if (col) restoredTabs.push({ id, type: 'runner', collection: col, collectionId: colId });
+                if (col) restoredTabs.push({ id, type: 'runner', collection: col, collectionId: colId, isPinned });
             } else if (id.startsWith('docs-')) {
                 const colId = id.replace('docs-', '');
                 const col = collections.find(c => c.id === colId);
-                if (col) restoredTabs.push({ id, type: 'docs', collection: col, collectionId: colId });
+                if (col) restoredTabs.push({ id, type: 'docs', collection: col, collectionId: colId, isPinned });
             }
+        });
+
+        // Ensure pinned tabs are first
+        restoredTabs.sort((a, b) => {
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          return 0;
         });
 
         set({ 
@@ -96,7 +106,8 @@ export const useTabStore = create<TabStore>()(
     const { activeTabId, tabs } = get();
     const session = {
       activeTabId,
-      tabIds: tabs.map(t => t.id)
+      tabIds: tabs.map(t => t.id),
+      pinnedTabIds: tabs.filter(t => t.isPinned).map(t => t.id)
     };
     localStorage.setItem('pulse_session', JSON.stringify(session));
   },
@@ -105,9 +116,11 @@ export const useTabStore = create<TabStore>()(
     const { tabs } = get();
     const existing = tabs.find(t => t.id === request.id);
     if (!existing) {
+      const pinnedTabs = tabs.filter(t => t.isPinned);
+      const unpinnedTabs = tabs.filter(t => !t.isPinned);
       set({ 
-        // Prepend new tab to the left
-        tabs: [{ id: request.id, type: 'request', request, collectionId }, ...tabs],
+        // Insert after pinned tabs
+        tabs: [...pinnedTabs, { id: request.id, type: 'request', request, collectionId }, ...unpinnedTabs],
         activeTabId: request.id 
       });
     } else {
@@ -120,8 +133,10 @@ export const useTabStore = create<TabStore>()(
     const id = `runner-${collection.id}`;
     const existing = tabs.find(t => t.id === id);
     if (!existing) {
+      const pinnedTabs = tabs.filter(t => t.isPinned);
+      const unpinnedTabs = tabs.filter(t => !t.isPinned);
       set({ 
-        tabs: [{ id, type: 'runner', collection, collectionId: collection.id }, ...tabs],
+        tabs: [...pinnedTabs, { id, type: 'runner', collection, collectionId: collection.id }, ...unpinnedTabs],
         activeTabId: id 
       });
     } else {
@@ -134,8 +149,10 @@ export const useTabStore = create<TabStore>()(
     const id = `docs-${collection.id}`;
     const existing = tabs.find(t => t.id === id);
     if (!existing) {
+      const pinnedTabs = tabs.filter(t => t.isPinned);
+      const unpinnedTabs = tabs.filter(t => !t.isPinned);
       set({ 
-        tabs: [{ id, type: 'docs', collection, collectionId: collection.id }, ...tabs],
+        tabs: [...pinnedTabs, { id, type: 'docs', collection, collectionId: collection.id }, ...unpinnedTabs],
         activeTabId: id 
       });
     } else {
@@ -158,6 +175,17 @@ export const useTabStore = create<TabStore>()(
     }
     
     set({ tabs: newTabs, activeTabId: newActiveId });
+  },
+
+  togglePinTab: (id) => {
+    const { tabs } = get();
+    const newTabs = tabs.map(t => t.id === id ? { ...t, isPinned: !t.isPinned } : t);
+    newTabs.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    });
+    set({ tabs: newTabs });
   },
 
   setActiveTab: (id) => set({ activeTabId: id }),
