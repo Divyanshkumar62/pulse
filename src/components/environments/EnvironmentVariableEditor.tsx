@@ -1,13 +1,46 @@
 import { useEnvStore } from '../../stores/useEnvStore';
 import { useAppStore } from '../../stores/useAppStore';
+import { useCollectionStore } from '../../stores/useCollectionStore';
+import { Request } from '../../types';
 import KeyValueTable from '../request/KeyValueTable';
 import '../../styles/components/environments.css';
+import { useMemo } from 'react';
 
 export default function EnvironmentVariableEditor() {
   const { environments, updateEnvironment } = useEnvStore();
   const { selectedEnvironmentId, setSelectedEnvironmentId } = useAppStore();
+  const { collections } = useCollectionStore();
 
   const selectedEnv = environments.find(e => e.id === selectedEnvironmentId);
+
+  const variableUsages = useMemo(() => {
+    if (!selectedEnv) return {};
+    
+    const usages: Record<string, number> = {};
+    selectedEnv.variables.forEach(v => {
+       if (v.key) usages[v.key] = 0;
+    });
+    
+    const allRequests: Request[] = [];
+    const extract = (items: any[]) => {
+       items.forEach(item => {
+          if (item.requests) allRequests.push(...item.requests);
+          if (item.folders) extract(item.folders);
+       });
+    };
+    extract(collections);
+    
+    allRequests.forEach(req => {
+       const reqStr = JSON.stringify(req);
+       Object.keys(usages).forEach(key => {
+          if (reqStr.includes(`{{${key}}}`)) {
+             usages[key]++;
+          }
+       });
+    });
+    
+    return usages;
+  }, [selectedEnv, collections]);
 
   if (!selectedEnv) {
     return (
@@ -66,6 +99,7 @@ export default function EnvironmentVariableEditor() {
             onChange={handleVariablesChange}
             keyPlaceholder="Variable Name"
             valuePlaceholder="Value"
+            usages={variableUsages}
           />
         </div>
       </div>

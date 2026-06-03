@@ -7,9 +7,10 @@ interface KeyValueTableProps {
   onChange: (items: KeyValuePair[]) => void;
   keyPlaceholder?: string;
   valuePlaceholder?: string;
+  usages?: Record<string, number>;
 }
 
-export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key', valuePlaceholder = 'Value' }: KeyValueTableProps) {
+export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key', valuePlaceholder = 'Value', usages }: KeyValueTableProps) {
   // Always ensure there is at least one empty row at the end if the last row is filled
   const displayItems = [...items];
   const lastItem = displayItems[displayItems.length - 1];
@@ -43,7 +44,9 @@ export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key',
 
   return (
     <div className="kv-table">
-      {displayItems.map((item, index) => (
+      {displayItems.map((item, index) => {
+        const usageCount = (usages && item.key) ? usages[item.key] : undefined;
+        return (
         <div key={index} className="kv-row">
           <div className="kv-check-wrapper">
             <input 
@@ -89,6 +92,28 @@ export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key',
               onChange={(e) => handleChange(index, 'description', e.target.value)}
             />
           </div>
+          
+          {usageCount !== undefined && (
+            <div 
+              title={`${usageCount} requests use this variable`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: usageCount > 0 ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                background: usageCount > 0 ? 'rgba(0, 112, 243, 0.1)' : 'var(--bg-elevated)',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                minWidth: '24px',
+                marginLeft: '8px'
+              }}
+            >
+              {usageCount}
+            </div>
+          )}
+          
           <button 
             className="kv-delete-btn"
             style={{ visibility: (item.key || item.value) ? 'visible' : 'hidden' }}
@@ -100,7 +125,7 @@ export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key',
             </svg>
           </button>
         </div>
-      ))}
+      )})}
     </div>
   );
 }
