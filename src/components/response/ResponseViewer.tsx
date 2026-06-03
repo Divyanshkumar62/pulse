@@ -1,24 +1,50 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
 import { useAppStore } from '../../stores/useAppStore';
+import { useHistoryStore } from '../../stores/useHistoryStore';
 import ResponseBody from './ResponseBody';
 import ResponseHistory from './ResponseHistory';
+import ResponseDiff from './ResponseDiff';
 import '../../styles/components/response-viewer.css';
 
-type ResponseTab = 'body' | 'preview' | 'headers' | 'test-results' | 'history' | 'console';
+type ResponseTab = 'body' | 'preview' | 'headers' | 'diff' | 'test-results' | 'history' | 'console';
 
 export default function ResponseViewer() {
   const { activeTabId, tabs } = useTabStore();
   const { responsePosition, setResponsePosition } = useAppStore();
+  const { history } = useHistoryStore();
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
 
   const tabData = tabs.find(t => t.id === activeTabId);
   const response = tabData?.response;
+  const request = tabData?.request;
+
+  const previousResponse = useMemo(() => {
+    if (!request || !response) return null;
+    const requestHistory = history.filter(h => h.requestId === request.id);
+    
+    // The current response is likely the first item in history if it was just saved.
+    // We want the most recent response that is NOT the exact same timestamp/id as the current one.
+    // If the current response is not yet in history, history[0] is the previous one.
+    // If the current response IS in history[0], then history[1] is the previous one.
+    
+    // We can just find the first history entry that doesn't strictly match the current response object
+    // Or we just take the second entry if the first matches.
+    // Actually, comparing timestamps or just taking index 1 if we know index 0 is current.
+    if (requestHistory.length > 0) {
+      if (requestHistory[0].response.body === response.body && requestHistory[0].response.time_ms === response.time_ms) {
+        return requestHistory.length > 1 ? requestHistory[1].response : null;
+      }
+      return requestHistory[0].response;
+    }
+    return null;
+  }, [request, response, history]);
 
   const tabsConfig: { id: ResponseTab; label: string }[] = [
     { id: 'body', label: 'Json' },
     { id: 'preview', label: 'Preview' },
     { id: 'headers', label: 'Headers' },
+    { id: 'diff', label: 'Diff' },
     { id: 'test-results', label: 'Test Results' },
     { id: 'history', label: 'History' },
     { id: 'console', label: 'Console' },
@@ -76,6 +102,8 @@ export default function ResponseViewer() {
               content={response.body} 
               contentType={response.headers.find(h => h.key.toLowerCase() === 'content-type')?.value || 'application/json'} 
             />
+          ) : activeTab === 'diff' ? (
+            <ResponseDiff currentResponse={response} previousResponse={previousResponse} />
           ) : activeTab === 'headers' ? (
             <div className="headers-view">
               {response.headers.map((h, i) => (
