@@ -120,6 +120,9 @@ pub fn git_status(path: &str) -> Result<GitStatus, String> {
 }
 
 pub fn git_commit(path: &str, message: &str) -> Result<(), String> {
+    // Security: Scan for sensitive patterns before allowing a commit
+    scan_for_secrets(path)?;
+
     let add_output = Command::new("git")
         .args(["add", "-A"])
         .current_dir(path)
@@ -139,6 +142,66 @@ pub fn git_commit(path: &str, message: &str) -> Result<(), String> {
     if !commit_output.status.success() {
         return Err(String::from_utf8_lossy(&commit_output.stderr).to_string());
     }
+    Ok(())
+}
+
+fn scan_for_secrets(path: &str) -> Result<(), String> {
+    use std::fs;
+    use regex::Regex;
+
+    // Common sensitive patterns
+    let patterns = [
+        r"sk_live_[a-zA-Z0-9]{24,}", // Stripe live keys
+        r"AIza[0-9A-Za-z\\-_]{35}",   // Google API keys
+        r"xox[bpgr]-[0-9]{12}-[0-9]{12}-[a-zA-Z0-9]{24}", // Slack tokens
+        r"ghp_[a-zA-Z0-9]{36}",      // GitHub PATs
+        r"ey[a-zA-Z0-9-_]+\.ey[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+", // JWTs (generic)
+    ];
+
+    let mut regexes = Vec::new();
+    for p in patterns {
+        regexes.push(Regex::new(p).map_err(|e: regex::Error| e.to_string())?);
+    }
+
+    // List all json files in the workspace (collections and environments)
+    let base_path = Path::new(path);
+    let mut files_to_scan = Vec::new();
+
+    fn collect_json_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) -> std::io::Result<()> {
+        if dir.is_dir() {
+            for entry in fs::read_dir(dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_dir() {
+                    let dir_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                    if dir_name != ".git" && dir_name != "node_modules" && dir_name != "target" {
+                        collect_json_files(&path, files)?;
+                    }
+                } else if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                    files.push(path);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    collect_json_files(base_path, &mut files_to_scan).map_err(|e: std::io::Error| e.to_string())?;
+
+    for file_path in files_to_scan {
+        let content = fs::read_to_string(&file_path).map_err(|e: std::io::Error| e.to_string())?;
+        
+        for re in &regexes {
+            if let Some(mat) = re.find(&content) {
+                let file_name = file_path.strip_prefix(base_path).unwrap_or(&file_path).display();
+                return Err(format!(
+                    "SECURITY BLOCK: Sensitive data pattern '{}' detected in {}. Commit aborted to protect your secrets.", 
+                    mat.as_str().chars().take(8).collect::<String>() + "...",
+                    file_name
+                ));
+            }
+        }
+    }
+
     Ok(())
 }
 

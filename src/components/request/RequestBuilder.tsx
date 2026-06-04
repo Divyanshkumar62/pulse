@@ -24,7 +24,7 @@ import '../../styles/components/request.css';
 type ConfigTab = 'params' | 'headers' | 'body' | 'auth' | 'scripts';
 
 export default function RequestBuilder() {
-  const { tabs, activeTabId, setTabResponse, updateActiveTabRequest } = useTabStore();
+  const { tabs, activeTabId, setTabResponse, updateActiveTabRequest, setTabLoading } = useTabStore();
   const { settings } = useSettingsStore();
   const { environments, activeEnvId, updateEnvironment } = useEnvStore();
   const { collections } = useCollectionStore();
@@ -33,6 +33,13 @@ export default function RequestBuilder() {
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('params');
   const [isLoading, setIsLoading] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+
+  // Sync global loading state to individual tab
+  useEffect(() => {
+    if (activeTabId) {
+      setTabLoading(activeTabId, isLoading);
+    }
+  }, [isLoading, activeTabId, setTabLoading]);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
   

@@ -57,7 +57,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         c.id === id ? { ...c, ...updates } : c
       ),
     }));
-    get().saveAllCollectionsToDisk();
+    get().saveCollectionToDisk(id);
   },
 
   duplicateCollection: (id) => {
@@ -83,14 +83,16 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     regenerateIds(newCol);
 
     set({ collections: [...collections, newCol] });
-    get().saveAllCollectionsToDisk();
+    get().saveCollectionToDisk(newCol.id);
   },
 
   deleteCollection: (id) => {
+    const collection = get().collections.find(c => c.id === id);
     set((state) => ({
       collections: state.collections.filter(c => c.id !== id)
     }));
-    get().saveAllCollectionsToDisk();
+    // Note: Deletion from disk might need a specific command if we want to delete the folder
+    // For now, we just stop tracking it.
   },
 
   addFolder: async (collectionId: string, parentFolderId: string | null, folder: Folder) => {
@@ -117,7 +119,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         return { ...c, folders: updateFolders(c.folders) };
       }),
     }));
-    get().saveAllCollectionsToDisk();
+    get().saveCollectionToDisk(collectionId);
   },
 
   updateFolder: (collectionId, folderId, updates) => {
@@ -140,7 +142,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         return { ...c, folders: updateFoldersRecursive(c.folders) };
       }),
     }));
-    get().saveAllCollectionsToDisk();
+    get().saveCollectionToDisk(collectionId);
   },
 
   duplicateFolder: (collectionId, folderId) => {
@@ -179,7 +181,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         return { ...c, folders: findAndClone(c.folders) };
       })
     }));
-    get().saveAllCollectionsToDisk();
+    get().saveCollectionToDisk(collectionId);
   },
 
   deleteFolder: (collectionId, folderId) => {
@@ -197,7 +199,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
           return { ...c, folders: removeInFolders(c.folders) };
       })
     }));
-    get().saveAllCollectionsToDisk();
+    get().saveCollectionToDisk(collectionId);
   },
 
   addRequest: async (collectionId: string, folderId: string | null, request: Request) => {
@@ -224,7 +226,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         return { ...c, folders: updateFolders(c.folders) };
       }),
     }));
-    get().saveAllCollectionsToDisk();
+    get().saveCollectionToDisk(collectionId);
   },
 
   updateRequest: async (collectionId: string, requestId: string, updates: Partial<Request>) => {
@@ -257,7 +259,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         return { ...c, folders: updateFolders(c.folders) };
       }),
     }));
-    get().saveAllCollectionsToDisk();
+    get().saveCollectionToDisk(collectionId);
   },
 
   duplicateRequest: (collectionId, requestId) => {
@@ -294,7 +296,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         return { ...c, folders: updateFolders(c.folders) };
       })
     }));
-    get().saveAllCollectionsToDisk();
+    get().saveCollectionToDisk(collectionId);
   },
 
   deleteRequest: (collectionId, requestId) => {
@@ -317,7 +319,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
           };
       })
     }));
-    get().saveAllCollectionsToDisk();
+    get().saveCollectionToDisk(collectionId);
   },
 
   saveCollectionToDisk: async (id: string) => {
@@ -366,14 +368,6 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
   }
 }));
 
-// Auto-save: debounce saves to disk whenever collections change
-let saveTimeout: ReturnType<typeof setTimeout> | null = null;
-useCollectionStore.subscribe((state, prevState) => {
-  const hasChanged = state.collections !== prevState.collections;
-  if (!hasChanged) return;
+// Auto-save logic is now handled directly by actions to be more targeted and efficient.
+// This prevents saving all collections when only one small part of one collection changes.
 
-  if (saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(async () => {
-    await state.saveAllCollectionsToDisk();
-  }, 1500);
-});

@@ -40,6 +40,10 @@ export default function GitSync() {
     if (!activeWorkspace?.path) return;
     setIsSyncing(true);
     try {
+      toast.loading('Preparing changes for sync...', { id: 'git-sync' });
+      // We don't have a specific git add command exposed except via commit
+      // but git pull --rebase usually needs a clean state or it will fail
+      
       toast.loading('Fetching and pulling remote changes...', { id: 'git-sync' });
       await gitPull(activeWorkspace.path);
       

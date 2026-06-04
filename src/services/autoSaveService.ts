@@ -3,19 +3,13 @@ import { useCollectionStore } from '../stores/useCollectionStore';
 
 class AutoSaveService {
   private timeout: number | null = null;
-  private debounceMs = 1000;
+  private debounceMs = 2000; // Increased debounce for efficiency
 
   init() {
     // Subscribe to tab store changes
-    useTabStore.subscribe((state, prevState) => {
-      // Check if any tab has changed its request content
-      const dirtyTabs = state.tabs.filter(t => {
-        const prevTab = prevState.tabs.find(pt => pt.id === t.id);
-        if (!prevTab) return false;
-        
-        // Deep compare request object strictly for changes
-        return JSON.stringify(t.request) !== JSON.stringify(prevTab.request);
-      });
+    useTabStore.subscribe((state) => {
+      // Check if any tab is marked as dirty
+      const dirtyTabs = state.tabs.filter(t => t.isDirty);
 
       if (dirtyTabs.length > 0) {
         this.triggerSave(dirtyTabs);
@@ -30,11 +24,13 @@ class AutoSaveService {
 
     this.timeout = window.setTimeout(async () => {
       const updateRequest = useCollectionStore.getState().updateRequest;
+      const markTabClean = useTabStore.getState().markTabClean;
       
       for (const tab of dirtyTabs) {
-        if (tab.collectionId) {
+        if (tab.collectionId && tab.request) {
           try {
             await updateRequest(tab.collectionId, tab.id, tab.request);
+            markTabClean(tab.id);
             console.log(`[AutoSave] Saved request ${tab.id} to collection ${tab.collectionId}`);
           } catch (error) {
             console.error(`[AutoSave] Failed to save request ${tab.id}:`, error);

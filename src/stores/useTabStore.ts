@@ -12,6 +12,7 @@ export interface Tab {
   collection?: Collection;
   response?: HttpResponse;
   isDirty?: boolean;
+  isLoading?: boolean;
   wsMessages?: WebSocketMessage[];
   wsStatus?: WebSocketStatus;
   isPinned?: boolean;
@@ -30,6 +31,8 @@ interface TabStore {
   togglePinTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateActiveTabRequest: (updates: Partial<Request>) => void;
+  markTabClean: (id: string) => void;
+  setTabLoading: (id: string, isLoading: boolean) => void;
   updateTabRequestName: (requestId: string, newName: string) => void;
   setTabResponse: (id: string, response: HttpResponse) => void;
   addWsMessage: (tabId: string, message: WebSocketMessage) => void;
@@ -210,6 +213,24 @@ export const useTabStore = create<TabStore>()(
         (t.id === activeTabId && t.type === 'request' && t.request)
           ? { ...t, request: { ...t.request, ...updates }, isDirty: true } 
           : t
+      )
+    });
+  },
+
+  markTabClean: (id) => {
+    const { tabs } = get();
+    set({
+      tabs: tabs.map(t => 
+        t.id === id ? { ...t, isDirty: false } : t
+      )
+    });
+  },
+
+  setTabLoading: (id, isLoading) => {
+    const { tabs } = get();
+    set({
+      tabs: tabs.map(t => 
+        t.id === id ? { ...t, isLoading } : t
       )
     });
   },

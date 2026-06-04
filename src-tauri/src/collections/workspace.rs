@@ -4,33 +4,35 @@ use crate::collections::types::{Collection, Folder, Request, Environment};
 use serde_json;
 
 pub async fn save_collection_to_disk(workspace_path: String, collection: Collection) -> Result<(), String> {
-    let base_path = PathBuf::from(workspace_path);
-    let collections_dir = base_path.join("collections");
-    
-    // Use ID for the folder name to prevent duplicates on rename
-    let collection_path = collections_dir.join(&collection.id);
-    
-    fs::create_dir_all(&collection_path).map_err(|e| e.to_string())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let base_path = PathBuf::from(workspace_path);
+        let collections_dir = base_path.join("collections");
+        
+        // Use ID for the folder name to prevent duplicates on rename
+        let collection_path = collections_dir.join(&collection.id);
+        
+        fs::create_dir_all(&collection_path).map_err(|e| e.to_string())?;
 
-    // collection.json holds variables and description
-    let mut collection_meta = collection.clone();
-    collection_meta.requests = vec![];
-    collection_meta.folders = vec![];
-    
-    let meta_json = serde_json::to_string_pretty(&collection_meta).map_err(|e| e.to_string())?;
-    fs::write(collection_path.join("collection.json"), meta_json).map_err(|e| e.to_string())?;
+        // collection.json holds variables and description
+        let mut collection_meta = collection.clone();
+        collection_meta.requests = vec![];
+        collection_meta.folders = vec![];
+        
+        let meta_json = serde_json::to_string_pretty(&collection_meta).map_err(|e| e.to_string())?;
+        fs::write(collection_path.join("collection.json"), meta_json).map_err(|e| e.to_string())?;
 
-    // Root requests
-    for request in &collection.requests {
-        save_request_to_disk(&collection_path, request)?;
-    }
+        // Root requests
+        for request in &collection.requests {
+            save_request_to_disk(&collection_path, request)?;
+        }
 
-    // Folders
-    for folder in &collection.folders {
-        save_folder_to_disk(&collection_path, folder)?;
-    }
+        // Folders
+        for folder in &collection.folders {
+            save_folder_to_disk(&collection_path, folder)?;
+        }
 
-    Ok(())
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
 }
 
 fn save_folder_to_disk(parent_path: &Path, folder: &Folder) -> Result<(), String> {
@@ -78,6 +80,8 @@ fn sanitize_filename(name: &str) -> String {
 }
 
 pub async fn load_collections_from_workspace(workspace_path: String) -> Result<Vec<Collection>, String> {
+    // Loading is usually fine to stay on async executor as it's less frequent, 
+    // but for consistency we can also offload it if needed.
     let collections_dir = PathBuf::from(workspace_path).join("collections");
     if !collections_dir.exists() {
         return Ok(vec![]);
@@ -150,28 +154,32 @@ fn load_folder(path: &Path) -> Result<Folder, String> {
 }
 
 pub async fn save_workspace_to_disk(workspace_path: String, environments: Vec<Environment>) -> Result<(), String> {
-    let path = PathBuf::from(workspace_path).join("workspace.json");
-    let json = serde_json::to_string_pretty(&environments).map_err(|e| e.to_string())?;
-    fs::write(path, json).map_err(|e| e.to_string())?;
-    Ok(())
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = PathBuf::from(workspace_path).join("workspace.json");
+        let json = serde_json::to_string_pretty(&environments).map_err(|e| e.to_string())?;
+        fs::write(path, json).map_err(|e| e.to_string())?;
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
 }
 
 pub async fn save_flows_to_disk(workspace_path: String, flows: Vec<crate::collections::types::Flow>) -> Result<(), String> {
-    let base_path = PathBuf::from(workspace_path);
-    let flows_dir = base_path.join("flows");
-    
-    if !flows_dir.exists() {
-        fs::create_dir_all(&flows_dir).map_err(|e| e.to_string())?;
-    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let base_path = PathBuf::from(workspace_path);
+        let flows_dir = base_path.join("flows");
+        
+        if !flows_dir.exists() {
+            fs::create_dir_all(&flows_dir).map_err(|e| e.to_string())?;
+        }
 
-    for flow in flows {
-        // Use ID for filename
-        let filename = format!("{}.json", flow.id);
-        let json = serde_json::to_string_pretty(&flow).map_err(|e| e.to_string())?;
-        fs::write(flows_dir.join(filename), json).map_err(|e| e.to_string())?;
-    }
+        for flow in flows {
+            // Use ID for filename
+            let filename = format!("{}.json", flow.id);
+            let json = serde_json::to_string_pretty(&flow).map_err(|e| e.to_string())?;
+            fs::write(flows_dir.join(filename), json).map_err(|e| e.to_string())?;
+        }
 
-    Ok(())
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
 }
 
 pub async fn load_flows_from_workspace(workspace_path: String) -> Result<Vec<crate::collections::types::Flow>, String> {

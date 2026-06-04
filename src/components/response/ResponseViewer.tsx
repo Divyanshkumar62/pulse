@@ -18,6 +18,17 @@ export default function ResponseViewer() {
   const tabData = tabs.find(t => t.id === activeTabId);
   const response = tabData?.response;
   const request = tabData?.request;
+  const isLoading = tabData?.isLoading;
+
+  const renderSkeleton = () => (
+    <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="skeleton" style={{ width: '80px', height: '24px', borderRadius: '12px' }} />
+        <div className="skeleton" style={{ width: '60px', height: '24px', borderRadius: '12px' }} />
+      </div>
+      <div className="skeleton skeleton-rect" style={{ flex: 1, borderRadius: '8px' }} />
+    </div>
+  );
 
   const previousResponse = useMemo(() => {
     if (!request || !response) return null;
@@ -96,37 +107,39 @@ export default function ResponseViewer() {
       </div>
       
       <div className="response-content">
-        {response ? (
-          activeTab === 'body' ? (
-            <ResponseBody 
-              content={response.body} 
-              contentType={response.headers.find(h => h.key.toLowerCase() === 'content-type')?.value || 'application/json'} 
-            />
-          ) : activeTab === 'diff' ? (
-            <ResponseDiff currentResponse={response} previousResponse={previousResponse} />
-          ) : activeTab === 'headers' ? (
-            <div className="headers-view">
-              {response.headers.map((h, i) => (
-                <div key={i} className="header-row">
-                  <span className="header-key">{h.key}:</span>
-                  <span className="header-value">{h.value}</span>
-                </div>
-              ))}
-            </div>
-          ) : activeTab === 'history' ? (
-            <ResponseHistory />
+        {isLoading ? renderSkeleton() : (
+          response ? (
+            activeTab === 'body' ? (
+              <ResponseBody 
+                content={response.body} 
+                contentType={response.headers.find((h: any) => h.key.toLowerCase() === 'content-type')?.value || 'application/json'} 
+              />
+            ) : activeTab === 'diff' ? (
+              <ResponseDiff currentResponse={response} previousResponse={previousResponse} />
+            ) : activeTab === 'headers' ? (
+              <div className="headers-view">
+                {response.headers.map((h: any, i: number) => (
+                  <div key={i} className="header-row">
+                    <span className="header-key">{h.key}:</span>
+                    <span className="header-value">{h.value}</span>
+                  </div>
+                ))}
+              </div>
+            ) : activeTab === 'history' ? (
+              <ResponseHistory />
+            ) : (
+              <div className="placeholder-view">
+                <div className="placeholder-icon">🛠️</div>
+                <p>{activeTab.replace('-', ' ')} view is under development</p>
+              </div>
+            )
           ) : (
-            <div className="placeholder-view">
-              <div className="placeholder-icon">🛠️</div>
-              <p>{activeTab.replace('-', ' ')} view is under development</p>
+            <div className="empty-response">
+              <div className="empty-icon">📡</div>
+              <h3>Waiting for Request</h3>
+              <p>Send a request to see the response data here.</p>
             </div>
           )
-        ) : (
-          <div className="empty-response">
-            <div className="empty-icon">📡</div>
-            <h3>Waiting for Request</h3>
-            <p>Send a request to see the response data here.</p>
-          </div>
         )}
       </div>
     </div>

@@ -27,12 +27,24 @@ export default function CollectionTree() {
     collections, addCollection, addFolder, addRequest, 
     updateCollection, updateRequest, updateFolder, 
     duplicateCollection, duplicateFolder, duplicateRequest,
-    deleteCollection, deleteFolder, deleteRequest 
+    deleteCollection, deleteFolder, deleteRequest,
+    isLoading: collectionsLoading
   } = useCollectionStore();
   const { setImportModalOpen } = useAppStore();
   const { presence } = usePresenceStore();
   const { settings } = useSettingsStore();
-  
+
+  const renderSkeleton = () => (
+    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {[1, 2, 3, 4, 5, 6].map(i => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="skeleton" style={{ width: '14px', height: '14px', borderRadius: '3px' }} />
+          <div className="skeleton skeleton-text" style={{ width: i % 2 === 0 ? '70%' : '50%' }} />
+        </div>
+      ))}
+    </div>
+  );
+
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
   const isTeamWorkspaceUnlinked = activeWorkspace?.type === 'team' && !activeWorkspace?.path;
 
@@ -840,6 +852,7 @@ export default function CollectionTree() {
             )}
 
             {visibleItems.length === 0 && !isCreatingCollection ? (
+                collectionsLoading ? renderSkeleton() : (
                 <EmptyState 
                     icon={FolderOpen}
                     title={searchQuery ? 'No results found' : 'No collections'}
@@ -848,6 +861,7 @@ export default function CollectionTree() {
                     onAction={() => setImportModalOpen(true)}
                     compact
                 />
+                )
             ) : (
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                     <VirtualList
