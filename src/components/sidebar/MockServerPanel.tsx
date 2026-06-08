@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useMockStore } from '../../stores/useMockStore';
 import EmptyState from '../ui/EmptyState';
+import ConfirmModal from '../ui/ConfirmModal';
 import { Play, Square, Trash2, Server } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function MockServerPanel() {
   const { 
@@ -16,6 +18,7 @@ export default function MockServerPanel() {
 
   const [newMockName, setNewMockName] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [serverToDelete, setServerToDelete] = useState<string | null>(null);
 
   const handleCreateMock = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,16 +43,20 @@ export default function MockServerPanel() {
         await stopMockServer(id);
       } else {
         await startMockServer(id);
+        const server = mockServers.find(s => s.id === id);
+        if (server) {
+          toast.success(`Mock server "${server.name}" started`);
+        }
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast.error(err.message || String(err));
     }
   };
 
-  const handleDeleteServer = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (confirm('Are you sure you want to delete this mock server?')) {
-      await deleteMockServer(id);
+  const confirmDeleteServer = async () => {
+    if (serverToDelete) {
+      await deleteMockServer(serverToDelete);
+      setServerToDelete(null);
     }
   };
 
@@ -111,10 +118,8 @@ export default function MockServerPanel() {
         {mockServers.length === 0 ? (
           <EmptyState 
             icon={Server}
-            title="No mock servers"
-            description="Mock servers let you simulate API responses locally before the backend is even ready."
-            actionLabel="New Mock"
-            onAction={() => setShowAddForm(true)}
+            title="Simulate Any API"
+            description="Create local endpoints to mimic production services for front-end testing."
             compact
           />
         ) : (
@@ -137,8 +142,11 @@ export default function MockServerPanel() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {mock.name}
+                  <span 
+                    style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    title={mock.name}
+                  >
+                    {mock.name.length > 23 ? `${mock.name.substring(0, 23)}...` : mock.name}
                   </span>
                   
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -162,7 +170,10 @@ export default function MockServerPanel() {
                     </button>
 
                     <button 
-                      onClick={(e) => handleDeleteServer(mock.id, e)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setServerToDelete(mock.id);
+                      }}
                       style={{
                         background: 'transparent',
                         border: 'none',
@@ -202,6 +213,16 @@ export default function MockServerPanel() {
           })
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!serverToDelete}
+        onClose={() => setServerToDelete(null)}
+        onConfirm={confirmDeleteServer}
+        title="Delete Mock Server"
+        message="Are you sure you want to delete this mock server? This action cannot be undone."
+        confirmLabel="Delete"
+        isDanger
+      />
     </div>
   );
 }

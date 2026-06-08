@@ -98,15 +98,19 @@ export const useMockStore = create<MockStore>((set, get) => ({
     const server = updated.find(s => s.id === id);
     if (server && server.status === 'active' && isTauri()) {
       try {
+        // Ensure we wait for the old server to fully stop before starting a new one
         await invoke('stop_mock_server', { id });
+        
+        // Ensure all numeric fields are actually numbers to prevent serialization errors
         await invoke('start_mock_server', { 
           id: server.id, 
-          port: server.port, 
+          name: server.name,
+          port: Number(server.port), 
           routes: server.routes.map(r => ({
             id: r.id,
             path: r.path,
             method: r.method,
-            statusCode: r.statusCode,
+            statusCode: Number(r.statusCode),
             responseBody: r.responseBody,
             headers: r.headers
           }))
@@ -154,12 +158,13 @@ export const useMockStore = create<MockStore>((set, get) => ({
       try {
         await invoke('start_mock_server', { 
           id: server.id, 
-          port: server.port, 
+          name: server.name,
+          port: Number(server.port), 
           routes: server.routes.map(r => ({
             id: r.id,
             path: r.path,
             method: r.method,
-            statusCode: r.statusCode,
+            statusCode: Number(r.statusCode),
             responseBody: r.responseBody,
             headers: r.headers
           }))

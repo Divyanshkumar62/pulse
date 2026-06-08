@@ -152,6 +152,14 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setActiveWorkspace: async (id) => {
     set({ activeWorkspaceId: id });
     
+    // Refresh mock servers for the new workspace
+    try {
+      const { useMockStore } = await import('./useMockStore');
+      await useMockStore.getState().initialize();
+    } catch (e) {
+      console.warn('[Pulse] Failed to refresh mock servers on workspace switch:', e);
+    }
+
     // If switching to a workspace with a path, load its collections
     const workspace = get().workspaces.find(w => w.id === id);
     if (workspace?.path) {

@@ -41,8 +41,8 @@ pub struct MockServerConfig {
     pub status: String, // "active" | "inactive"
 }
 
-// Global registry of running mock servers: mapping server_id -> port
-static RUNNING_SERVERS: Lazy<Mutex<HashMap<String, u16>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+// Global registry of running mock servers: mapping server_id -> (port, name)
+static RUNNING_SERVERS: Lazy<Mutex<HashMap<String, (u16, String)>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 fn resolve_faker_placeholders(body: &str) -> String {
     let mut resolved = body.to_string();
@@ -75,25 +75,32 @@ fn resolve_faker_placeholders(body: &str) -> String {
 }
 
 #[tauri::command]
-pub fn start_mock_server(id: String, port: u16, routes: Vec<MockRoute>) -> Result<(), String> {
+pub fn start_mock_server(id: String, name: String, port: u16, routes: Vec<MockRoute>) -> Result<(), String> {
     let mut running = RUNNING_SERVERS.lock().unwrap();
     if running.contains_key(&id) {
         return Err("Mock server is already running".to_string());
     }
 
     // Check if port is already in use by another mock server
-    for (running_id, &running_port) in running.iter() {
-        if running_port == port {
-            return Err(format!("Port {} is already in use by mock server {}", port, running_id));
+    for (_running_id, (running_port, running_name)) in running.iter() {
+        if *running_port == port {
+            return Err(format!("Port {} is already in use by mock server '{}'", port, running_name));
         }
     }
 
     // Attempt to bind to the port first
     let addr = format!("127.0.0.1:{}", port);
-    let server = Server::http(&addr).map_err(|e| format!("Failed to start server on port {}: {}", port, e))?;
+    let server = Server::http(&addr).map_err(|e| {
+        let err_str = e.to_string();
+        if err_str.contains("access permissions") || err_str.contains("address already in use") || err_str.contains("10013") {
+            format!("Port {} is occupied by another application or restricted by the system. Please try a different port.", port)
+        } else {
+            format!("Failed to start server on port {}: {}", port, e)
+        }
+    })?;
 
     // Store in running list
-    running.insert(id.clone(), port);
+    running.insert(id.clone(), (port, name));
 
     // Spawn the server loop in a background thread
     let server_id = id.clone();
@@ -163,9 +170,11 @@ pub fn start_mock_server(id: String, port: u16, routes: Vec<MockRoute>) -> Resul
 #[tauri::command]
 pub fn stop_mock_server(id: String) -> Result<(), String> {
     let port = {
-        let running = RUNNING_SERVERS.lock().unwrap();
-        if let Some(&p) = running.get(&id) {
-            p
+        let mut running = RUNNING_SERVERS.lock().unwrap();
+        if let Some(&(p, _)) = running.get(&id) {
+            let port = p;
+            running.remove(&id); // Remove immediately to unblock registry
+            port
         } else {
             return Ok(()); // Not running, or already stopped
         }
@@ -175,11 +184,6 @@ pub fn stop_mock_server(id: String) -> Result<(), String> {
     if let Ok(mut stream) = TcpStream::connect(format!("127.0.0.1:{}", port)) {
         let _ = stream.write_all(b"GET /__shutdown HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n");
     }
-
-    // Give it a tiny bit of time to shutdown, then verify and remove
-    thread::sleep(Duration::from_millis(50));
-    let mut running = RUNNING_SERVERS.lock().unwrap();
-    running.remove(&id);
 
     Ok(())
 }

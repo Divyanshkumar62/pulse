@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useMockStore } from '../../stores/useMockStore';
 import { MockServer, MockRoute, KeyValuePair } from '../../types';
 import { Play, Square, Plus, Trash2, Edit3, Save, Server, Globe } from 'lucide-react';
+import { toast } from 'sonner';
 import '../../styles/components/mock-editor.css';
 
 export default function MockServerEditor() {
@@ -18,14 +19,12 @@ export default function MockServerEditor() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [serverName, setServerName] = useState('');
   const [serverPort, setServerPort] = useState<number>(3000);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Sync state with active server when it changes
   useEffect(() => {
     if (activeServer) {
       setServerName(activeServer.name);
       setServerPort(activeServer.port);
-      setErrorMessage(null);
       if (activeServer.routes.length > 0 && !selectedRouteId) {
         setSelectedRouteId(activeServer.routes[0].id);
       } else if (activeServer.routes.length === 0) {
@@ -61,22 +60,21 @@ export default function MockServerEditor() {
   const handleSavePort = () => {
     if (serverPort > 0 && serverPort < 65536) {
       updateMockServer(activeServer.id, { port: serverPort });
-      setErrorMessage(null);
     } else {
-      setErrorMessage('Port must be between 1 and 65535');
+      toast.error('Port must be between 1 and 65535');
     }
   };
 
   const handleToggleStatus = async () => {
-    setErrorMessage(null);
     try {
       if (activeServer.status === 'active') {
         await stopMockServer(activeServer.id);
       } else {
         await startMockServer(activeServer.id);
+        toast.success(`Mock server "${activeServer.name}" started on port ${activeServer.port}`);
       }
     } catch (e: any) {
-      setErrorMessage(e.message || 'Failed to start mock server');
+      toast.error(e.message || 'Failed to start mock server');
     }
   };
 
@@ -211,13 +209,6 @@ export default function MockServerEditor() {
           </button>
         </div>
       </div>
-
-      {errorMessage && (
-        <div className="mock-error-banner">
-          <span>{errorMessage}</span>
-          <button onClick={() => setErrorMessage(null)} className="error-close-btn">&times;</button>
-        </div>
-      )}
 
       {/* Main Workspace Area (Columns) */}
       <div className="mock-editor-workspace">
