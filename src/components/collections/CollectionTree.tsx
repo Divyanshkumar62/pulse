@@ -855,10 +855,8 @@ export default function CollectionTree() {
                 collectionsLoading ? renderSkeleton() : (
                 <EmptyState 
                     icon={FolderOpen}
-                    title={searchQuery ? 'No results found' : 'No collections'}
-                    description={searchQuery ? `We couldn't find anything matching "${searchQuery}"` : 'Create your first collection or import an existing one to get started.'}
-                    actionLabel={searchQuery ? undefined : 'Import'}
-                    onAction={() => setImportModalOpen(true)}
+                    title="Organize Your Work"
+                    description="Group your requests into collections for faster development and easier team sharing."
                     compact
                 />
                 )

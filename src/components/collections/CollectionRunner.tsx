@@ -165,9 +165,12 @@ export default function CollectionRunner({ collection, onClose }: CollectionRunn
                           {allPassed ? <CheckCircle size={18} color="#10b981" /> : <AlertCircle size={18} color="#ef4444" />}
                           <span style={{ fontWeight: 600 }}>{result.request_name}</span>
                       </div>
-                      <div style={{ display: 'flex', gap: '12px', fontSize: '12px' }}>
-                          <span style={{ color: allPassed ? '#10b981' : '#ef4444', fontWeight: 700 }}>{result.status}</span>
-                          <span style={{ color: 'var(--text-tertiary)' }}>{result.time_ms}ms</span>
+                      <div style={{ display: 'flex', gap: '20px', fontSize: '12px', alignItems: 'center' }}>
+                          <span style={{ color: allPassed ? '#10b981' : '#ef4444', fontWeight: 700, minWidth: '40px' }}>{result.status}</span>
+                          <span style={{ color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Clock size={12} />
+                            {result.time_ms}ms
+                          </span>
                       </div>
                   </div>
                   
