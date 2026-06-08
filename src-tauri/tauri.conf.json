@@ -25,6 +25,9 @@
       "csp": "default-src 'self'; connect-src 'self' https: http:; script-src 'self'; style-src 'self' 'unsafe-inline'"
     }
   },
+  "plugins": {
+    "notification": null
+  },
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],

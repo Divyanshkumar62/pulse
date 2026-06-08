@@ -336,7 +336,7 @@ pub fn execute_js(
     }
 
     let pm = pm_init.build();
-    context.register_global_property(JsString::from("pm"), pm, Attribute::all());
+    let _ = context.register_global_property(JsString::from("pm"), pm, Attribute::all());
 
     // Execute Shim
     context
