@@ -2,13 +2,35 @@ import { useAppStore } from '../../stores/useAppStore';
 import { useMonitorStore, MonitorCheck, CheckRun } from '../../stores/useMonitorStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { sendRequest } from '../../hooks/useTauri';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { ChevronDown, Clock, Activity, AlertTriangle, CheckCircle, Trash2, Play } from 'lucide-react';
 
 export default function MonitorDashboard() {
   const { selectedMonitorId, setSelectedMonitorId } = useAppStore();
   const { monitors, checkRuns, isChecking, setChecking, addRun, updateMonitor, deleteMonitor } = useMonitorStore();
   const { settings } = useSettingsStore();
+  
+  const [isIntervalOpen, setIsIntervalOpen] = useState(false);
+  const intervalRef = useRef<HTMLDivElement>(null);
+
+  const INTERVAL_OPTIONS = [
+    { label: '1 min', value: 1 },
+    { label: '5 mins', value: 5 },
+    { label: '15 mins', value: 15 },
+    { label: '30 mins', value: 30 },
+    { label: '1 hour', value: 60 },
+  ];
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (intervalRef.current && !intervalRef.current.contains(e.target as Node)) {
+        setIsIntervalOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const selectedCheck = useMemo(() => 
     monitors.find(m => m.id === selectedMonitorId), 
@@ -22,7 +44,7 @@ export default function MonitorDashboard() {
 
   const stats = useMemo(() => {
     if (runs.length === 0) {
-      return { uptime: 100, avgResponseTime: 0, lastChecked: 'Never' };
+      return { uptime: 0, avgResponseTime: 0, lastChecked: 'Never' };
     }
     const successfulRuns = runs.filter(r => r.statusCode && r.statusCode >= 200 && r.statusCode < 300).length;
     const uptime = Math.round((successfulRuns / runs.length) * 100);
@@ -36,7 +58,6 @@ export default function MonitorDashboard() {
     setChecking(true);
     const startTime = Date.now();
     try {
-      // Execute via backend to bypass CORS
       const response = await sendRequest(
         selectedCheck.method, 
         selectedCheck.url, 
@@ -118,7 +139,8 @@ export default function MonitorDashboard() {
         borderRadius: '16px',
         padding: '24px',
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'visible',
+        zIndex: 10
       }}>
         {isChecking && (
           <div style={{
@@ -126,12 +148,55 @@ export default function MonitorDashboard() {
             inset: 0,
             background: 'linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.3), transparent)',
             animation: 'shimmer 1.5s infinite',
+            borderRadius: '16px',
+            pointerEvents: 'none'
           }} />
         )}
         <style>{`
           @keyframes shimmer {
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
+          }
+          .interval-dropdown-glass {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            z-index: 500;
+            min-width: 120px;
+            background: rgba(22, 27, 34, 0.72);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 4px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            animation: dropdown-fade 150ms ease-out;
+            display: flex;
+            flex-direction: column;
+          }
+          @keyframes dropdown-fade {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .interval-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            background: none;
+            border: none;
+            width: 100%;
+          }
+          .interval-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+          }
+          .interval-item.active {
+            background: rgba(37, 99, 235, 0.2);
+            color: var(--accent-primary);
           }
         `}</style>
         
@@ -189,19 +254,44 @@ export default function MonitorDashboard() {
             {selectedCheck.isActive ? 'Polling Active' : 'Polling Paused'}
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-input)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
-            <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>Interval:</span>
-            <select
-              value={selectedCheck.interval || 5}
-              onChange={(e) => updateMonitor(selectedCheck.id, { interval: parseInt(e.target.value) })}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, outline: 'none', cursor: 'pointer' }}
+          <div style={{ position: 'relative' }} ref={intervalRef}>
+            <button 
+              onClick={() => setIsIntervalOpen(!isIntervalOpen)}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                background: 'rgba(255, 255, 255, 0.05)', 
+                padding: '8px 12px', 
+                borderRadius: '6px', 
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
             >
-              <option value={1}>1 min</option>
-              <option value={5}>5 mins</option>
-              <option value={15}>15 mins</option>
-              <option value={30}>30 mins</option>
-              <option value={60}>1 hour</option>
-            </select>
+              <Clock size={14} style={{ color: 'var(--text-tertiary)' }} />
+              <span>Interval: {INTERVAL_OPTIONS.find(opt => opt.value === (selectedCheck.interval || 5))?.label}</span>
+              <ChevronDown size={14} style={{ color: 'var(--text-tertiary)', marginLeft: '4px', transform: isIntervalOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+            </button>
+
+            {isIntervalOpen && (
+              <div className="interval-dropdown-glass">
+                {INTERVAL_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    className={`interval-item ${selectedCheck.interval === opt.value ? 'active' : ''}`}
+                    onClick={() => {
+                      updateMonitor(selectedCheck.id, { interval: opt.value });
+                      setIsIntervalOpen(false);
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <button 
@@ -237,8 +327,8 @@ export default function MonitorDashboard() {
           transition: 'transform 0.2s',
         }}>
           <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Uptime</div>
-          <div style={{ fontSize: '42px', fontWeight: 800, color: stats.uptime >= 99 ? '#22c55e' : stats.uptime >= 95 ? '#eab308' : '#ef4444' }}>
-            {stats.uptime}%
+          <div style={{ fontSize: '42px', fontWeight: 800, color: runs.length > 0 ? (stats.uptime >= 99 ? '#22c55e' : stats.uptime >= 95 ? '#eab308' : '#ef4444') : 'var(--text-tertiary)' }}>
+            {runs.length > 0 ? `${stats.uptime}%` : '---'}
           </div>
         </div>
         <div style={{ 
@@ -250,8 +340,12 @@ export default function MonitorDashboard() {
           textAlign: 'center'
         }}>
           <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Avg Latency</div>
-          <div style={{ fontSize: '42px', fontWeight: 800, color: 'var(--text-primary)' }}>
-            {stats.avgResponseTime}<span style={{ fontSize: '18px', fontWeight: 400, color: 'var(--text-tertiary)', marginLeft: '4px' }}>ms</span>
+          <div style={{ fontSize: '42px', fontWeight: 800, color: runs.length > 0 ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
+            {runs.length > 0 ? (
+              <>
+                {stats.avgResponseTime}<span style={{ fontSize: '18px', fontWeight: 400, color: 'var(--text-tertiary)', marginLeft: '4px' }}>ms</span>
+              </>
+            ) : '---'}
           </div>
         </div>
         <div style={{ 
@@ -337,3 +431,4 @@ export default function MonitorDashboard() {
     </div>
   );
 }
+

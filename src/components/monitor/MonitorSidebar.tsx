@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { useAppStore } from '../../stores/useAppStore';
 import { useMonitorStore, MonitorCheck } from '../../stores/useMonitorStore';
 import EmptyState from '../ui/EmptyState';
-import { Activity } from 'lucide-react';
+import ConfirmModal from '../ui/ConfirmModal';
+import { Activity, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MonitorSidebar() {
   const { selectedMonitorId, setSelectedMonitorId } = useAppStore();
-  const { monitors, addMonitor } = useMonitorStore();
+  const { monitors, addMonitor, deleteMonitor } = useMonitorStore();
   const [isAdding, setIsAdding] = useState(false);
+  const [monitorToDelete, setMonitorToDelete] = useState<string | null>(null);
   const [newCheck, setNewCheck] = useState<Omit<MonitorCheck, 'id' | 'status' | 'responseTime' | 'statusCode' | 'lastCheck' | 'interval' | 'isActive'>>({
     name: '',
     url: '',
@@ -20,10 +22,21 @@ export default function MonitorSidebar() {
       toast.error('Name and URL are required');
       return;
     }
-    addMonitor({ ...newCheck, interval: 5, isActive: true } as any);
+    addMonitor({ ...newCheck, interval: 5, isActive: false } as any);
     setIsAdding(false);
     setNewCheck({ name: '', url: '', method: 'GET' });
-    toast.success('Monitor created');
+    toast.success('Monitor created (Inactive)');
+  };
+
+  const confirmDeleteMonitor = () => {
+    if (monitorToDelete) {
+      deleteMonitor(monitorToDelete);
+      if (selectedMonitorId === monitorToDelete) {
+        setSelectedMonitorId(null);
+      }
+      setMonitorToDelete(null);
+      toast.success('Monitor deleted');
+    }
   };
 
   if (isAdding) {
@@ -104,14 +117,12 @@ export default function MonitorSidebar() {
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1 }}>
         {monitors.length === 0 ? (
           <EmptyState 
             icon={Activity}
-            title="No monitors"
-            description="Automatic health checks help you ensure your production APIs are always up and running."
-            actionLabel="New Monitor"
-            onAction={() => setIsAdding(true)}
+            title="Stay Online"
+            description="Automate uptime checks for your critical endpoints and get notified instantly."
             compact
           />
         ) : (
@@ -125,18 +136,44 @@ export default function MonitorSidebar() {
                 border: `1px solid ${selectedMonitorId === m.id ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
                 borderRadius: '8px',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                position: 'relative'
               }}
               onClick={() => setSelectedMonitorId(m.id)}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 600 }}>{m.name}</span>
-                <div style={{ 
-                  width: '8px', height: '8px', borderRadius: '50%', 
-                  background: m.status === 'healthy' ? 'var(--status-success)' : 
-                             m.status === 'degraded' ? 'var(--status-warning)' : 
-                             m.status === 'failing' ? 'var(--status-error)' : 'var(--text-tertiary)'
-                }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px' }}>
+                <span 
+                  style={{ 
+                    fontSize: '13px', 
+                    fontWeight: 600, 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis', 
+                    whiteSpace: 'nowrap',
+                    flex: 1,
+                    minWidth: 0
+                  }}
+                  title={m.name}
+                >
+                  {m.name.length > 23 ? `${m.name.substring(0, 23)}...` : m.name}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMonitorToDelete(m.id);
+                    }}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 0 }}
+                    title="Delete Monitor"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                  <div style={{ 
+                    width: '8px', height: '8px', borderRadius: '50%', 
+                    background: m.status === 'healthy' ? 'var(--status-success)' : 
+                               m.status === 'degraded' ? 'var(--status-warning)' : 
+                               m.status === 'failing' ? 'var(--status-error)' : 'var(--text-tertiary)'
+                  }} />
+                </div>
               </div>
               <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', wordBreak: 'break-all' }}>
                 {m.url}
@@ -153,6 +190,16 @@ export default function MonitorSidebar() {
           ))
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!monitorToDelete}
+        onClose={() => setMonitorToDelete(null)}
+        onConfirm={confirmDeleteMonitor}
+        title="Delete Monitor"
+        message="Are you sure you want to delete this API monitor? You will lose its historical health data."
+        confirmLabel="Delete"
+        isDanger
+      />
     </div>
   );
 }

@@ -28,9 +28,8 @@ export default function MonitorEngine() {
           const permission = await requestPermission();
           permissionGranted = permission === 'granted';
         }
-        console.log("[Pulse Monitor] OS Notification Permission:", permissionGranted);
       } catch (e) {
-        console.warn("[Pulse Monitor] Notification permission request failed:", e);
+        // Silent error in production
       }
     };
     initNotifications();
@@ -87,7 +86,6 @@ export default function MonitorEngine() {
     const statusChangedToHealthy = monitor.status === 'failing' && (newStatus === 'healthy' || newStatus === 'degraded');
 
     if (statusChangedToFailing || statusChangedToHealthy) {
-      console.log(`[Pulse Monitor] Alert triggered for ${monitor.name}. Status: ${newStatus}`);
       try {
         const hasPermission = await isPermissionGranted();
         if (hasPermission) {
@@ -97,11 +95,9 @@ export default function MonitorEngine() {
                 ? `Monitor "${monitor.name}" is failing with status ${statusCode || 'Error'}.`
                 : `Monitor "${monitor.name}" is back online.`,
           });
-        } else {
-          console.warn("[Pulse Monitor] OS Notification permission denied.");
         }
       } catch (e) {
-        console.error("[Pulse Monitor] Failed to send OS notification:", e);
+        // Silent error in production
       }
     }
 
