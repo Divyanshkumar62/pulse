@@ -8,7 +8,7 @@ import { useSettingsStore } from '../../stores/useSettingsStore';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import ConfirmModal from '../ui/ConfirmModal';
 import EmptyState from '../ui/EmptyState';
-import { MoreVertical, Pin, FolderOpen, Eye } from 'lucide-react';
+import { MoreVertical, Pin, FolderOpen, Eye, Folder as FolderIcon, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { getGravatarUrl } from '../../utils/gravatar';
@@ -488,10 +488,13 @@ export default function CollectionTree() {
             width: '14px',
             transition: 'transform 0.2s',
             transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-            opacity: 0.5
+            opacity: 0.6
           }}>
-            ▶
+            <ChevronRight size={14} strokeWidth={2} />
           </span>
+          {item.type === 'folder' && (
+            <FolderIcon size={14} strokeWidth={2} style={{ opacity: 0.6, color: 'var(--text-secondary)', fill: 'transparent', marginLeft: '2px' }} />
+          )}
           <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
           
           <div className="tree-item-actions">

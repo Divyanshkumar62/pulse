@@ -15,7 +15,7 @@ import {
   MarkerType
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Play, Save, Plus, Maximize, ZoomIn, ZoomOut, Library } from 'lucide-react';
+import { Play, Save, Plus, Maximize, ZoomIn, ZoomOut, Library, Repeat, GitBranch, Clock, ArrowRight, Sparkles, Send } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { RequestNode } from './nodes/RequestNode';
 import { LogicNode } from './nodes/LogicNode';
@@ -27,6 +27,8 @@ import NodeConfigPanel from './NodeConfigPanel';
 import CreateNodeModal from '../modals/CreateNodeModal';
 import CustomEdge from './CustomEdge';
 import ConfirmModal from '../ui/ConfirmModal';
+import EmptyState from '../ui/EmptyState';
+import { Workflow } from 'lucide-react';
 
 const nodeTypes = {
   request: RequestNode,
@@ -99,6 +101,21 @@ export default function FlowBuilder() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showAddNodeModal, setShowAddNodeModal] = useState(false);
   const [nodeToDeleteId, setNodeToDeleteId] = useState<string | null>(null);
+
+  const [previewEmail, setPreviewEmail] = useState('');
+  const [previewSubmitted, setPreviewSubmitted] = useState(false);
+  const [previewSubmitting, setPreviewSubmitting] = useState(false);
+
+  const handlePreviewSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!previewEmail.trim()) return;
+    setPreviewSubmitting(true);
+    setTimeout(() => {
+      setPreviewSubmitting(false);
+      setPreviewSubmitted(true);
+      toast.success("Joined waitlist! We'll notify you soon.");
+    }, 1000);
+  };
 
   const lastSentToStoreRef = useRef<string>('');
   const localUpdateTimeoutRef = useRef<any>(null);
@@ -300,7 +317,7 @@ export default function FlowBuilder() {
           const edgesWithArrows = storeEdges.map(edge => {
             const isNegative = edge.sourceHandle === 'failure' || edge.sourceHandle === 'false' || edge.sourceHandle === 'done' || edge.sourceHandle === 'failed';
             const sourceNode = storeNodes.find(n => n.id === edge.source);
-            const isTriggered = sourceNode?.data?.triggeredHandle === edge.sourceHandle;
+            const isTriggered = (sourceNode?.data as any)?.triggeredHandle === edge.sourceHandle;
             
             const strokeColor = isTriggered ? '#fbbf24' : (isNegative ? '#ef4444' : '#3b82f6');
             const strokeWidth = isTriggered ? 4 : 2;
@@ -527,6 +544,273 @@ export default function FlowBuilder() {
     await runner.run();
   };
 
+  // --- FEATURE UNDER CONSTRUCTION ---
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'radial-gradient(circle at center, #0f172a 0%, #020617 100%)',
+      position: 'relative',
+      overflow: 'hidden',
+      padding: '40px 24px'
+    }}>
+      {/* Background grid */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage: 'radial-gradient(rgba(99, 102, 241, 0.08) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+        pointerEvents: 'none'
+      }} />
+
+      {/* Background glowing blobs */}
+      <div style={{
+        position: 'absolute',
+        top: '20%',
+        left: '30%',
+        width: '350px',
+        height: '350px',
+        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
+        filter: 'blur(40px)',
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '20%',
+        right: '25%',
+        width: '400px',
+        height: '400px',
+        background: 'radial-gradient(circle, rgba(187, 154, 247, 0.1) 0%, transparent 70%)',
+        filter: 'blur(50px)',
+        pointerEvents: 'none'
+      }} />
+
+      {/* Mock Flow Canvas in Background */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '24px',
+        padding: '100px',
+        opacity: 0.18,
+        filter: 'blur(0.5px)',
+        pointerEvents: 'none',
+        transform: 'scale(1.05)',
+        userSelect: 'none'
+      }}>
+        {/* Mock Node 1: Request */}
+        <div style={{
+          background: '#0d1527',
+          border: '1px solid rgba(99, 102, 241, 0.2)',
+          borderRadius: '14px',
+          padding: '16px',
+          width: '200px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(99, 102, 241, 0.3)' }}>GET</span>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Fetch User Profile</span>
+          </div>
+          <span style={{ fontSize: '10px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>/api/v1/users/me</span>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+            <span style={{ fontSize: '8px', color: '#34d399', background: 'rgba(52, 211, 153, 0.1)', padding: '1px 6px', borderRadius: '10px', border: '1px solid rgba(52, 211, 153, 0.2)' }}>200 OK</span>
+          </div>
+        </div>
+
+        {/* Arrow 1 */}
+        <div style={{ display: 'flex', alignItems: 'center', color: '#475569' }}>
+          <ArrowRight size={20} strokeWidth={1.5} />
+        </div>
+
+        {/* Mock Node 2: Logic Branch */}
+        <div style={{
+          background: '#0d1527',
+          border: '1px solid rgba(234, 88, 12, 0.2)',
+          borderRadius: '14px',
+          padding: '16px',
+          width: '200px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ background: 'rgba(234, 88, 12, 0.15)', color: '#fdba74', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(234, 88, 12, 0.3)' }}>BRANCH</span>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Is Admin?</span>
+          </div>
+          <span style={{ fontSize: '10px', color: '#94a3b8' }}>user.role === 'admin'</span>
+        </div>
+
+        {/* Arrow 2 */}
+        <div style={{ display: 'flex', alignItems: 'center', color: '#475569' }}>
+          <ArrowRight size={20} strokeWidth={1.5} />
+        </div>
+
+        {/* Mock Node 3: Delay */}
+        <div style={{
+          background: '#0d1527',
+          border: '1px solid rgba(187, 154, 247, 0.2)',
+          borderRadius: '14px',
+          padding: '16px',
+          width: '200px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ background: 'rgba(187, 154, 247, 0.15)', color: '#d8b4fe', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(187, 154, 247, 0.3)' }}>DELAY</span>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Wait 1500ms</span>
+          </div>
+          <span style={{ fontSize: '10px', color: '#94a3b8' }}>Delay execution chain</span>
+        </div>
+      </div>
+
+      {/* Main Glassmorphic Panel */}
+      <div style={{
+        background: 'rgba(13, 17, 23, 0.75)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderRadius: '24px',
+        padding: '48px 40px',
+        maxWidth: '640px',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center',
+        boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+        position: 'relative',
+        zIndex: 10
+      }}>
+        {/* Glow Top Badge */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: 'rgba(99, 102, 241, 0.1)',
+          border: '1px solid rgba(99, 102, 241, 0.3)',
+          padding: '4px 12px',
+          borderRadius: '100px',
+          color: '#818cf8',
+          fontSize: '11px',
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          marginBottom: '24px',
+          boxShadow: '0 0 12px rgba(99, 102, 241, 0.2)'
+        }}>
+          <Sparkles size={12} />
+          <span>Developer Preview</span>
+        </div>
+
+        {/* Feature Icon */}
+        <div style={{
+          width: '72px',
+          height: '72px',
+          borderRadius: '20px',
+          background: 'linear-gradient(135deg, #6366f1, #bb9af7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#ffffff',
+          boxShadow: '0 8px 30px rgba(99, 102, 241, 0.4)',
+          marginBottom: '24px'
+        }}>
+          <Workflow size={36} strokeWidth={1.5} />
+        </div>
+
+        {/* Title */}
+        <h2 style={{
+          fontSize: '32px',
+          fontWeight: 800,
+          color: '#ffffff',
+          letterSpacing: '-0.03em',
+          margin: '0 0 12px 0',
+          background: 'linear-gradient(to right, #ffffff, #cbd5e1)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent'
+        }}>
+          Visual Flow Builder
+        </h2>
+
+        {/* Subtitle / Description */}
+        <p style={{
+          fontSize: '15px',
+          color: '#94a3b8',
+          lineHeight: 1.6,
+          maxWidth: '480px',
+          margin: '0 0 40px 0'
+        }}>
+          Design complex execution pipelines visually. Drag-and-drop requests, configure logic triggers, loop data streams, and debug runs in real-time.
+        </p>
+
+        {/* Features Preview Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '16px',
+          width: '100%',
+          marginBottom: '40px'
+        }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderRadius: '16px',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Play size={20} style={{ color: '#38bdf8' }} />
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#f1f5f9', whiteSpace: 'nowrap' }}>Request Chaining</span>
+            <span style={{ fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>Pass variables downstream automatically</span>
+          </div>
+
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderRadius: '16px',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <GitBranch size={20} style={{ color: '#c084fc' }} />
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#f1f5f9', whiteSpace: 'nowrap' }}>Control Nodes</span>
+            <span style={{ fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>Add delays, loop indexes & branch conditions</span>
+          </div>
+
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderRadius: '16px',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Repeat size={20} style={{ color: '#fb923c' }} />
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#f1f5f9', whiteSpace: 'nowrap' }}>Mock Runs</span>
+            <span style={{ fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>Inspect logs & debug connections step-by-step</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (!activeFlow) {
     return (
       <div className="flow-workspace">
@@ -573,8 +857,8 @@ export default function FlowBuilder() {
         <Panel position="top-right" className="flow-panel-group">
           <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-deep)', padding: '6px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
              <select 
-                value={activeFlow.environmentId || ''}
-                onChange={(e) => updateFlow(activeFlow.id, { environmentId: e.target.value })}
+                value={activeFlow?.environmentId || ''}
+                onChange={(e) => activeFlow && updateFlow(activeFlow.id, { environmentId: e.target.value })}
                 style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
              >
                 <option value="">No Environment</option>
@@ -638,7 +922,7 @@ export default function FlowBuilder() {
 
       {selectedNodeId && (
         <NodeConfigPanel 
-          nodeId={selectedNodeId} 
+          nodeId={selectedNodeId!} 
           onClose={() => setSelectedNodeId(null)} 
         />
       )}

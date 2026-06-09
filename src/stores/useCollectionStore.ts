@@ -29,6 +29,7 @@ interface CollectionStore {
   deleteRequest: (collectionId: string, requestId: string) => void;
   
   // Persistence
+  setCollections: (collections: CollectionWithPath[]) => void;
   saveCollectionToDisk: (id: string) => Promise<void>;
   saveAllCollectionsToDisk: () => Promise<void>;
 }
@@ -49,6 +50,7 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     } else {
       set({ collections: [...collections, { ...collection, _diskPath: path }] });
     }
+    await get().saveCollectionToDisk(collection.id);
   },
 
   updateCollection: async (id: string, updates: Partial<Collection>, _path: string) => {
@@ -86,13 +88,29 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
     get().saveCollectionToDisk(newCol.id);
   },
 
-  deleteCollection: (id) => {
+  deleteCollection: async (id) => {
     const collection = get().collections.find(c => c.id === id);
     set((state) => ({
       collections: state.collections.filter(c => c.id !== id)
     }));
-    // Note: Deletion from disk might need a specific command if we want to delete the folder
-    // For now, we just stop tracking it.
+    
+    const activeWorkspace = useWorkspaceStore.getState().workspaces.find(
+      w => w.id === useWorkspaceStore.getState().activeWorkspaceId
+    );
+    let workspacePath = activeWorkspace?.path;
+
+    if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__ !== undefined) {
+      try {
+        if (!workspacePath) {
+          const { invoke } = await import('@tauri-apps/api/core');
+          workspacePath = await invoke<string>('create_data_dir');
+        }
+        const { deleteCollectionFromDisk } = await import('../hooks/useTauri');
+        await deleteCollectionFromDisk(workspacePath, id);
+      } catch (e) {
+        console.error(`[Pulse] Failed to delete collection ${id} from disk:`, e);
+      }
+    }
   },
 
   addFolder: async (collectionId: string, parentFolderId: string | null, folder: Folder) => {
@@ -365,8 +383,31 @@ export const useCollectionStore = create<CollectionStore>((set, get) => ({
         console.error(`[Pulse] Failed to save collection ${collection.name}:`, e);
       }
     }
-  }
+  },
+
+  setCollections: (collections) => set({ collections })
 }));
+
+// Automatic sync to workspaces in useWorkspaceStore
+useCollectionStore.subscribe((state) => {
+  try {
+    const wsStore = useWorkspaceStore.getState();
+    const activeId = wsStore.activeWorkspaceId;
+    if (activeId) {
+      const workspaces = wsStore.workspaces;
+      const workspace = workspaces.find(w => w.id === activeId);
+      if (workspace && workspace.collections !== state.collections) {
+        useWorkspaceStore.setState({
+          workspaces: workspaces.map(w => 
+            w.id === activeId ? { ...w, collections: state.collections } : w
+          )
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('[Pulse] Failed to sync collections to workspace store:', e);
+  }
+});
 
 // Auto-save logic is now handled directly by actions to be more targeted and efficient.
 // This prevents saving all collections when only one small part of one collection changes.

@@ -172,6 +172,10 @@ export async function exportCollection(collection: Collection, format: String): 
 }
 
 // Workspace Sync Commands
+export async function deleteCollectionFromDisk(workspacePath: String, collectionId: string): Promise<void> {
+  return invoke('delete_collection_from_disk', { workspacePath, collectionId });
+}
+
 export async function saveCollectionToDisk(workspacePath: string, collection: Collection): Promise<void> {
   return invoke('save_collection_to_disk', { workspacePath, collection });
 }

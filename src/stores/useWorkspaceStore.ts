@@ -119,17 +119,16 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         const { useCollectionStore } = await import('./useCollectionStore');
         const colStore = useCollectionStore.getState();
         
-        // Populate store from collections found in workspace
-        for (const col of workspaceCollections) {
-          colStore.addCollection(col, effectivePath);
-        }
-
-        // Also add the default collections loaded in Step 2 if they aren't duplicates
+        // Merge workspace-specific collections with default collections loaded in Step 2, avoiding duplicates
+        const mergedCollections = [...workspaceCollections];
         for (const col of collections) {
-          if (!workspaceCollections.find(wc => wc.id === col.id)) {
-            colStore.addCollection(col, effectivePath);
+          if (!mergedCollections.find(wc => wc.id === col.id)) {
+            mergedCollections.push(col);
           }
         }
+
+        // Set collections directly in the store to avoid redundant disk writes on startup
+        colStore.setCollections(mergedCollections.map(col => ({ ...col, _diskPath: effectivePath })));
 
         // Load Flows
         const { useFlowStore } = await import('./useFlowStore');
@@ -160,25 +159,43 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       console.warn('[Pulse] Failed to refresh mock servers on workspace switch:', e);
     }
 
-    // If switching to a workspace with a path, load its collections
     const workspace = get().workspaces.find(w => w.id === id);
-    if (workspace?.path) {
+    const { useCollectionStore } = await import('./useCollectionStore');
+    const store = useCollectionStore.getState();
+
+    // Determine the path for this workspace
+    let effectivePath = workspace?.path;
+    if (!effectivePath && id === 'personal') {
+      const { invoke } = await import('@tauri-apps/api/core');
+      effectivePath = await invoke<string>('create_data_dir');
+    }
+
+    if (effectivePath) {
       try {
-        const workspaceCollections = await loadCollectionsFromWorkspace(workspace.path);
-        if (workspaceCollections.length > 0) {
-          const { useCollectionStore } = await import('./useCollectionStore');
-          const store = useCollectionStore.getState();
-          for (const col of workspaceCollections) {
-            store.addCollection(col, workspace.path);
+        const workspaceCollections = await loadCollectionsFromWorkspace(effectivePath);
+        
+        let allCollections = [...workspaceCollections];
+        if (id === 'personal') {
+          // For personal workspace, also load default collections
+          const defaultCols = await loadCollections();
+          for (const col of defaultCols) {
+            if (!allCollections.find(wc => wc.id === col.id)) {
+              allCollections.push(col);
+            }
           }
         }
+        
+        store.setCollections(allCollections.map(col => ({ ...col, _diskPath: effectivePath })));
 
         // Load Flows
         const { useFlowStore } = await import('./useFlowStore');
-        await useFlowStore.getState().loadFlowsFromDisk(workspace.path);
+        await useFlowStore.getState().loadFlowsFromDisk(effectivePath);
       } catch (e) {
         console.warn('[Pulse] Failed to load workspace data:', e);
+        store.setCollections([]);
       }
+    } else {
+      store.setCollections([]);
     }
   },
 

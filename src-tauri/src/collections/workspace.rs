@@ -3,6 +3,72 @@ use std::path::{Path, PathBuf};
 use crate::collections::types::{Collection, Folder, Request, Environment};
 use serde_json;
 
+pub async fn delete_collection_from_disk(workspace_path: String, collection_id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let collections_dir = PathBuf::from(workspace_path).join("collections");
+        if !collections_dir.exists() {
+            return Ok(());
+        }
+
+        // 1. Delete direct folder matching the ID if it exists
+        let direct_path = collections_dir.join(&collection_id);
+        if direct_path.exists() {
+            if let Err(e) = fs::remove_dir_all(&direct_path) {
+                eprintln!("Failed to delete direct collection path: {}", e);
+            }
+        }
+
+        // 2. Scan all entries to find any folders or files with matching ID inside their metadata
+        if let Ok(entries) = fs::read_dir(&collections_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    let meta_file = path.join("collection.json");
+                    if meta_file.exists() {
+                        if let Ok(content) = fs::read_to_string(&meta_file) {
+                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+                                if let Some(id) = val.get("id").and_then(|v| v.as_str()) {
+                                    if id == collection_id {
+                                        if let Err(e) = fs::remove_dir_all(&path) {
+                                            eprintln!("Failed to delete matching collection path {:?}: {}", path, e);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if path.is_file() {
+                    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                        if ext == "json" || ext == "yaml" || ext == "yml" {
+                            if let Ok(content) = fs::read_to_string(&path) {
+                                let matches = if ext == "json" {
+                                    serde_json::from_str::<serde_json::Value>(&content)
+                                        .ok()
+                                        .and_then(|val| val.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()))
+                                } else {
+                                    serde_yaml::from_str::<serde_yaml::Value>(&content)
+                                        .ok()
+                                        .and_then(|val| val.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()))
+                                };
+                                
+                                if let Some(id) = matches {
+                                    if id == collection_id {
+                                        if let Err(e) = fs::remove_file(&path) {
+                                            eprintln!("Failed to delete matching collection file {:?}: {}", path, e);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }).await.map_err(|e| e.to_string())?
+}
+
 pub async fn save_collection_to_disk(workspace_path: String, collection: Collection) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         let base_path = PathBuf::from(workspace_path);
@@ -11,6 +77,10 @@ pub async fn save_collection_to_disk(workspace_path: String, collection: Collect
         // Use ID for the folder name to prevent duplicates on rename
         let collection_path = collections_dir.join(&collection.id);
         
+        // Nuke the existing directory if it exists to clear out deleted items (folders/requests)
+        if collection_path.exists() {
+            fs::remove_dir_all(&collection_path).map_err(|e| e.to_string())?;
+        }
         fs::create_dir_all(&collection_path).map_err(|e| e.to_string())?;
 
         // collection.json holds variables and description

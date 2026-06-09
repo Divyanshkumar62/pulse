@@ -6,7 +6,7 @@ import { usePresenceStore } from '../../stores/usePresenceStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { v4 as uuidv4 } from 'uuid';
 import { getGravatarUrl } from '../../utils/gravatar';
-import { LayoutDashboard, Folder, ChevronDown, ChevronRight, Clock, Globe, GitBranch, MoreVertical, Pin } from 'lucide-react';
+import { LayoutDashboard, Folder, ChevronDown, ChevronRight, Clock, Globe, GitBranch, MoreVertical, Pin, Lock, Sparkles } from 'lucide-react';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import ConfirmModal from '../ui/ConfirmModal';
 import { toast } from 'sonner';
@@ -27,6 +27,92 @@ export default function FlowSidebar() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // --- FEATURE UNDER CONSTRUCTION ---
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      padding: '24px 16px',
+      background: 'var(--bg-deep)',
+      gap: '24px',
+      userSelect: 'none'
+    }}>
+      {/* Category Group */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Flow Library
+        </span>
+        
+        {/* Mock Flow Items */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {[
+            { name: 'Auth & Sync Pipeline', nodes: 3 },
+            { name: 'Daily User Cleanup', nodes: 5 },
+            { name: 'Slack Notify Webhook', nodes: 2 }
+          ].map((flow, idx) => (
+            <div 
+              key={idx}
+              onClick={() => {
+                toast.info("Visual Flow Builder is in developer preview.", {
+                  description: "Request early access in the main editor panel."
+                });
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 14px',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.01)',
+                border: '1px solid rgba(255, 255, 255, 0.03)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.01)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.03)';
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {flow.name}
+                </span>
+                <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                  {flow.nodes} nodes
+                </span>
+              </div>
+              <Lock size={12} style={{ color: 'var(--text-tertiary)', opacity: 0.6 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Info Card */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(187, 154, 247, 0.03) 100%)',
+        border: '1px solid rgba(99, 102, 241, 0.12)',
+        borderRadius: '12px',
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#818cf8' }}>
+          <Sparkles size={14} />
+          <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Automations</span>
+        </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0, opacity: 0.8 }}>
+          Create schedules, cron-like triggers, and request pipes. Request beta access in the visual flow editor.
+        </p>
+      </div>
+    </div>
+  );
 
   const editInputRef = useRef<HTMLInputElement>(null);
 
@@ -364,9 +450,9 @@ export default function FlowSidebar() {
 
       {menuPos && (
         <ContextMenu 
-          x={menuPos.x}
-          y={menuPos.y}
-          items={getMenuItems(flows.find(f => f.id === menuPos.flowId))}
+          x={menuPos!.x}
+          y={menuPos!.y}
+          items={getMenuItems(flows.find(f => f.id === menuPos!.flowId))}
           onClose={() => setMenuPos(null)}
         />
       )}

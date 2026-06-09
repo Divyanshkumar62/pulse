@@ -265,6 +265,12 @@ fn export_collection(collection: Collection, format: String) -> Result<serde_jso
 
 // Workspace Sync Commands
 #[tauri::command]
+async fn delete_collection_from_disk(workspace_path: String, collection_id: String) -> Result<(), String> {
+    let sanitized_path = collections::utils::validate_workspace_path(&workspace_path)?;
+    collections::workspace::delete_collection_from_disk(sanitized_path.to_string_lossy().to_string(), collection_id).await
+}
+
+#[tauri::command]
 async fn save_collection_to_disk(workspace_path: String, collection: Collection) -> Result<(), String> {
     let sanitized_path = collections::utils::validate_workspace_path(&workspace_path)?;
     collections::workspace::save_collection_to_disk(sanitized_path.to_string_lossy().to_string(), collection).await
@@ -561,6 +567,7 @@ pub fn run() {
             remove_team_member,
             load_collections,
             create_data_dir,
+            delete_collection_from_disk,
             save_collection_to_disk,
             load_collections_from_workspace,
             save_workspace_to_disk,
