@@ -714,7 +714,7 @@ export default function CollectionTree() {
     <div className="collection-tree" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="tree-header" style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Collections</h3>
+            <h3 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Collections</h3>
             <div style={{ position: 'relative' }}>
                 <button 
                     onClick={() => setShowMenuDropdown(!showMenuDropdown)}

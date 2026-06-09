@@ -10,7 +10,7 @@ export default function ScriptsEditor() {
   const script = activeTab.request.preRequestScript || '';
 
   return (
-    <div className="scripts-editor" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="scripts-editor" style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
             Pre-request Script

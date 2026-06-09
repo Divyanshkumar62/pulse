@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTabStore } from '../../stores/useTabStore';
-import { generateCurl, generateFetch } from '../../services/codeGen';
+import { generateCurl, generateFetch, generatePython, generateGo, generateJava } from '../../services/codeGen';
 import { toast } from 'sonner';
 
 interface CodeGeneratorProps {
@@ -10,7 +10,7 @@ interface CodeGeneratorProps {
 
 export default function CodeGenerator({ isOpen, onClose }: CodeGeneratorProps) {
   const { tabs, activeTabId } = useTabStore();
-  const [lang, setLang] = useState<'curl' | 'js'>('curl');
+  const [lang, setLang] = useState<'curl' | 'js' | 'python' | 'go' | 'java'>('curl');
   const activeTab = tabs.find(t => t.id === activeTabId);
 
   useEffect(() => {
@@ -24,7 +24,14 @@ export default function CodeGenerator({ isOpen, onClose }: CodeGeneratorProps) {
   if (!isOpen || !activeTab || !activeTab.request) return null;
 
   const request = activeTab.request;
-  const code = lang === 'curl' ? generateCurl(request) : generateFetch(request);
+  let code = '';
+  switch (lang) {
+    case 'curl': code = generateCurl(request); break;
+    case 'js': code = generateFetch(request); break;
+    case 'python': code = generatePython(request); break;
+    case 'go': code = generateGo(request); break;
+    case 'java': code = generateJava(request); break;
+  }
 
   const handleCopy = () => {
     navigator.clipboard.writeText(code);
@@ -42,31 +49,26 @@ export default function CodeGenerator({ isOpen, onClose }: CodeGeneratorProps) {
           <button onClick={onClose} style={{ color: 'var(--text-tertiary)', background: 'transparent', border: 'none', cursor: 'pointer', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
         
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-default)' }}>
-          <button 
-            className={`config-tab ${lang === 'curl' ? 'active' : ''}`}
-            onClick={() => setLang('curl')}
-          >
-            Curl
-          </button>
-          <button 
-            className={`config-tab ${lang === 'js' ? 'active' : ''}`}
-            onClick={() => setLang('js')}
-          >
-            JavaScript (Fetch)
-          </button>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-default)', overflowX: 'auto' }} className="no-scrollbar">
+          <button className={`config-tab ${lang === 'curl' ? 'active' : ''}`} onClick={() => setLang('curl')}>Curl</button>
+          <button className={`config-tab ${lang === 'js' ? 'active' : ''}`} onClick={() => setLang('js')}>JS (Fetch)</button>
+          <button className={`config-tab ${lang === 'python' ? 'active' : ''}`} onClick={() => setLang('python')}>Python (Requests)</button>
+          <button className={`config-tab ${lang === 'go' ? 'active' : ''}`} onClick={() => setLang('go')}>Go</button>
+          <button className={`config-tab ${lang === 'java' ? 'active' : ''}`} onClick={() => setLang('java')}>Java (HttpClient)</button>
         </div>
         
-        <div style={{ padding: '16px', position: 'relative' }}>
-          <button 
-            onClick={handleCopy}
-            style={{ position: 'absolute', top: '24px', right: '24px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', padding: '4px 12px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}
-          >
-            Copy
-          </button>
-          <pre style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '4px', overflowX: 'auto', color: 'var(--text-primary)', border: '1px solid var(--border-default)', whiteSpace: 'pre-wrap' }} className="text-mono">
-            {code}
-          </pre>
+        <div style={{ padding: '16px' }}>
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={handleCopy}
+              style={{ position: 'absolute', top: '8px', right: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', padding: '4px 12px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', zIndex: 10 }}
+            >
+              Copy
+            </button>
+            <pre style={{ margin: 0, background: 'var(--bg-surface)', padding: '16px', paddingTop: '32px', borderRadius: '4px', overflowX: 'auto', color: 'var(--text-primary)', border: '1px solid var(--border-default)', whiteSpace: 'pre-wrap', minHeight: '150px', maxHeight: '400px' }} className="text-mono">
+              {code}
+            </pre>
+          </div>
         </div>
       </div>
     </div>

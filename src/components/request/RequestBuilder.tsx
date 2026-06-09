@@ -7,6 +7,7 @@ import AuthTab from './AuthTab';
 import WebSocketPanel from './WebSocketPanel';
 import ScriptsEditor from './ScriptsEditor';
 import CodeGenerator from '../modals/CodeGenerator';
+import SaveRequestModal from '../modals/SaveRequestModal';
 import { useTabStore } from '../../stores/useTabStore';
 import { useCollectionStore } from '../../stores/useCollectionStore';
 import { sendRequest } from '../../hooks/useTauri';
@@ -33,6 +34,7 @@ export default function RequestBuilder() {
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('params');
   const [isLoading, setIsLoading] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   // Sync global loading state to individual tab
   useEffect(() => {
@@ -247,6 +249,18 @@ export default function RequestBuilder() {
     return () => window.removeEventListener('pulse:send-request', onSendRequest);
   }, [handleSend]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + S
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        setIsSaveModalOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const configTabs: { id: ConfigTab; label: string }[] = [
     { id: 'params', label: 'Params' },
     { id: 'headers', label: 'Headers' },
@@ -257,7 +271,7 @@ export default function RequestBuilder() {
 
   return (
     <div className="request-builder">
-      <UrlBar onSend={handleSend} onCode={() => setIsCodeModalOpen(true)} isLoading={isLoading} />
+      <UrlBar onSend={handleSend} onCode={() => setIsCodeModalOpen(true)} onSave={() => setIsSaveModalOpen(true)} isLoading={isLoading} />
       
       {isWebSocket ? (
         <div className="websocket-container-glass">
@@ -288,6 +302,7 @@ export default function RequestBuilder() {
       )}
       
       <CodeGenerator isOpen={isCodeModalOpen} onClose={() => setIsCodeModalOpen(false)} />
+      <SaveRequestModal isOpen={isSaveModalOpen} onClose={() => setIsSaveModalOpen(false)} request={request} />
     </div>
   );
 }

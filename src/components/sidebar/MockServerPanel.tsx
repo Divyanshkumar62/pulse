@@ -63,9 +63,9 @@ export default function MockServerPanel() {
   return (
     <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 className="text-h2" style={{ margin: 0, fontSize: '14px', letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+        <h3 className="text-h2" style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
           Mock Servers
-        </h2>
+        </h3>
         <button 
           onClick={() => setShowAddForm(!showAddForm)} 
           className="btn-secondary" 

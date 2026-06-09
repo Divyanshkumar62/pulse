@@ -163,7 +163,7 @@
   justify-content: center;
   font-size: 16px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   flex-shrink: 0;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
@@ -206,8 +206,8 @@
 }
 
 .premium-role-badge.role-admin {
-  background: rgba(59, 130, 246, 0.08);
-  color: #3b82f6;
+  background: var(--accent-subtle);
+  color: var(--accent-primary);
 }
 
 .premium-role-badge.role-member {
@@ -608,15 +608,16 @@
 
 /* Team Card Top-Right Actions */
 .team-card-actions-top {
+  opacity: 1;
+  visibility: visible;
   display: flex;
   align-items: center;
-  gap: 4px;
-  opacity: 0.3;
-  transition: opacity var(--transition-fast);
+  gap: var(--space-2);
+  transition: all var(--transition-fast);
 }
 
 .premium-team-card:hover .team-card-actions-top {
-  opacity: 1;
+  /* Kept for structural compatibility */
 }
 
 .team-action-icon-btn {
@@ -638,7 +639,7 @@
 }
 
 .team-action-icon-btn.pin-btn.pinned {
-  color: #bb9af7;
+  color: var(--accent-primary);
 }
 
 .premium-team-card .team-action-icon-btn.pin-btn.pinned {
@@ -646,18 +647,18 @@
 }
 
 .team-action-icon-btn.pin-btn.pinned:hover {
-  background: rgba(187, 154, 247, 0.1);
+  background: var(--accent-subtle);
 }
 
 .team-action-icon-btn.delete-btn:hover {
-  background: rgba(239, 68, 68, 0.1) !important;
-  color: #ef4444 !important;
+  background: var(--status-error-subtle) !important;
+  color: var(--status-error) !important;
 }
 
 /* Danger Modal for Deletion */
 .btn-danger {
   padding: var(--space-3) var(--space-5);
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: var(--status-error);
   border: none;
   border-radius: var(--radius-lg);
   color: white;
@@ -665,12 +666,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+  box-shadow: 0 4px 12px var(--status-error-subtle);
 }
 
 .btn-danger:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+  box-shadow: 0 6px 16px var(--status-error-subtle);
 }
 
 .btn-danger:active {

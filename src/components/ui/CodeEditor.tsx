@@ -128,6 +128,7 @@ export default function CodeEditor({ value, onChange, language = 'javascript', h
       className="pulse-code-editor glass-panel" 
       style={{ 
         height: '100%', 
+        width: '100%',
         overflow: 'hidden', 
         borderRadius: 'var(--radius-md)',
         border: '1px solid var(--border-subtle)',

@@ -10,7 +10,7 @@ export default function HeadersEditor() {
   const headers = activeTab.request.headers || [];
 
   return (
-    <div className="headers-editor" style={{ height: '100%', overflowY: 'auto' }}>
+    <div className="headers-editor" style={{ height: '100%', width: '100%', overflowY: 'auto' }}>
       <KeyValueTable 
         items={headers} 
         onChange={(data) => updateActiveTabRequest({ headers: data })} 

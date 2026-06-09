@@ -20,9 +20,18 @@ export default function BodyEditor() {
   };
 
   return (
-    <div className="body-editor" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
+    <div className="body-editor" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', gap: '16px' }}>
       <div style={{ display: 'flex', gap: '12px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
-        {['none', 'json', 'raw', 'form-data', 'x-www-form-urlencoded', 'graphql'].map((type) => (
+        {['none', 'json', 'raw', 'form-data', 'x-www-form-urlencoded', 'graphql'].map((type) => {
+          const bodyTypeLabels: Record<string, string> = {
+            'none': 'None',
+            'json': 'JSON',
+            'raw': 'Raw',
+            'form-data': 'Form-Data',
+            'x-www-form-urlencoded': 'URL-Encoded',
+            'graphql': 'GraphQL'
+          };
+          return (
           <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '11px', color: body.type === type ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontWeight: body.type === type ? 600 : 400 }}>
             <input
               type="radio"
@@ -32,9 +41,9 @@ export default function BodyEditor() {
               style={{ display: 'none' }}
             />
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', border: '1px solid var(--border-default)', background: body.type === type ? 'var(--accent-primary)' : 'transparent' }} />
-            {type.toUpperCase()}
+            {bodyTypeLabels[type]}
           </label>
-        ))}
+        )})}
       </div>
 
       <div style={{ flex: 1, minHeight: 0 }}>

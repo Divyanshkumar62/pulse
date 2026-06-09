@@ -226,7 +226,6 @@ export default function MonitorDashboard() {
               color: selectedCheck.status === 'healthy' ? '#22c55e' :
                      selectedCheck.status === 'degraded' ? '#eab308' :
                      selectedCheck.status === 'failing' ? '#ef4444' : '#6b7280',
-              textTransform: 'uppercase',
             }}>
               {selectedCheck.status}
             </span>
@@ -326,7 +325,7 @@ export default function MonitorDashboard() {
           textAlign: 'center',
           transition: 'transform 0.2s',
         }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Uptime</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', letterSpacing: '0.05em', fontWeight: 600 }}>Uptime</div>
           <div style={{ fontSize: '42px', fontWeight: 800, color: runs.length > 0 ? (stats.uptime >= 99 ? '#22c55e' : stats.uptime >= 95 ? '#eab308' : '#ef4444') : 'var(--text-tertiary)' }}>
             {runs.length > 0 ? `${stats.uptime}%` : '---'}
           </div>
@@ -339,7 +338,7 @@ export default function MonitorDashboard() {
           padding: '24px',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Avg Latency</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', letterSpacing: '0.05em', fontWeight: 600 }}>Avg Latency</div>
           <div style={{ fontSize: '42px', fontWeight: 800, color: runs.length > 0 ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
             {runs.length > 0 ? (
               <>
@@ -356,7 +355,7 @@ export default function MonitorDashboard() {
           padding: '24px',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Last Healthy Check</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '8px', letterSpacing: '0.05em', fontWeight: 600 }}>Last Healthy Check</div>
           <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '8px' }}>
             {selectedCheck.lastCheck || 'Never'}
           </div>

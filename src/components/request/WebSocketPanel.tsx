@@ -45,7 +45,7 @@ export default function WebSocketPanel() {
   };
 
   return (
-    <div className="websocket-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
+    <div className="websocket-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', gap: '16px' }}>
       {/* Connection Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -17,11 +17,14 @@ function generateResponseSchema(response: HttpResponse): string {
     // Simple schema inference
     const inferSchema = (obj: any, indent: string = ''): string => {
       if (Array.isArray(obj)) {
-        return `[ ${inferSchema(obj[0], indent)} ]`;
+        if (obj.length > 0) {
+          return `[ ${inferSchema(obj[0], indent)} ]`;
+        }
+        return `[]`;
       } else if (typeof obj === 'object' && obj !== null) {
         let str = '{\n';
         for (const key in obj) {
-          str += `${indent}  "${key}": ${typeof obj[key]},\n`;
+          str += `${indent}  "${key}": ${inferSchema(obj[key], indent + '  ')},\n`;
         }
         str += `${indent}}`;
         return str;

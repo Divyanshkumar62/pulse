@@ -67,7 +67,7 @@ export default function AuthTab() {
   };
 
   return (
-    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', overflowY: 'auto' }}>
+    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', width: '100%', overflowY: 'auto' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <label style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontWeight: 500 }}>Auth Type</label>
         <CustomSelect 

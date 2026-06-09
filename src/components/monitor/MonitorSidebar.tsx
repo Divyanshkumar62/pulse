@@ -44,7 +44,7 @@ export default function MonitorSidebar() {
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button onClick={() => setIsAdding(false)} className="btn-icon">←</button>
-          <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>New Monitor</h2>
+          <h3 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>New Monitor</h3>
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -95,7 +95,7 @@ export default function MonitorSidebar() {
   return (
     <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>Monitoring</h2>
+        <h3 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Monitoring</h3>
         <button onClick={() => setIsAdding(true)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '8px' }}>
           + New
         </button>

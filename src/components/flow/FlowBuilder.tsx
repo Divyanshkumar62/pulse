@@ -546,268 +546,302 @@ export default function FlowBuilder() {
 
   // --- FEATURE UNDER CONSTRUCTION ---
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      width: '100%',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'radial-gradient(circle at center, #0f172a 0%, #020617 100%)',
-      position: 'relative',
-      overflow: 'hidden',
-      padding: '40px 24px'
-    }}>
-      {/* Background grid */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundImage: 'radial-gradient(rgba(99, 102, 241, 0.08) 1px, transparent 1px)',
-        backgroundSize: '24px 24px',
-        pointerEvents: 'none'
-      }} />
+    <div className="flow-construction-container">
+      {/* Animated background elements */}
+      <div className="flow-bg-orb orb-1"></div>
+      <div className="flow-bg-orb orb-2"></div>
+      <div className="flow-bg-orb orb-3"></div>
+      <div className="flow-bg-grid"></div>
 
-      {/* Background glowing blobs */}
-      <div style={{
-        position: 'absolute',
-        top: '20%',
-        left: '30%',
-        width: '350px',
-        height: '350px',
-        background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)',
-        filter: 'blur(40px)',
-        pointerEvents: 'none'
-      }} />
-      <div style={{
-        position: 'absolute',
-        bottom: '20%',
-        right: '25%',
-        width: '400px',
-        height: '400px',
-        background: 'radial-gradient(circle, rgba(187, 154, 247, 0.1) 0%, transparent 70%)',
-        filter: 'blur(50px)',
-        pointerEvents: 'none'
-      }} />
-
-      {/* Mock Flow Canvas in Background */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '24px',
-        padding: '100px',
-        opacity: 0.18,
-        filter: 'blur(0.5px)',
-        pointerEvents: 'none',
-        transform: 'scale(1.05)',
-        userSelect: 'none'
-      }}>
-        {/* Mock Node 1: Request */}
-        <div style={{
-          background: '#0d1527',
-          border: '1px solid rgba(99, 102, 241, 0.2)',
-          borderRadius: '14px',
-          padding: '16px',
-          width: '200px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(99, 102, 241, 0.3)' }}>GET</span>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Fetch User Profile</span>
-          </div>
-          <span style={{ fontSize: '10px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>/api/v1/users/me</span>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-            <span style={{ fontSize: '8px', color: '#34d399', background: 'rgba(52, 211, 153, 0.1)', padding: '1px 6px', borderRadius: '10px', border: '1px solid rgba(52, 211, 153, 0.2)' }}>200 OK</span>
-          </div>
-        </div>
-
-        {/* Arrow 1 */}
-        <div style={{ display: 'flex', alignItems: 'center', color: '#475569' }}>
-          <ArrowRight size={20} strokeWidth={1.5} />
-        </div>
-
-        {/* Mock Node 2: Logic Branch */}
-        <div style={{
-          background: '#0d1527',
-          border: '1px solid rgba(234, 88, 12, 0.2)',
-          borderRadius: '14px',
-          padding: '16px',
-          width: '200px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ background: 'rgba(234, 88, 12, 0.15)', color: '#fdba74', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(234, 88, 12, 0.3)' }}>BRANCH</span>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Is Admin?</span>
-          </div>
-          <span style={{ fontSize: '10px', color: '#94a3b8' }}>user.role === 'admin'</span>
-        </div>
-
-        {/* Arrow 2 */}
-        <div style={{ display: 'flex', alignItems: 'center', color: '#475569' }}>
-          <ArrowRight size={20} strokeWidth={1.5} />
-        </div>
-
-        {/* Mock Node 3: Delay */}
-        <div style={{
-          background: '#0d1527',
-          border: '1px solid rgba(187, 154, 247, 0.2)',
-          borderRadius: '14px',
-          padding: '16px',
-          width: '200px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ background: 'rgba(187, 154, 247, 0.15)', color: '#d8b4fe', fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(187, 154, 247, 0.3)' }}>DELAY</span>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>Wait 1500ms</span>
-          </div>
-          <span style={{ fontSize: '10px', color: '#94a3b8' }}>Delay execution chain</span>
-        </div>
-      </div>
-
-      {/* Main Glassmorphic Panel */}
-      <div style={{
-        background: 'rgba(13, 17, 23, 0.75)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '24px',
-        padding: '48px 40px',
-        maxWidth: '640px',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        textAlign: 'center',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
-        position: 'relative',
-        zIndex: 10
-      }}>
+      <div className="flow-construction-card">
         {/* Glow Top Badge */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          background: 'rgba(99, 102, 241, 0.1)',
-          border: '1px solid rgba(99, 102, 241, 0.3)',
-          padding: '4px 12px',
-          borderRadius: '100px',
-          color: '#818cf8',
-          fontSize: '11px',
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-          marginBottom: '24px',
-          boxShadow: '0 0 12px rgba(99, 102, 241, 0.2)'
-        }}>
-          <Sparkles size={12} />
-          <span>Developer Preview</span>
+        <div className="flow-coming-soon-badge">
+          <Sparkles size={14} className="sparkle-icon" />
+          <span>Coming Soon</span>
         </div>
 
         {/* Feature Icon */}
-        <div style={{
-          width: '72px',
-          height: '72px',
-          borderRadius: '20px',
-          background: 'linear-gradient(135deg, #6366f1, #bb9af7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#ffffff',
-          boxShadow: '0 8px 30px rgba(99, 102, 241, 0.4)',
-          marginBottom: '24px'
-        }}>
-          <Workflow size={36} strokeWidth={1.5} />
+        <div className="flow-feature-icon-wrapper">
+          <Workflow size={44} strokeWidth={1.5} className="flow-feature-icon" />
         </div>
 
         {/* Title */}
-        <h2 style={{
-          fontSize: '32px',
-          fontWeight: 800,
-          color: '#ffffff',
-          letterSpacing: '-0.03em',
-          margin: '0 0 12px 0',
-          background: 'linear-gradient(to right, #ffffff, #cbd5e1)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent'
-        }}>
+        <h2 className="flow-title">
           Visual Flow Builder
         </h2>
 
         {/* Subtitle / Description */}
-        <p style={{
-          fontSize: '15px',
-          color: '#94a3b8',
-          lineHeight: 1.6,
-          maxWidth: '480px',
-          margin: '0 0 40px 0'
-        }}>
+        <p className="flow-subtitle">
           Design complex execution pipelines visually. Drag-and-drop requests, configure logic triggers, loop data streams, and debug runs in real-time.
         </p>
 
         {/* Features Preview Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '16px',
-          width: '100%',
-          marginBottom: '40px'
-        }}>
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: '16px',
-            padding: '16px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <Play size={20} style={{ color: '#38bdf8' }} />
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#f1f5f9', whiteSpace: 'nowrap' }}>Request Chaining</span>
-            <span style={{ fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>Pass variables downstream automatically</span>
+        <div className="flow-features-grid">
+          <div className="flow-feature-item">
+            <div className="flow-feature-icon-box blue">
+               <Play size={22} />
+            </div>
+            <span>Request Chaining</span>
           </div>
 
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: '16px',
-            padding: '16px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <GitBranch size={20} style={{ color: '#c084fc' }} />
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#f1f5f9', whiteSpace: 'nowrap' }}>Control Nodes</span>
-            <span style={{ fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>Add delays, loop indexes & branch conditions</span>
+          <div className="flow-feature-item">
+            <div className="flow-feature-icon-box green">
+               <GitBranch size={22} />
+            </div>
+            <span>Control Nodes</span>
           </div>
 
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: '16px',
-            padding: '16px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <Repeat size={20} style={{ color: '#fb923c' }} />
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#f1f5f9', whiteSpace: 'nowrap' }}>Mock Runs</span>
-            <span style={{ fontSize: '10px', color: '#64748b', lineHeight: 1.4 }}>Inspect logs & debug connections step-by-step</span>
+          <div className="flow-feature-item">
+            <div className="flow-feature-icon-box orange">
+               <Repeat size={22} />
+            </div>
+            <span>Mock Runs</span>
           </div>
         </div>
       </div>
+
+      <style>{`
+        .flow-construction-container {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          width: 100%;
+          align-items: center;
+          justify-content: center;
+          background: #0f111a;
+          position: relative;
+          overflow: hidden;
+          padding: 40px 24px;
+        }
+
+        .flow-bg-grid {
+          position: absolute;
+          inset: 0;
+          background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+          background-size: 40px 40px;
+          opacity: 0.5;
+          z-index: 1;
+        }
+
+        .flow-bg-orb {
+          position: absolute;
+          border-radius: 50%;
+          filter: blur(80px);
+          opacity: 0.4;
+          z-index: 1;
+          animation: float 10s infinite alternate ease-in-out;
+        }
+
+        .orb-1 {
+          width: 400px;
+          height: 400px;
+          background: #3b82f6; /* Blue */
+          top: -100px;
+          left: -100px;
+          animation-delay: 0s;
+        }
+
+        .orb-2 {
+          width: 300px;
+          height: 300px;
+          background: #8b5cf6; /* Purple */
+          bottom: -50px;
+          right: -50px;
+          animation-delay: -3s;
+        }
+
+        .orb-3 {
+          width: 250px;
+          height: 250px;
+          background: #10b981; /* Emerald */
+          bottom: 20%;
+          left: 20%;
+          animation-delay: -7s;
+        }
+
+        @keyframes float {
+          0% { transform: translate(0, 0) scale(1); }
+          100% { transform: translate(30px, 50px) scale(1.1); }
+        }
+
+        .flow-construction-card {
+          max-width: 640px;
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          background: rgba(17, 24, 39, 0.6);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 32px;
+          padding: 64px 48px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          z-index: 10;
+          transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .flow-construction-card:hover {
+          transform: translateY(-4px);
+        }
+
+        .flow-coming-soon-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
+          border: 1px solid rgba(139, 92, 246, 0.3);
+          padding: 8px 20px;
+          border-radius: 100px;
+          color: #a78bfa;
+          font-size: 13px;
+          font-weight: 700;
+          margin-bottom: 40px;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+          animation: pulse-glow 3s infinite;
+        }
+
+        .sparkle-icon {
+          animation: sparkle 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 15px rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.3); }
+          50% { box-shadow: 0 0 30px rgba(139, 92, 246, 0.4); border-color: rgba(139, 92, 246, 0.6); }
+        }
+
+        @keyframes sparkle {
+          0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+          50% { transform: scale(1.2) rotate(15deg); opacity: 1; }
+        }
+
+        .flow-feature-icon-wrapper {
+          width: 96px;
+          height: 96px;
+          border-radius: 28px;
+          background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 2px 0 rgba(255, 255, 255, 0.05);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          margin-bottom: 32px;
+          position: relative;
+        }
+
+        .flow-feature-icon-wrapper::after {
+          content: '';
+          position: absolute;
+          inset: -2px;
+          border-radius: 30px;
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+          z-index: -1;
+          opacity: 0.5;
+          filter: blur(10px);
+          animation: rotate-gradient 4s linear infinite;
+        }
+
+        @keyframes rotate-gradient {
+          0% { filter: hue-rotate(0deg) blur(10px); }
+          100% { filter: hue-rotate(360deg) blur(10px); }
+        }
+
+        .flow-feature-icon {
+          animation: gentle-bounce 3s infinite ease-in-out;
+        }
+
+        @keyframes gentle-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+
+        .flow-title {
+          font-size: 36px;
+          font-weight: 800;
+          margin: 0 0 16px 0;
+          background: linear-gradient(to right, #ffffff, #94a3b8);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          letter-spacing: -0.02em;
+        }
+
+        .flow-subtitle {
+          font-size: 16px;
+          color: #94a3b8;
+          max-width: 500px;
+          margin: 0 0 48px 0;
+          line-height: 1.6;
+        }
+
+        .flow-features-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 24px;
+          width: 100%;
+        }
+
+        .flow-feature-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+          padding: 20px;
+          border-radius: 20px;
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          transition: all 0.3s ease;
+        }
+
+        .flow-feature-item:hover {
+          background: rgba(255, 255, 255, 0.04);
+          transform: translateY(-4px);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .flow-feature-icon-box {
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.3s ease;
+        }
+
+        .flow-feature-item:hover .flow-feature-icon-box {
+          transform: scale(1.1);
+        }
+
+        .flow-feature-icon-box.blue {
+          background: rgba(59, 130, 246, 0.1);
+          color: #60a5fa;
+          border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .flow-feature-icon-box.green {
+          background: rgba(16, 185, 129, 0.1);
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .flow-feature-icon-box.orange {
+          background: rgba(245, 158, 11, 0.1);
+          color: #fbbf24;
+          border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .flow-feature-item span {
+          font-size: 14px;
+          font-weight: 600;
+          color: #e2e8f0;
+          letter-spacing: 0.02em;
+        }
+      `}</style>
     </div>
   );
 

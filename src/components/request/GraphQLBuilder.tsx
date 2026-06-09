@@ -43,7 +43,7 @@ export default function GraphQLBuilder() {
   };
 
   return (
-    <div className="graphql-builder" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="graphql-builder" style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)' }}>QUERY</span>

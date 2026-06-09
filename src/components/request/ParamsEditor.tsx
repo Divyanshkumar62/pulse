@@ -10,7 +10,7 @@ export default function ParamsEditor() {
   const params = activeTab.request.params || [];
 
   return (
-    <div className="params-editor" style={{ height: '100%', overflowY: 'auto' }}>
+    <div className="params-editor" style={{ height: '100%', width: '100%', overflowY: 'auto' }}>
       <KeyValueTable 
         items={params} 
         onChange={(data) => updateActiveTabRequest({ params: data })} 

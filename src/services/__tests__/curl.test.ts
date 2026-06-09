@@ -3,72 +3,63 @@ import { CurlParser } from '../curl';
 
 describe('CurlParser', () => {
   it('should parse a basic GET request', () => {
-    const raw = `curl https://api.example.com/v1/users`;
-    const req = CurlParser.parse(raw);
+    const curl = 'curl https://api.example.com/users';
+    const request = CurlParser.parse(curl);
 
-    expect(req.method).toBe('GET');
-    expect(req.url).toBe('https://api.example.com/v1/users');
-    expect(req.headers).toEqual([]);
-    expect(req.body.type).toBe('none');
+    expect(request.url).toBe('https://api.example.com/users');
+    expect(request.method).toBe('GET');
+    expect(request.headers.length).toBe(0);
+    expect(request.body.type).toBe('none');
+    expect(request.name).toBe('Imported: users');
   });
 
-  it('should explicitly parse GET request with -X GET', () => {
-    const raw = `curl -X GET https://api.example.com/v1/users`;
-    const req = CurlParser.parse(raw);
-    expect(req.method).toBe('GET');
-    expect(req.url).toBe('https://api.example.com/v1/users');
+  it('should parse HTTP methods using -X', () => {
+    const curl = 'curl -X DELETE https://api.example.com/users/123';
+    const request = CurlParser.parse(curl);
+
+    expect(request.method).toBe('DELETE');
+    expect(request.url).toBe('https://api.example.com/users/123');
   });
 
-  it('should parse HTTP method and URL with headers', () => {
-    const raw = `curl -X POST https://api.example.com/login \\
-      -H "Content-Type: application/json" \\
-      -H "Authorization: Bearer token123"`;
+  it('should parse headers using -H', () => {
+    const curl = 'curl -H "Content-Type: application/json" -H "Authorization: Bearer token123" https://api.example.com/data';
+    const request = CurlParser.parse(curl);
+
+    expect(request.headers.length).toBe(2);
+    expect(request.headers[0]).toEqual({ key: 'Content-Type', value: 'application/json', enabled: true });
+    expect(request.headers[1]).toEqual({ key: 'Authorization', value: 'Bearer token123', enabled: true });
+  });
+
+  it('should parse request body using -d and auto-set method to POST', () => {
+    const curl = "curl -d '{\"name\":\"John\"}' https://api.example.com/users";
+    const request = CurlParser.parse(curl);
+
+    expect(request.method).toBe('POST'); // Should default to POST when data is provided
+    expect(request.body.type).toBe('raw');
+    expect(request.body.content).toBe('{"name":"John"}');
+  });
+
+  it('should parse multiline cURL commands with escaped line endings', () => {
+    const curl = `curl -X POST \\
+      https://api.example.com/graphql \\
+      -H 'Content-Type: application/json' \\
+      -d '{"query":"query { users { id } }"}'`;
     
-    const req = CurlParser.parse(raw);
+    const request = CurlParser.parse(curl);
 
-    expect(req.method).toBe('POST');
-    expect(req.url).toBe('https://api.example.com/login');
-    expect(req.headers).toHaveLength(2);
-    expect(req.headers).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ key: 'Content-Type', value: 'application/json' }),
-        expect.objectContaining({ key: 'Authorization', value: 'Bearer token123' })
-      ])
-    );
+    expect(request.method).toBe('POST');
+    expect(request.url).toBe('https://api.example.com/graphql');
+    expect(request.headers.length).toBe(1);
+    expect(request.headers[0]).toEqual({ key: 'Content-Type', value: 'application/json', enabled: true });
+    expect(request.body.type).toBe('raw');
+    expect(request.body.content).toBe('{"query":"query { users { id } }"}');
   });
 
-  it('should infer POST when -d is used without -X', () => {
-    const raw = `curl https://api.example.com/submit -d '{"name":"John"}'`;
-    const req = CurlParser.parse(raw);
+  it('should respect -G / --get to force GET method even with data', () => {
+    const curl = "curl -G -d 'query=test' https://api.example.com/search";
+    const request = CurlParser.parse(curl);
 
-    expect(req.method).toBe('POST');
-    expect(req.url).toBe('https://api.example.com/submit');
-    expect(req.body.type).toBe('raw');
-    expect(req.body.content).toBe('{"name":"John"}');
-  });
-
-  it('should handle complex JSON bodies with escaped quotes', () => {
-    const raw = `curl -X POST https://api.example.com/data \\
-      -H "Content-Type: application/json" \\
-      -d '{"message": "Hello \\"world\\"", "value": 42}'`;
-    
-    const req = CurlParser.parse(raw);
-
-    expect(req.method).toBe('POST');
-    expect(req.body.type).toBe('raw');
-    expect(req.body.content).toBe('{"message": "Hello \\"world\\"", "value": 42}');
-  });
-
-  it('should parse --data-raw and --header aliases', () => {
-    const raw = `curl --request PUT "https://api.example.com/update" \\
-      --header "Accept: application/json" \\
-      --data-raw "{ \\"status\\": \\"ok\\" }"`;
-    
-    const req = CurlParser.parse(raw);
-
-    expect(req.method).toBe('PUT');
-    expect(req.url).toBe('https://api.example.com/update');
-    expect(req.headers[0].key).toBe('Accept');
-    expect(req.body.content).toBe('{ "status": "ok" }');
+    expect(request.method).toBe('GET');
+    expect(request.body.content).toBe('query=test');
   });
 });

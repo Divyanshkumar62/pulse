@@ -73,8 +73,8 @@ export default function AddEnvironmentModal() {
         </div>
         
         <div style={{ padding: '24px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>
-            ENVIRONMENT NAME
+          <label className="text-label">
+            Environment Name
           </label>
           <input
             type="text"

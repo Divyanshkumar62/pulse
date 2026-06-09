@@ -3,30 +3,62 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
 }
 
+/* Headings */
 h1, .text-h1 {
   font-weight: 700;
-  font-size: 18px;
+  font-size: 24px;
   line-height: 1.2;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 h2, .text-h2 {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1.3;
+  color: var(--text-primary);
+  margin: 0;
 }
 
+h3, .text-h3 {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+h4, .text-h4 {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Body Text */
 .text-body {
   font-weight: 400;
   font-size: 13px;
   line-height: 1.5;
+  color: var(--text-primary);
 }
 
+/* Semantic Variants */
 .text-label {
   font-weight: 500;
   font-size: 11px;
   line-height: 1.4;
   color: var(--text-secondary);
   letter-spacing: 0.05em;
+  /* Option to keep uppercase strictly for small badges, removing elsewhere. Let's not enforce uppercase globally on labels to allow Title Case if wanted, but components can apply uppercase if it's a specific badge. */
+}
+
+.text-caption {
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
 }
 
 .text-mono {

@@ -59,9 +59,9 @@ export default function EnvironmentsPanel() {
   return (
     <div className="environments-panel" style={{ paddingTop: '0px' }}>
       <div className="panel-header" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '8px', gap: '12px', marginTop: '-4px' }}>
-        <h2 className="panel-title" style={{ margin: 0, whiteSpace: 'nowrap' }}>
+        <h3 className="panel-title" style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0, whiteSpace: 'nowrap' }}>
           Environments
-        </h2>
+        </h3>
         <button 
           onClick={() => setAddEnvironmentModalOpen(true)} 
           className="btn-secondary rounded-md" 

@@ -47,6 +47,9 @@ export class CurlParser {
     };
 
     let i = 0;
+    let forceGet = false;
+    let explicitMethod = false;
+
     while (i < tokens.length) {
       const token = tokens[i];
 
@@ -57,6 +60,7 @@ export class CurlParser {
 
       if (token === '-X' || token === '--request') {
         result.method = tokens[i + 1]?.toUpperCase() as any || 'GET';
+        explicitMethod = true;
         i += 2;
         continue;
       }
@@ -79,13 +83,14 @@ export class CurlParser {
         const bodyContent = tokens[i + 1];
         if (bodyContent) {
           result.body = { type: 'raw', content: bodyContent };
-          if (result.method === 'GET') result.method = 'POST'; // Default to POST if data is present
+          if (!explicitMethod && !forceGet) result.method = 'POST'; // Default to POST if data is present and not forced otherwise
         }
         i += 2;
         continue;
       }
 
       if (token === '-G' || token === '--get') {
+        forceGet = true;
         result.method = 'GET';
         i++;
         continue;
@@ -98,6 +103,10 @@ export class CurlParser {
       }
 
       i++;
+    }
+
+    if (forceGet) {
+      result.method = 'GET';
     }
 
     return result;

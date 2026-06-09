@@ -147,7 +147,6 @@
 .info-label {
   font-size: 12px;
   color: var(--text-secondary);
-  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
@@ -299,7 +298,6 @@
 .sidebar-header-row h3 {
   font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-secondary);
   margin: 0;
@@ -514,7 +512,6 @@
 .section-title {
   font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
   color: var(--text-secondary);
   margin: 0;
   letter-spacing: 0.5px;

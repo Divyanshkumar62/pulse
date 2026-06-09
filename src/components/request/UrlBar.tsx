@@ -8,6 +8,7 @@ import { useMockStore } from '../../stores/useMockStore';
 interface UrlBarProps {
   onSend: () => void;
   onCode: () => void;
+  onSave: () => void;
   isLoading: boolean;
 }
 
@@ -24,7 +25,7 @@ const METHOD_COLORS: Record<string, string> = {
   WS: '#10b981', // emerald green for websockets
 };
 
-export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
+export default function UrlBar({ onSend, onCode, onSave, isLoading }: UrlBarProps) {
   const { updateActiveTabRequest, tabs, activeTabId } = useTabStore();
   const { createMockFromRequest } = useMockStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
@@ -129,7 +130,7 @@ export default function UrlBar({ onSend, onCode, isLoading }: UrlBarProps) {
 
               <button 
                 className="icon-action-btn"
-                onClick={() => toast.success('Request saved!')}
+                onClick={onSave}
                 title="Save Request (Ctrl+S)"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

@@ -171,7 +171,7 @@ export default function TeamPanel({
           >
             {activeTab === 'invitations' ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'translateY(-0.5px)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'translateY(-0.5px)' }}>
                   <line x1="19" y1="12" x2="5" y2="12" />
                   <polyline points="12 19 5 12 12 5" />
                 </svg>
@@ -385,12 +385,12 @@ export default function TeamPanel({
       {showCreateModal && createPortal(
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Create Team</h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
+            <h2 className="text-h2">Create Team</h2>
+            <p className="text-body">
               Set up a shared space for your projects and collaborate in real-time.
             </p>
             <div style={{ marginBottom: '32px' }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Team Name</label>
+              <label className="text-label">Team Name</label>
               <input
                 type="text"
                 className="text-input"
@@ -413,18 +413,18 @@ export default function TeamPanel({
             </div>
           </div>
         </div>,
-        document.body
+        document.getElementById('root') || document.body
       )}
 
       {showInviteModal && createPortal(
         <div className="modal-overlay" onClick={() => setShowInviteModal(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Invite Member</h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
+            <h2 className="text-h2">Invite Member</h2>
+            <p className="text-body">
               Add a colleague to <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{teams.find(t => t.id === showInviteModal)?.name}</span>.
             </p>
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Email Address</label>
+              <label className="text-label">Email Address</label>
               <input
                 type="email"
                 className="text-input"
@@ -435,7 +435,7 @@ export default function TeamPanel({
               />
             </div>
             <div style={{ marginBottom: '32px' }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>Role</label>
+              <label className="text-label">Role</label>
               <CustomSelect 
                 value={inviteRole}
                 onChange={(val) => setInviteRole(val as TeamRole)}
@@ -451,18 +451,18 @@ export default function TeamPanel({
             </div>
           </div>
         </div>,
-        document.body
+        document.getElementById('root') || document.body
       )}
 
       {showRenameModal && createPortal(
         <div className="modal-overlay" onClick={() => setShowRenameModal(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Rename Team</h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
+            <h2 className="text-h2">Rename Team</h2>
+            <p className="text-body">
               Choose a new name for your team workspace.
             </p>
             <div style={{ marginBottom: '32px' }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: '10px', letterSpacing: '0.05em' }}>New Team Name</label>
+              <label className="text-label">New Team Name</label>
               <input
                 type="text"
                 className="text-input"
@@ -485,15 +485,15 @@ export default function TeamPanel({
             </div>
           </div>
         </div>,
-        document.body
+        document.getElementById('root') || document.body
       )}
 
       {showDeleteConfirmModal && createPortal(
         <div className="modal-overlay" onClick={() => setShowDeleteConfirmModal(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Delete Team</h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>
-              Are you sure you want to delete <span style={{ color: '#ef4444', fontWeight: 700 }}>{teams.find(t => t.id === showDeleteConfirmModal)?.name}</span>? This action is permanent and cannot be undone. All shared configurations for this team workspace will be lost.
+            <h2 className="text-h2">Delete Team</h2>
+            <p className="text-body">
+              Are you sure you want to delete <span style={{ color: 'var(--status-error)', fontWeight: 700 }}>{teams.find(t => t.id === showDeleteConfirmModal)?.name}</span>? This action is permanent and cannot be undone. All shared configurations for this team workspace will be lost.
             </p>
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setShowDeleteConfirmModal(null)}>Cancel</button>
@@ -507,14 +507,14 @@ export default function TeamPanel({
             </div>
           </div>
         </div>,
-        document.body
+        document.getElementById('root') || document.body
       )}
 
       {showManageMembersModal && createPortal(
         <div className="modal-overlay" onClick={() => setShowManageMembersModal(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ width: '480px' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', color: 'var(--text-primary)' }}>Manage Members</h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>
+            <h2 className="text-h2">Manage Members</h2>
+            <p className="text-body" style={{ marginBottom: '24px' }}>
               Members of <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{teams.find(t => t.id === showManageMembersModal)?.name}</span>.
             </p>
             
@@ -592,7 +592,7 @@ export default function TeamPanel({
             </div>
           </div>
         </div>,
-        document.body
+        document.getElementById('root') || document.body
       )}
     </div>
   );

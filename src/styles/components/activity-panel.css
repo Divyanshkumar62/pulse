@@ -90,7 +90,7 @@
 
 .new-collection-btn:hover {
   background: var(--accent-primary);
-  color: #FFFFFF;
+  color: var(--text-primary);
   box-shadow: 0 4px 12px var(--accent-subtle);
 }
 

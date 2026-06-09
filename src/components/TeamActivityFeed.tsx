@@ -28,9 +28,9 @@ export default function TeamActivityFeed() {
   if (!activeWorkspace?.path) {
     return (
       <div className="team-activity-feed" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '24px', padding: '0 16px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <h3 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
           Team Activity
-        </div>
+        </h3>
         <div style={{ padding: '20px 0', textAlign: 'center', background: 'rgba(255,255,255,0.01)', borderRadius: '8px', border: '1px dashed var(--border-subtle)' }}>
           <div style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>No Workspace Folder Linked</div>
           <div style={{ color: 'var(--text-tertiary)', fontSize: '11px', lineHeight: 1.4, padding: '0 12px' }}>
@@ -43,8 +43,10 @@ export default function TeamActivityFeed() {
 
   return (
     <div className="team-activity-feed" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '24px' }}>
-      <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0 16px' }}>
-        Team Activity
+      <div style={{ padding: '0 16px' }}>
+        <h3 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+          Team Activity
+        </h3>
       </div>
       
       <div className="activity-list no-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflowY: 'auto', maxHeight: '400px' }}>

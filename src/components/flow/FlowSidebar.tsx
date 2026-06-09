@@ -41,7 +41,7 @@ export default function FlowSidebar() {
     }}>
       {/* Category Group */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Flow Library
         </span>
         

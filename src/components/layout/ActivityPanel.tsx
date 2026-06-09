@@ -138,10 +138,10 @@ function TeamSidebarList() {
   const { workspaces, activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore();
 
   return (
-    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+    <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <h3 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
         Workspaces
-      </div>
+      </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {workspaces.map(w => {
           const isActive = activeWorkspaceId === w.id;

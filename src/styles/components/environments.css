@@ -117,7 +117,7 @@
 }
 
 .icon-red {
-  color: #ef4444;
+  color: var(--status-error);
 }
 
 .icon-blue {

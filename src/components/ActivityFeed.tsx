@@ -108,7 +108,7 @@ export default function ActivityFeed() {
   return (
     <div className="activity-feed" style={{ padding: 'var(--space-3)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h3 style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: 700, margin: 0 }}>History</h3>
+        <h3 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>History</h3>
         <button 
             onClick={() => setShowClearConfirm(true)}
             style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer' }}

@@ -119,3 +119,40 @@ export function generateGo(request: Request): string {
   
   return code;
 }
+
+export function generateJava(request: Request): string {
+  if (!request.url) return '// Please enter a URL first.';
+
+  let code = `import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+            .uri(URI.create("${request.url}"))
+            .method("${request.method}", `;
+            
+  if (request.body && request.body.content && request.method !== "GET" && request.method !== "HEAD") {
+      const escapedBody = request.body.content.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+      code += `HttpRequest.BodyPublishers.ofString("${escapedBody}")`;
+  } else {
+      code += `HttpRequest.BodyPublishers.noBody()`;
+  }
+  code += `);\n\n`;
+
+  (request.headers || []).filter(h => h.enabled !== false && h.key).forEach(h => {
+    code += `        builder.header("${h.key}", "${h.value}");\n`;
+  });
+
+  code += `
+        HttpRequest request = builder.build();
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(response.body());
+    }
+}
+`;
+  return code;
+}
