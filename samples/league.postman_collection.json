@@ -1,0 +1,620 @@
+{
+  "info": {
+    "_postman_id": "4e690cdb-fe80-433a-8d16-13b6ec6c6e60",
+    "name": "league",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "24413011",
+    "_collection_link": "https://go.postman.co/collection/24413011-4e690cdb-fe80-433a-8d16-13b6ec6c6e60?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Team",
+      "item": [
+        {
+          "name": "edit team",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"teamCode\": \"MI\",\r\n    \"teamName\": \"Mumbai IND Indians\",\r\n    \"teamShortName\": \"MI-IND\",\r\n    \"logoUrl\": \"https://example-test.com/mi.png\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://practise.stapubox.com/squad/league/teams/MI",
+              "protocol": "https",
+              "host": [
+                "practise",
+                "stapubox",
+                "com"
+              ],
+              "path": [
+                "squad",
+                "league",
+                "teams",
+                "MI"
+              ]
+            },
+            "description": "Generated from cURL: curl -X PUT http://localhost:2035/squad/league/ipl/teams/1 \\\r\n  -H \"Content-Type: application/json\" \\\r\n  -d '{\r\n    \"teamShortName\": \"M-IND\",\r\n    \"isActive\": 0\r\n  }'\r\n"
+          },
+          "response": []
+        },
+        {
+          "name": "create team",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"sportCode\": \"7031809\",\r\n    \"teamCode\": \"MI\",\r\n    \"teamName\": \"Mumbai Indians\",\r\n    \"teamShortName\": \"MI\",\r\n    \"logoUrl\": \"https://example.com/mi.png\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://practise.stapubox.com/squad/league/teams",
+              "protocol": "https",
+              "host": [
+                "practise",
+                "stapubox",
+                "com"
+              ],
+              "path": [
+                "squad",
+                "league",
+                "teams"
+              ]
+            },
+            "description": "Generated from cURL: curl -X POST http://localhost:8080/league/ipl/teams \\\r\n  -H \"Content-Type: application/json\" \\\r\n  -d '{\r\n    \"sportCode\": \"cricket\",\r\n    \"teamCode\": \"MI\",\r\n    \"teamName\": \"Mumbai Indians\",\r\n    \"teamShortName\": \"MI\",\r\n    \"logoUrl\": \"https://example.com/mi.png\"\r\n  }'\r\n"
+          },
+          "response": []
+        },
+        {
+          "name": "get team by code",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"sportCode\": \"7031809\",\r\n    \"teamCode\": \"MI\",\r\n    \"teamName\": \"Mumbai Indians\",\r\n    \"teamShortName\": \"MI\",\r\n    \"logoUrl\": \"https://example.com/mi.png\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://practise.stapubox.com/squad/league/teams/MI",
+              "protocol": "https",
+              "host": [
+                "practise",
+                "stapubox",
+                "com"
+              ],
+              "path": [
+                "squad",
+                "league",
+                "teams",
+                "MI"
+              ]
+            },
+            "description": "Generated from cURL: curl -X POST http://localhost:8080/league/ipl/teams \\\r\n  -H \"Content-Type: application/json\" \\\r\n  -d '{\r\n    \"sportCode\": \"cricket\",\r\n    \"teamCode\": \"MI\",\r\n    \"teamName\": \"Mumbai Indians\",\r\n    \"teamShortName\": \"MI\",\r\n    \"logoUrl\": \"https://example.com/mi.png\"\r\n  }'\r\n"
+          },
+          "response": []
+        },
+        {
+          "name": "get team",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"sportCode\": \"7031809\",\r\n    \"teamCode\": \"MI\",\r\n    \"teamName\": \"Mumbai Indians\",\r\n    \"teamShortName\": \"MI\",\r\n    \"logoUrl\": \"https://example.com/mi.png\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://practise.stapubox.com/squad/league/teams",
+              "protocol": "https",
+              "host": [
+                "practise",
+                "stapubox",
+                "com"
+              ],
+              "path": [
+                "squad",
+                "league",
+                "teams"
+              ]
+            },
+            "description": "Generated from cURL: curl -X POST http://localhost:8080/league/ipl/teams \\\r\n  -H \"Content-Type: application/json\" \\\r\n  -d '{\r\n    \"sportCode\": \"cricket\",\r\n    \"teamCode\": \"MI\",\r\n    \"teamName\": \"Mumbai Indians\",\r\n    \"teamShortName\": \"MI\",\r\n    \"logoUrl\": \"https://example.com/mi.png\"\r\n  }'\r\n"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "question",
+      "item": [
+        {
+          "name": "create question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"questionText\": \"Who will win IPL 2026?\",\r\n    \"maxChoices\": 1,\r\n    \"answer\": \"{\\\"teamCode\\\":\\\"ipl-2026-MI\\\"}\"\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://practise.stapubox.com/squad/league/questions",
+              "protocol": "https",
+              "host": [
+                "practise",
+                "stapubox",
+                "com"
+              ],
+              "path": [
+                "squad",
+                "league",
+                "questions"
+              ]
+            },
+            "description": "Generated from cURL: curl -X POST http://localhost:2035/squad/league/ipl/questions \\\r\n  -H \"Content-Type: application/json\" \\\r\n  -d '{\r\n    \"questionText\": \"Who will win IPL 2026?\",\r\n    \"maxChoices\": 1,\r\n    \"answer\": \"{\\\"teamCode\\\":\\\"ipl-2026-MI\\\"}\"\r\n  }'\r\n"
+          },
+          "response": []
+        },
+        {
+          "name": "get questions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://practise.stapubox.com/squad/league/questions",
+              "protocol": "https",
+              "host": [
+                "practise",
+                "stapubox",
+                "com"
+              ],
+              "path": [
+                "squad",
+                "league",
+                "questions"
+              ]
+            },
+            "description": "Generated from cURL: curl -X GET http://localhost:2035/squad/league/ipl/questions\r\n"
+          },
+          "response": []
+        },
+        {
+          "name": "update question",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"questionText\": \"Who will be the bottom team in IPL 2026?\",\r\n    \"maxChoices\": 4\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://practise.stapubox.com/squad/league/questions/1",
+              "protocol": "https",
+              "host": [
+                "practise",
+                "stapubox",
+                "com"
+              ],
+              "path": [
+                "squad",
+                "league",
+                "questions",
+                "1"
+              ]
+            },
+            "description": "Generated from cURL: curl -X PUT http://localhost:2035/squad/league/ipl/questions/1 \\\r\n  -H \"Content-Type: application/json\" \\\r\n  -d '{\r\n    \"questionText\": \"Who will be the bottom team in IPL 2026?\"\r\n  }'\r\n"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "prediction",
+      "item": [
+        {
+          "name": "overall predictions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"pid\": 1019,\r\n    \"questionId\": 1,\r\n    \"answer\": \"{\\\"teamCode\\\": \\\"ipl-2026-MI\\\"}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://practise.stapubox.com/squad/league/predictions",
+              "protocol": "https",
+              "host": [
+                "practise",
+                "stapubox",
+                "com"
+              ],
+              "path": [
+                "squad",
+                "league",
+                "predictions"
+              ]
+            },
+            "description": "Generated from cURL: curl -X POST http://localhost:8080/squad/league/ipl-2026/predictions \\\r\n-H \"Content-Type: application/json\" \\\r\n-d '{\r\n    \"pid\": 12345,\r\n    \"questionId\": 1,\r\n    \"answer\": \"{\\\"teamCode\\\": \\\"ipl-2026-MI\\\"}\"\r\n}'\r\n"
+          },
+          "response": []
+        },
+        {
+          "name": "update Prediction",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "https://practise.stapubox.com/squad/league/predictions/{id}",
+              "protocol": "https",
+              "host": [
+                "practise",
+                "stapubox",
+                "com"
+              ],
+              "path": [
+                "squad",
+                "league",
+                "predictions",
+                "{id}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "matchPrediction",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"pid\": 1019,\r\n    \"questionId\": 1,\r\n    \"answer\": \"{\\\"teamCode\\\": \\\"ipl-2026-MI\\\"}\"\r\n}"
+            },
+            "url": {
+              "raw": "https://practise.stapubox.com/squad/league/predictions",
+              "protocol": "https",
+              "host": [
+                "practise",
+                "stapubox",
+                "com"
+              ],
+              "path": [
+                "squad",
+                "league",
+                "predictions"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "createMatch",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"leagueCode\": \"IPL-2026\",\r\n  \"matchType\": \"ELIMINATOR\",\r\n  \"team1Id\": 12,\r\n  \"team2Id\": 61,\r\n  \"venueCode\": \"CHINNASWAMY\",\r\n  \"description\": \"Eliminator - knockout match\",\r\n  \"scheduledAt\": \"2026-07-22 19:30:00\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http:/practise.stapubox.com/squad/league/matches/create",
+          "host": [
+            "http"
+          ],
+          "port": "",
+          "path": [
+            "practise.stapubox.com",
+            "squad",
+            "league",
+            "matches",
+            "create"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "updateMatch",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "https://practise.stapubox.com/squad/league/matches/update/{id}",
+          "protocol": "https",
+          "host": [
+            "practise",
+            "stapubox",
+            "com"
+          ],
+          "path": [
+            "squad",
+            "league",
+            "matches",
+            "update",
+            "{id}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "getMatches",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"questionText\": \"Who will win IPL 2026?\",\r\n    \"maxChoices\": 1,\r\n    \"answer\": \"{\\\"teamCode\\\":\\\"ipl-2026-MI\\\"}\"\r\n  }"
+        },
+        "url": {
+          "raw": "https://practise.stapubox.com/squad/league/matches/get",
+          "protocol": "https",
+          "host": [
+            "practise",
+            "stapubox",
+            "com"
+          ],
+          "path": [
+            "squad",
+            "league",
+            "matches",
+            "get"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "getMatches by id",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"questionText\": \"Who will win IPL 2026?\",\r\n    \"maxChoices\": 1,\r\n    \"answer\": \"{\\\"teamCode\\\":\\\"ipl-2026-MI\\\"}\"\r\n  }"
+        },
+        "url": {
+          "raw": "https://practise.stapubox.com/squad/league/matches/get/{id}",
+          "protocol": "https",
+          "host": [
+            "practise",
+            "stapubox",
+            "com"
+          ],
+          "path": [
+            "squad",
+            "league",
+            "matches",
+            "get",
+            "{id}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "squadLeaderBoard",
+      "request": {
+        "method": "GET",
+        "header": []
+      },
+      "response": []
+    },
+    {
+      "name": "create all ipl squads",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "https://practise.stapubox.com/squad/dev/ipl-squads/create-all",
+          "protocol": "https",
+          "host": [
+            "practise",
+            "stapubox",
+            "com"
+          ],
+          "path": [
+            "squad",
+            "dev",
+            "ipl-squads",
+            "create-all"
+          ]
+        },
+        "description": "Generated from cURL: curl -X POST https://practise.stapubox.com/squad/dev/ipl-squads/create-all \\\r\n  -H \"Content-Type: application/json\"\r\n"
+      },
+      "response": []
+    },
+    {
+      "name": "sync squad events for league",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "https://practise.stapubox.com/squad/dev/matches/sync-events/ipl-2026",
+          "protocol": "https",
+          "host": [
+            "practise",
+            "stapubox",
+            "com"
+          ],
+          "path": [
+            "squad",
+            "dev",
+            "matches",
+            "sync-events",
+            "ipl-2026"
+          ]
+        },
+        "description": "Generated from cURL: curl -X POST http://localhost:2035/squad/admin/dev/sync-matches-events?leagueCode=ipl-2026\r\n"
+      },
+      "response": []
+    },
+    {
+      "name": "remove ipl squads from company",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:2035/squad/dev/ipl-squads/mappings?companyCode=cp-acast-1538",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "2035",
+          "path": [
+            "squad",
+            "dev",
+            "ipl-squads",
+            "mappings"
+          ],
+          "query": [
+            {
+              "key": "companyCode",
+              "value": "cp-acast-1538"
+            }
+          ]
+        },
+        "description": "Generated from cURL: curl -X DELETE http://localhost:2035/squad/dev/ipl-squads/mappings?companyCode=cp-acast-1538\r\n"
+      },
+      "response": []
+    },
+    {
+      "name": "remove  ipl event mapping from ipl squads",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:2035/squad/dev/matches/event-mappings?squadId=111",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "2035",
+          "path": [
+            "squad",
+            "dev",
+            "matches",
+            "event-mappings"
+          ],
+          "query": [
+            {
+              "key": "squadId",
+              "value": "111"
+            }
+          ]
+        },
+        "description": "Generated from cURL: curl -X DELETE http://localhost:2035/squad/dev/matches/event-mappings?squadId=111\r\n"
+      },
+      "response": []
+    }
+  ]
+}
