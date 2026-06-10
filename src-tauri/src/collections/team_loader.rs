@@ -5,6 +5,9 @@ use std::path::Path;
 use crate::collections::team::{Invitation, InvitationStatus, Team, TeamRole};
 
 pub fn load_teams<P: AsRef<Path>>(path: P) -> Result<Vec<Team>, Box<dyn std::error::Error>> {
+    if !path.as_ref().exists() {
+        return Ok(vec![]);
+    }
     let content = fs::read_to_string(path)?;
     let teams: Vec<Team> = serde_yaml::from_str(&content)?;
     Ok(teams)
@@ -14,6 +17,11 @@ pub fn save_teams<P: AsRef<Path>>(
     teams: &[Team],
     path: P,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.as_ref().parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent)?;
+        }
+    }
     let yaml = serde_yaml::to_string(teams)?;
     fs::write(path, yaml)?;
     Ok(())
@@ -22,6 +30,9 @@ pub fn save_teams<P: AsRef<Path>>(
 pub fn load_invitations<P: AsRef<Path>>(
     path: P,
 ) -> Result<Vec<Invitation>, Box<dyn std::error::Error>> {
+    if !path.as_ref().exists() {
+        return Ok(vec![]);
+    }
     let content = fs::read_to_string(path)?;
     let invitations: Vec<Invitation> = serde_json::from_str(&content)?;
     Ok(invitations)
@@ -31,6 +42,11 @@ pub fn save_invitations<P: AsRef<Path>>(
     invitations: &[Invitation],
     path: P,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.as_ref().parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent)?;
+        }
+    }
     let json = serde_json::to_string_pretty(invitations)?;
     fs::write(path, json)?;
     Ok(())
