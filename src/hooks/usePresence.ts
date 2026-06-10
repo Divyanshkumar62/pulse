@@ -16,25 +16,27 @@ export function usePresence() {
 
   // Update presence when active tab changes
   useEffect(() => {
-    if (activeWorkspace?.path && userEmail && activeTabId) {
-      updatePresence(activeWorkspace.path, userEmail, activeTabId);
+    const path = activeWorkspace?.path;
+    if (path && userEmail && activeTabId) {
+      updatePresence(path, userEmail, activeTabId);
     }
   }, [activeWorkspace?.path, userEmail, activeTabId, updatePresence]);
 
   // Periodic fetch presence
   useEffect(() => {
-    if (!activeWorkspace?.path) return;
+    const path = activeWorkspace?.path;
+    if (!path) return;
 
     const interval = setInterval(() => {
-      fetchPresence(activeWorkspace.path);
+      fetchPresence(path);
       
       // Also pulse our own presence if we have an active tab
       if (userEmail && activeTabId) {
-        updatePresence(activeWorkspace.path, userEmail, activeTabId);
+        updatePresence(path, userEmail, activeTabId);
       }
     }, 30000); // Every 30 seconds
 
-    fetchPresence(activeWorkspace.path);
+    fetchPresence(path);
 
     return () => clearInterval(interval);
   }, [activeWorkspace?.path, userEmail, activeTabId, fetchPresence, updatePresence]);

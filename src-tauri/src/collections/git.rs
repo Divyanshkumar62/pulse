@@ -291,6 +291,7 @@ pub fn git_add_remote(path: &str, remote_name: &str, remote_url: &str) -> Result
 #[tauri::command]
 pub async fn get_git_diff(path: String, file_path: String) -> Result<Vec<DiffLine>, String> {
     let sanitized_path = utils::validate_workspace_path(&path)?;
+    let _ = utils::validate_sub_path(&sanitized_path, &file_path)?;
     let path_str = sanitized_path.to_str().unwrap_or(&path);
 
     let output = Command::new("git")
@@ -336,6 +337,7 @@ pub async fn get_git_diff(path: String, file_path: String) -> Result<Vec<DiffLin
 #[tauri::command]
 pub async fn git_discard_changes(path: String, file_path: String) -> Result<(), String> {
     let sanitized_path = utils::validate_workspace_path(&path)?;
+    let _ = utils::validate_sub_path(&sanitized_path, &file_path)?;
     let path_str = sanitized_path.to_str().unwrap_or(&path);
 
     let output = Command::new("git")
@@ -353,6 +355,7 @@ pub async fn git_discard_changes(path: String, file_path: String) -> Result<(), 
 #[tauri::command]
 pub async fn git_resolve_conflict(path: String, file_path: String, resolution: String) -> Result<(), String> {
     let sanitized_path = utils::validate_workspace_path(&path)?;
+    let _ = utils::validate_sub_path(&sanitized_path, &file_path)?;
     let path_str = sanitized_path.to_str().unwrap_or(&path);
 
     let strategy = match resolution.as_str() {

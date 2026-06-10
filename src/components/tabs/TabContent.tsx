@@ -3,7 +3,7 @@ import { useAppStore } from '../../stores/useAppStore';
 import RequestBuilder from '../request/RequestBuilder';
 import ResponseViewer from '../response/ResponseViewer';
 import CollectionRunner from '../collections/CollectionRunner';
-import DocumentationView from '../collections/CollectionDocs';
+import CollectionDocs from '../collections/CollectionDocs';
 import WelcomeScreen from '../layout/WelcomeScreen';
 import { useResizable } from '../../hooks/useResizable';
 import '../../styles/components/tab-content.css';
@@ -97,7 +97,7 @@ export default function TabContent() {
           className="response-pane" 
           style={isBottom ? { height: `${resHeight}px` } : { width: `${resWidth}px` }}
         >
-          {showDocsSplit ? <DocumentationView /> : <ResponseViewer />}
+          {showDocsSplit ? <CollectionDocs /> : <ResponseViewer />}
         </div>
       </motion.div>
     </AnimatePresence>

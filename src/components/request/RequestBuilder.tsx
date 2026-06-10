@@ -245,21 +245,16 @@ export default function RequestBuilder() {
 
   useEffect(() => {
     const onSendRequest = () => handleSend();
+    const onSaveRequest = () => setIsSaveModalOpen(true);
+    
     window.addEventListener('pulse:send-request', onSendRequest);
-    return () => window.removeEventListener('pulse:send-request', onSendRequest);
-  }, [handleSend]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + S
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        setIsSaveModalOpen(true);
-      }
+    window.addEventListener('pulse:save-entity', onSaveRequest);
+    
+    return () => {
+      window.removeEventListener('pulse:send-request', onSendRequest);
+      window.removeEventListener('pulse:save-entity', onSaveRequest);
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleSend]);
 
   const configTabs: { id: ConfigTab; label: string }[] = [
     { id: 'params', label: 'Params' },

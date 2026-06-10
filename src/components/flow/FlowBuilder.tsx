@@ -24,6 +24,7 @@ import { useCollectionStore } from '../../stores/useCollectionStore';
 import { useEnvStore } from '../../stores/useEnvStore';
 import { FlowRunner } from '../../utils/flowRunner';
 import NodeConfigPanel from './NodeConfigPanel';
+import ExecutionLogsPanel from './ExecutionLogsPanel';
 import CreateNodeModal from '../modals/CreateNodeModal';
 import CustomEdge from './CustomEdge';
 import ConfirmModal from '../ui/ConfirmModal';
@@ -101,21 +102,8 @@ export default function FlowBuilder() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showAddNodeModal, setShowAddNodeModal] = useState(false);
   const [nodeToDeleteId, setNodeToDeleteId] = useState<string | null>(null);
+  const [showLogs, setShowLogs] = useState(false);
 
-  const [previewEmail, setPreviewEmail] = useState('');
-  const [previewSubmitted, setPreviewSubmitted] = useState(false);
-  const [previewSubmitting, setPreviewSubmitting] = useState(false);
-
-  const handlePreviewSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!previewEmail.trim()) return;
-    setPreviewSubmitting(true);
-    setTimeout(() => {
-      setPreviewSubmitting(false);
-      setPreviewSubmitted(true);
-      toast.success("Joined waitlist! We'll notify you soon.");
-    }, 1000);
-  };
 
   const lastSentToStoreRef = useRef<string>('');
   const localUpdateTimeoutRef = useRef<any>(null);
@@ -540,310 +528,30 @@ export default function FlowBuilder() {
 
   const handleRunFlow = async () => {
     if (!activeFlow) return;
+    setShowLogs(true);
     const runner = new FlowRunner(activeFlow);
     await runner.run();
   };
 
-  // --- FEATURE UNDER CONSTRUCTION ---
-  return (
-    <div className="flow-construction-container">
-      {/* Animated background elements */}
-      <div className="flow-bg-orb orb-1"></div>
-      <div className="flow-bg-orb orb-2"></div>
-      <div className="flow-bg-orb orb-3"></div>
-      <div className="flow-bg-grid"></div>
+  useEffect(() => {
+    const onRunFlow = () => {
+      handleRunFlow();
+    };
+    const onSaveFlow = async () => {
+      await saveFlowsToDisk();
+      toast.success('Flow saved to disk');
+    };
 
-      <div className="flow-construction-card">
-        {/* Glow Top Badge */}
-        <div className="flow-coming-soon-badge">
-          <Sparkles size={14} className="sparkle-icon" />
-          <span>Coming Soon</span>
-        </div>
+    window.addEventListener('pulse:run-flow', onRunFlow);
+    window.addEventListener('pulse:save-entity', onSaveFlow);
 
-        {/* Feature Icon */}
-        <div className="flow-feature-icon-wrapper">
-          <Workflow size={44} strokeWidth={1.5} className="flow-feature-icon" />
-        </div>
+    return () => {
+      window.removeEventListener('pulse:run-flow', onRunFlow);
+      window.removeEventListener('pulse:save-entity', onSaveFlow);
+    };
+  }, [handleRunFlow, saveFlowsToDisk]);
 
-        {/* Title */}
-        <h2 className="flow-title">
-          Visual Flow Builder
-        </h2>
-
-        {/* Subtitle / Description */}
-        <p className="flow-subtitle">
-          Design complex execution pipelines visually. Drag-and-drop requests, configure logic triggers, loop data streams, and debug runs in real-time.
-        </p>
-
-        {/* Features Preview Grid */}
-        <div className="flow-features-grid">
-          <div className="flow-feature-item">
-            <div className="flow-feature-icon-box blue">
-               <Play size={22} />
-            </div>
-            <span>Request Chaining</span>
-          </div>
-
-          <div className="flow-feature-item">
-            <div className="flow-feature-icon-box green">
-               <GitBranch size={22} />
-            </div>
-            <span>Control Nodes</span>
-          </div>
-
-          <div className="flow-feature-item">
-            <div className="flow-feature-icon-box orange">
-               <Repeat size={22} />
-            </div>
-            <span>Mock Runs</span>
-          </div>
-        </div>
-      </div>
-
-      <style>{`
-        .flow-construction-container {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          width: 100%;
-          align-items: center;
-          justify-content: center;
-          background: #0f111a;
-          position: relative;
-          overflow: hidden;
-          padding: 40px 24px;
-        }
-
-        .flow-bg-grid {
-          position: absolute;
-          inset: 0;
-          background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-          background-size: 40px 40px;
-          opacity: 0.5;
-          z-index: 1;
-        }
-
-        .flow-bg-orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(80px);
-          opacity: 0.4;
-          z-index: 1;
-          animation: float 10s infinite alternate ease-in-out;
-        }
-
-        .orb-1 {
-          width: 400px;
-          height: 400px;
-          background: #3b82f6; /* Blue */
-          top: -100px;
-          left: -100px;
-          animation-delay: 0s;
-        }
-
-        .orb-2 {
-          width: 300px;
-          height: 300px;
-          background: #8b5cf6; /* Purple */
-          bottom: -50px;
-          right: -50px;
-          animation-delay: -3s;
-        }
-
-        .orb-3 {
-          width: 250px;
-          height: 250px;
-          background: #10b981; /* Emerald */
-          bottom: 20%;
-          left: 20%;
-          animation-delay: -7s;
-        }
-
-        @keyframes float {
-          0% { transform: translate(0, 0) scale(1); }
-          100% { transform: translate(30px, 50px) scale(1.1); }
-        }
-
-        .flow-construction-card {
-          max-width: 640px;
-          width: 100%;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          background: rgba(17, 24, 39, 0.6);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 32px;
-          padding: 64px 48px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-          z-index: 10;
-          transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .flow-construction-card:hover {
-          transform: translateY(-4px);
-        }
-
-        .flow-coming-soon-badge {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
-          border: 1px solid rgba(139, 92, 246, 0.3);
-          padding: 8px 20px;
-          border-radius: 100px;
-          color: #a78bfa;
-          font-size: 13px;
-          font-weight: 700;
-          margin-bottom: 40px;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
-          animation: pulse-glow 3s infinite;
-        }
-
-        .sparkle-icon {
-          animation: sparkle 2s infinite ease-in-out;
-        }
-
-        @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 15px rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.3); }
-          50% { box-shadow: 0 0 30px rgba(139, 92, 246, 0.4); border-color: rgba(139, 92, 246, 0.6); }
-        }
-
-        @keyframes sparkle {
-          0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.8; }
-          50% { transform: scale(1.2) rotate(15deg); opacity: 1; }
-        }
-
-        .flow-feature-icon-wrapper {
-          width: 96px;
-          height: 96px;
-          border-radius: 28px;
-          background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 2px 0 rgba(255, 255, 255, 0.05);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          margin-bottom: 32px;
-          position: relative;
-        }
-
-        .flow-feature-icon-wrapper::after {
-          content: '';
-          position: absolute;
-          inset: -2px;
-          border-radius: 30px;
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
-          z-index: -1;
-          opacity: 0.5;
-          filter: blur(10px);
-          animation: rotate-gradient 4s linear infinite;
-        }
-
-        @keyframes rotate-gradient {
-          0% { filter: hue-rotate(0deg) blur(10px); }
-          100% { filter: hue-rotate(360deg) blur(10px); }
-        }
-
-        .flow-feature-icon {
-          animation: gentle-bounce 3s infinite ease-in-out;
-        }
-
-        @keyframes gentle-bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-4px); }
-        }
-
-        .flow-title {
-          font-size: 36px;
-          font-weight: 800;
-          margin: 0 0 16px 0;
-          background: linear-gradient(to right, #ffffff, #94a3b8);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          letter-spacing: -0.02em;
-        }
-
-        .flow-subtitle {
-          font-size: 16px;
-          color: #94a3b8;
-          max-width: 500px;
-          margin: 0 0 48px 0;
-          line-height: 1.6;
-        }
-
-        .flow-features-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 24px;
-          width: 100%;
-        }
-
-        .flow-feature-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-          padding: 20px;
-          border-radius: 20px;
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          transition: all 0.3s ease;
-        }
-
-        .flow-feature-item:hover {
-          background: rgba(255, 255, 255, 0.04);
-          transform: translateY(-4px);
-          border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .flow-feature-icon-box {
-          width: 56px;
-          height: 56px;
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: transform 0.3s ease;
-        }
-
-        .flow-feature-item:hover .flow-feature-icon-box {
-          transform: scale(1.1);
-        }
-
-        .flow-feature-icon-box.blue {
-          background: rgba(59, 130, 246, 0.1);
-          color: #60a5fa;
-          border: 1px solid rgba(59, 130, 246, 0.2);
-        }
-
-        .flow-feature-icon-box.green {
-          background: rgba(16, 185, 129, 0.1);
-          color: #34d399;
-          border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-
-        .flow-feature-icon-box.orange {
-          background: rgba(245, 158, 11, 0.1);
-          color: #fbbf24;
-          border: 1px solid rgba(245, 158, 11, 0.2);
-        }
-
-        .flow-feature-item span {
-          font-size: 14px;
-          font-weight: 600;
-          color: #e2e8f0;
-          letter-spacing: 0.02em;
-        }
-      `}</style>
-    </div>
-  );
+  // Flow Builder UI is now active
 
   if (!activeFlow) {
     return (
@@ -852,6 +560,25 @@ export default function FlowBuilder() {
           <Play size={48} />
           <h2>No Flow Selected</h2>
           <p>Select or create a flow from the sidebar to start building.</p>
+        </div>
+
+        {/* Dev Preview / Under Development Modal Overlay */}
+        <div className="flow-dev-modal-overlay">
+          <div className="flow-dev-modal-card">
+            <div className="flow-dev-badge">
+              <Sparkles size={14} className="sparkle-icon" />
+              <span>Developer Preview</span>
+            </div>
+            
+            <div className="flow-dev-icon-wrapper">
+              <Workflow size={40} className="flow-dev-icon" />
+            </div>
+            
+            <h2 className="flow-dev-title">Visual Flow Builder</h2>
+            <p className="flow-dev-subtitle">
+              This feature is currently under active development. Stay tuned for future updates!
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -928,7 +655,18 @@ export default function FlowBuilder() {
         </Panel>
 
         {/* Bottom Map & Controls Area */}
-        <Panel position="bottom-right" style={{ margin: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px' }}>
+        <Panel 
+          position="bottom-right" 
+          style={{ 
+            margin: '16px', 
+            marginBottom: showLogs ? '256px' : '56px', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'flex-end', 
+            gap: '12px',
+            transition: 'margin-bottom 0.2s ease'
+          }}
+        >
             <div style={{ 
                 display: 'flex', background: 'var(--bg-elevated)', 
                 backdropFilter: 'blur(12px)', border: '1px solid var(--border-subtle)', 
@@ -960,6 +698,11 @@ export default function FlowBuilder() {
           onClose={() => setSelectedNodeId(null)} 
         />
       )}
+
+      <ExecutionLogsPanel 
+        isOpen={showLogs} 
+        onToggle={() => setShowLogs(!showLogs)} 
+      />
 
       <CreateNodeModal 
         isOpen={showAddNodeModal} 
@@ -993,6 +736,25 @@ export default function FlowBuilder() {
         confirmLabel="Delete"
         isDanger={true}
       />
+
+      {/* Dev Preview / Under Development Modal Overlay */}
+      <div className="flow-dev-modal-overlay">
+        <div className="flow-dev-modal-card">
+          <div className="flow-dev-badge">
+            <Sparkles size={14} className="sparkle-icon" />
+            <span>Developer Preview</span>
+          </div>
+          
+          <div className="flow-dev-icon-wrapper">
+            <Workflow size={40} className="flow-dev-icon" />
+          </div>
+          
+          <h2 className="flow-dev-title">Visual Flow Builder</h2>
+          <p className="flow-dev-subtitle">
+            This feature is currently under active development. Stay tuned for future updates!
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

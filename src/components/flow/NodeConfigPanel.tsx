@@ -105,11 +105,10 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
     top: 0,
     right: 0,
     bottom: 0,
-    width: '400px',
-    backgroundColor: 'rgba(9, 10, 15, 0.98)',
-    backdropFilter: 'blur(30px)',
+    width: '420px',
+    backgroundColor: '#090a0f',
     borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
-    boxShadow: '-20px 0 50px rgba(0, 0, 0, 0.5)',
+    boxShadow: '-20px 0 50px rgba(0, 0, 0, 0.6)',
     zIndex: 100,
     display: 'flex',
     flexDirection: 'column',
@@ -126,10 +125,10 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
           justifyContent: 'space-between' 
         }}>
           <div>
-            <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'white', margin: 0 }}>Configure Node</h3>
-            <span style={{ fontSize: '11px', color: '#475569' }}>ID: {nodeId}</span>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'white', margin: 0, fontFamily: 'sans-serif' }}>Configure Node</h3>
+            <span style={{ fontSize: '11px', color: '#475569', fontFamily: 'monospace' }}>ID: {nodeId}</span>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '16px' }}>✕</button>
         </div>
 
         {/* Content */}
@@ -209,10 +208,10 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
                     value={method}
                     onChange={(e) => setMethod(e.target.value)}
                     className="kv-input"
-                    style={{ width: '100px', cursor: 'pointer' }}
+                    style={{ width: '100px', cursor: 'pointer', padding: '8px' }}
                   >
                     {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map(m => (
-                      <option key={m} value={m}>{m}</option>
+                      <option key={m} value={m} style={{ background: '#090a0f' }}>{m}</option>
                     ))}
                   </select>
                   <input 
@@ -232,14 +231,18 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
                   <label className="config-label">Query Parameters</label>
                   <button onClick={addParam} className="config-add-btn">+ Add</button>
                 </div>
-                {params.map((p, idx) => (
-                  <div key={p.id} className="kv-row">
-                    <input type="checkbox" checked={p.enabled} onChange={(e) => updateParam(idx, { enabled: e.target.checked })} className="kv-checkbox" />
-                    <input type="text" value={p.key} onChange={(e) => updateParam(idx, { key: e.target.value })} placeholder="Key" className="kv-input" />
-                    <input type="text" value={p.value} onChange={(e) => updateParam(idx, { value: e.target.value })} placeholder="Value" className="kv-input" />
-                    <button onClick={() => removeParam(idx)} className="kv-delete">✕</button>
-                  </div>
-                ))}
+                {params.length === 0 ? (
+                  <div style={{ fontSize: '11px', color: '#475569', fontStyle: 'italic', padding: '4px 0' }}>No query parameters.</div>
+                ) : (
+                  params.map((p, idx) => (
+                    <div key={p.id} className="kv-row">
+                      <input type="checkbox" checked={p.enabled} onChange={(e) => updateParam(idx, { enabled: e.target.checked })} className="kv-checkbox" />
+                      <input type="text" value={p.key} onChange={(e) => updateParam(idx, { key: e.target.value })} placeholder="Key" className="kv-input" />
+                      <input type="text" value={p.value} onChange={(e) => updateParam(idx, { value: e.target.value })} placeholder="Value" className="kv-input" />
+                      <button onClick={() => removeParam(idx)} className="kv-delete">✕</button>
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* Headers Section */}
@@ -248,21 +251,25 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
                   <label className="config-label">Headers</label>
                   <button onClick={addHeader} className="config-add-btn">+ Add</button>
                 </div>
-                {headers.map((h, idx) => (
-                  <div key={h.id} className="kv-row">
-                    <input type="checkbox" checked={h.enabled} onChange={(e) => updateHeader(idx, { enabled: e.target.checked })} className="kv-checkbox" />
-                    <input type="text" value={h.key} onChange={(e) => updateHeader(idx, { key: e.target.value })} placeholder="Key" className="kv-input" />
-                    <input type="text" value={h.value} onChange={(e) => updateHeader(idx, { value: e.target.value })} placeholder="Value" className="kv-input" />
-                    <button onClick={() => removeHeader(idx)} className="kv-delete">✕</button>
-                  </div>
-                ))}
+                {headers.length === 0 ? (
+                  <div style={{ fontSize: '11px', color: '#475569', fontStyle: 'italic', padding: '4px 0' }}>No headers.</div>
+                ) : (
+                  headers.map((h, idx) => (
+                    <div key={h.id} className="kv-row">
+                      <input type="checkbox" checked={h.enabled} onChange={(e) => updateHeader(idx, { enabled: e.target.checked })} className="kv-checkbox" />
+                      <input type="text" value={h.key} onChange={(e) => updateHeader(idx, { key: e.target.value })} placeholder="Key" className="kv-input" />
+                      <input type="text" value={h.value} onChange={(e) => updateHeader(idx, { value: e.target.value })} placeholder="Value" className="kv-input" />
+                      <button onClick={() => removeHeader(idx)} className="kv-delete">✕</button>
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* Body Section */}
               {['POST', 'PUT', 'PATCH'].includes(method) && (
                 <div className="config-section">
                   <label className="config-label">JSON Body</label>
-                  <div className="json-editor-container" style={{ marginTop: '8px' }}>
+                  <div style={{ marginTop: '8px' }}>
                     <textarea
                       value={body}
                       onChange={(e) => setBody(e.target.value)}
@@ -279,26 +286,30 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
                   <label className="config-label">Response Variable Mappings</label>
                   <button onClick={addMapping} className="config-add-btn">+ Add</button>
                 </div>
-                {mappings.map((m, idx) => (
-                  <div key={idx} className="kv-row">
-                    <input 
-                      type="text" 
-                      value={m.sourcePath} 
-                      onChange={(e) => updateMapping(idx, { sourcePath: e.target.value })} 
-                      placeholder="JSON Path (e.g. data.id)" 
-                      className="kv-input" 
-                    />
-                    <span style={{ color: '#475569' }}>→</span>
-                    <input 
-                      type="text" 
-                      value={m.targetVar} 
-                      onChange={(e) => updateMapping(idx, { targetVar: e.target.value })} 
-                      placeholder="Variable Name" 
-                      className="kv-input" 
-                    />
-                    <button onClick={() => removeMapping(idx)} className="kv-delete">✕</button>
-                  </div>
-                ))}
+                {mappings.length === 0 ? (
+                  <div style={{ fontSize: '11px', color: '#475569', fontStyle: 'italic', padding: '4px 0' }}>No response mappings.</div>
+                ) : (
+                  mappings.map((m, idx) => (
+                    <div key={idx} className="kv-row">
+                      <input 
+                        type="text" 
+                        value={m.sourcePath} 
+                        onChange={(e) => updateMapping(idx, { sourcePath: e.target.value })} 
+                        placeholder="JSON Path (e.g. data.id)" 
+                        className="kv-input" 
+                      />
+                      <span style={{ color: '#475569', fontSize: '14px' }}>→</span>
+                      <input 
+                        type="text" 
+                        value={m.targetVar} 
+                        onChange={(e) => updateMapping(idx, { targetVar: e.target.value })} 
+                        placeholder="Variable" 
+                        className="kv-input" 
+                      />
+                      <button onClick={() => removeMapping(idx)} className="kv-delete">✕</button>
+                    </div>
+                  ))
+                )}
               </div>
             </>
           )}
@@ -314,15 +325,111 @@ export default function NodeConfigPanel({ nodeId, onClose }: NodeConfigPanelProp
               backgroundColor: '#2563eb', 
               color: 'white', 
               border: 'none', 
-              borderRadius: '12px', 
+              borderRadius: '8px', 
               fontWeight: 700, 
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)'
+              fontSize: '13px',
+              fontFamily: 'sans-serif'
             }}
           >
             Save Configuration
           </button>
         </div>
+
+        <style>{`
+          .config-section {
+            margin-bottom: 24px;
+          }
+          .config-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+          }
+          .config-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-family: sans-serif;
+          }
+          .config-add-btn {
+            background: transparent;
+            border: none;
+            color: #3b82f6;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.2s;
+          }
+          .config-add-btn:hover {
+            background: rgba(59, 130, 246, 0.1);
+          }
+          .kv-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+          }
+          .kv-checkbox {
+            width: 14px;
+            height: 14px;
+            accent-color: #3b82f6;
+            cursor: pointer;
+          }
+          .kv-input {
+            flex: 1;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: white;
+            font-size: 12px;
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: sans-serif;
+          }
+          .kv-input:focus {
+            border-color: #3b82f6;
+          }
+          .kv-delete {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 6px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+          }
+          .kv-delete:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+          }
+          .json-textarea {
+            width: 100%;
+            height: 140px;
+            background: #090a0f;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #38bdf8;
+            font-family: Fira Code, Consolas, Monaco, Courier New, monospace;
+            font-size: 12px;
+            padding: 12px;
+            outline: none;
+            resize: vertical;
+            line-height: 1.5;
+          }
+          .json-textarea:focus {
+            border-color: #3b82f6;
+          }
+        `}</style>
     </div>
   );
 }

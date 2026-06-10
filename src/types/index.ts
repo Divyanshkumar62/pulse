@@ -41,6 +41,9 @@ export interface Request {
   testScript?: string;
   responseSchema?: string;
   pinned?: boolean;
+  showDocs?: boolean;
+  description?: string;
+  collectionId?: string;
 }
 
 export interface HttpRequest {
@@ -65,7 +68,7 @@ export interface Folder {
 export interface Collection {
   id: string;
   name: string;
-  description: string | null;
+  description?: string | null;
   requests: Request[];
   folders: Folder[];
   variables: KeyValuePair[];
@@ -155,7 +158,7 @@ export interface FlowNodeMapping {
 
 export interface FlowNode {
   id: string;
-  type: 'request' | 'logic' | 'delay' | 'start' | 'end' | 'loop';
+  type: 'request' | 'logic' | 'delay' | 'start' | 'end' | 'loop' | 'assertion';
   position: { x: number; y: number };
   data: {
     name: string;
@@ -172,6 +175,7 @@ export interface FlowNode {
     body?: string;
     status?: 'idle' | 'running' | 'success' | 'error';
     lastResponse?: HttpResponse;
+    triggeredHandle?: string;
   };
 }
 
@@ -199,6 +203,7 @@ export interface Flow {
 
 export interface MockRoute {
   id: string;
+  name?: string;
   path: string;
   method: string;
   statusCode: number;

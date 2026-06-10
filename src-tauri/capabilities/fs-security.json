@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schemas.tauri.app/v2/capabilities",
+  "identifier": "fs-security",
+  "description": "Filesystem security scope rules for Pulse",
+  "windows": ["main"],
+  "permissions": [
+    "fs:default",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-exists",
+    "fs:allow-mkdir",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$HOME/.pulse/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DESKTOP/**" }
+      ],
+      "deny": [
+        { "path": "$HOME/.ssh/**" },
+        { "path": "$HOME/.gnupg/**" },
+        { "path": "$HOME/.aws/**" },
+        { "path": "C:\\Windows\\**" }
+      ]
+    }
+  ]
+}

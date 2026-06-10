@@ -386,11 +386,8 @@ export default function TeamPanel({
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 className="text-h2">Create Team</h2>
-            <p className="text-body">
-              Set up a shared space for your projects and collaborate in real-time.
-            </p>
-            <div style={{ marginBottom: '32px' }}>
-              <label className="text-label">Team Name</label>
+            <div style={{ marginBottom: '32px', marginTop: '16px' }}>
+              <label className="text-label" style={{ fontSize: '13px', fontWeight: 700, marginBottom: '8px', display: 'block' }}>Team Name</label>
               <input
                 type="text"
                 className="text-input"

@@ -12,11 +12,12 @@ export default function TeamActivityFeed() {
 
   useEffect(() => {
     console.log('[Pulse] TeamActivityFeed: Active workspace:', activeWorkspace?.name, 'Path:', activeWorkspace?.path);
-    if (activeWorkspace?.path) {
-      fetchActivityLogAction(activeWorkspace.path);
+    const path = activeWorkspace?.path;
+    if (path) {
+      fetchActivityLogAction(path);
       
       const interval = setInterval(() => {
-        fetchActivityLogAction(activeWorkspace.path);
+        fetchActivityLogAction(path);
       }, 120000);
       
       return () => clearInterval(interval);

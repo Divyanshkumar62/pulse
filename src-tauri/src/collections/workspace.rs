@@ -139,6 +139,7 @@ fn save_request_to_disk(parent_path: &Path, request: &Request) -> Result<(), Str
     Ok(())
 }
 
+#[allow(dead_code)]
 fn sanitize_filename(name: &str) -> String {
     name.chars().map(|c| {
         if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' {

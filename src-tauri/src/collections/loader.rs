@@ -31,7 +31,17 @@ pub fn load_environments(
     path: impl AsRef<Path>,
 ) -> Result<Vec<Environment>, Box<dyn std::error::Error>> {
     let content = fs::read_to_string(path)?;
-    let envs: Vec<Environment> = serde_yaml::from_str(&content)?;
+    let mut envs: Vec<Environment> = serde_yaml::from_str(&content)?;
+    for env in &mut envs {
+        for var in &mut env.variables {
+            if var.secret.unwrap_or(false) && var.value == "[KEYCHAIN]" {
+                let service_key = format!("pulse.env.{}.{}", env.id, var.key);
+                if let Ok(real_value) = crate::secrets::retrieve_secret("pulse", &service_key) {
+                    var.value = real_value;
+                }
+            }
+        }
+    }
     Ok(envs)
 }
 
@@ -39,7 +49,17 @@ pub fn save_environments(
     environments: &[Environment],
     path: impl AsRef<Path>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let yaml = serde_yaml::to_string(environments)?;
+    let mut saveable = environments.to_vec();
+    for env in &mut saveable {
+        for var in &mut env.variables {
+            if var.secret.unwrap_or(false) {
+                let service_key = format!("pulse.env.{}.{}", env.id, var.key);
+                crate::secrets::store_secret("pulse", &service_key, &var.value).ok();
+                var.value = "[KEYCHAIN]".to_string();
+            }
+        }
+    }
+    let yaml = serde_yaml::to_string(&saveable)?;
     fs::write(path, yaml)?;
     Ok(())
 }

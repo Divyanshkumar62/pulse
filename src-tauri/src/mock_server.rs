@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::thread;
-use std::time::Duration;
 use std::net::TcpStream;
 use std::io::Write;
 use tiny_http::{Response, Server};
@@ -189,23 +188,30 @@ pub fn stop_mock_server(id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn load_mock_servers() -> Result<Vec<MockServerConfig>, String> {
-    let path = crate::get_data_dir().join("mock_servers.json");
+pub async fn load_mock_servers() -> Result<Vec<MockServerConfig>, String> {
+    let path = crate::utils::get_pulse_data_dir().join("mock_servers.json");
     if path.exists() {
-        let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
-        let servers: Vec<MockServerConfig> = serde_json::from_str(&content).map_err(|e| e.to_string())?;
-        Ok(servers)
+        tokio::task::spawn_blocking(move || {
+            let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+            let servers: Vec<MockServerConfig> = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+            Ok(servers)
+        })
+        .await
+        .map_err(|e| e.to_string())?
     } else {
         Ok(vec![])
     }
 }
 
 #[tauri::command]
-pub fn save_mock_servers(servers: Vec<MockServerConfig>) -> Result<(), String> {
-    let path = crate::get_data_dir().join("mock_servers.json");
-    let content = serde_json::to_string_pretty(&servers).map_err(|e| e.to_string())?;
-    std::fs::write(path, content).map_err(|e| e.to_string())?;
-    Ok(())
+pub async fn save_mock_servers(servers: Vec<MockServerConfig>) -> Result<(), String> {
+    let path = crate::utils::get_pulse_data_dir().join("mock_servers.json");
+    tokio::task::spawn_blocking(move || {
+        let content = serde_json::to_string_pretty(&servers).map_err(|e| e.to_string())?;
+        std::fs::write(path, content).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

@@ -92,7 +92,14 @@ pub fn run_script(
     script: String,
     context: ScriptContext,
 ) -> Result<ScriptExecutionResult, String> {
-    execute_js(script, context)
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let result = execute_js(script, context);
+        let _ = tx.send(result);
+    });
+
+    rx.recv_timeout(std::time::Duration::from_secs(5))
+        .map_err(|_| "Script execution timed out after 5 seconds".to_string())?
 }
 
 pub fn evaluate_boolean_script(
@@ -103,7 +110,7 @@ pub fn evaluate_boolean_script(
 
     // Setup pm object (minimal for logic evaluation)
     let pm = ObjectInitializer::new(&mut context).build();
-    context.register_global_property(JsString::from("pm"), pm, Attribute::all());
+    let _ = context.register_global_property(JsString::from("pm"), pm, Attribute::all());
 
     // Add environment and collection variables to context as global vars for easy access
     for (k, v) in &context_data.environment {
@@ -143,7 +150,7 @@ pub fn execute_js(
     let console = ObjectInitializer::new(&mut context)
         .function(console_log_fn, JsString::from("log"), 0)
         .build();
-    context.register_global_property(JsString::from("console"), console, Attribute::all());
+    let _ = context.register_global_property(JsString::from("console"), console, Attribute::all());
 
     // 2. Setup pm object with environment
     let env_data = std::sync::Arc::new(std::sync::Mutex::new(context_data.environment.clone()));

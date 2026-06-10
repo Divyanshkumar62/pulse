@@ -5,7 +5,12 @@ import { generateDocumentation } from '../../services/docGenerator';
 import { FileText, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function DocumentationView() {
+interface CollectionDocsProps {
+  collection?: any;
+  onClose?: () => void;
+}
+
+export default function CollectionDocs({ collection, onClose }: CollectionDocsProps = {}) {
   const { tabs, activeTabId } = useTabStore();
   const [copied, setCopied] = React.useState(false);
 
@@ -14,9 +19,49 @@ export default function DocumentationView() {
   const response = activeTab?.response;
 
   const markdown = useMemo(() => {
+    if (collection) {
+      let md = `# Collection: ${collection.name}\n\n`;
+      if (collection.description) {
+        md += `${collection.description}\n\n`;
+      }
+      
+      const requests = collection.requests || [];
+      if (requests.length === 0) {
+        md += `*No requests in this collection.*\n`;
+      } else {
+        requests.forEach((req: any) => {
+          md += `## ${req.name}\n\n`;
+          md += `**Method**: \`${req.method}\`  \n`;
+          md += `**URL**: \`${req.url || 'Not specified'}\`  \n\n`;
+          if (req.description) {
+            md += `${req.description}\n\n`;
+          }
+          if (req.headers && req.headers.length > 0) {
+            md += `### Headers\n\n`;
+            md += `| Key | Value | Description |\n`;
+            md += `| :--- | :--- | :--- |\n`;
+            req.headers.forEach((h: any) => {
+              md += `| \`${h.key}\` | \`${h.value}\` | ${h.description || '-'} |\n`;
+            });
+            md += `\n`;
+          }
+          if (req.body && req.body.content) {
+            md += `### Body (\`${req.body.type}\`)\n\n`;
+            if (req.body.type === 'json') {
+              md += `\`\`\`json\n${req.body.content}\n\`\`\`\n\n`;
+            } else {
+              md += `\`\`\`text\n${req.body.content}\n\`\`\`\n\n`;
+            }
+          }
+          md += `---\n\n`;
+        });
+      }
+      return md;
+    }
+
     if (!request) return '';
     return generateDocumentation(request, response);
-  }, [request, response]);
+  }, [collection, request, response]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(markdown);
@@ -25,7 +70,7 @@ export default function DocumentationView() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!request) {
+  if (!collection && !request) {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
         <FileText size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
@@ -52,26 +97,45 @@ export default function DocumentationView() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <FileText size={16} color="var(--accent-primary)" />
-          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Live Documentation</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+            {collection ? `${collection.name} Documentation` : 'Live Documentation'}
+          </span>
         </div>
-        <button 
-          onClick={handleCopy}
-          style={{
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '6px',
-            padding: '4px 8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-          className="copy-docs-btn"
-        >
-          {copied ? <Check size={14} color="#22c55e" /> : <Copy size={14} color="var(--text-secondary)" />}
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>{copied ? 'Copied' : 'Copy MD'}</span>
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button 
+            onClick={handleCopy}
+            style={{
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            className="copy-docs-btn"
+          >
+            {copied ? <Check size={14} color="#22c55e" /> : <Copy size={14} color="var(--text-secondary)" />}
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>{copied ? 'Copied' : 'Copy MD'}</span>
+          </button>
+          {onClose && (
+            <button 
+              onClick={onClose}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                fontSize: '14px',
+                cursor: 'pointer',
+                padding: '4px'
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="documentation-content custom-scrollbar" style={{ 

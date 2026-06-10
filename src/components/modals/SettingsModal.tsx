@@ -85,18 +85,34 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           <section style={{ paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
             <h3 className="text-label" style={{ marginBottom: '12px', color: 'var(--accent-primary)', letterSpacing: '0.05em' }}>Request Defaults</h3>
-            <div style={{ marginBottom: '16px' }}>
-              <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>Timeout (seconds)</label>
-              <input
-                type="number"
-                className="text-input"
-                style={{ width: '120px', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
-                value={settings.default_timeout_secs}
-                onChange={(e) => updateSettings({ default_timeout_secs: parseInt(e.target.value) || 30 })}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>Timeout (seconds)</label>
+                <input
+                  type="number"
+                  className="text-input"
+                  style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                  value={settings.default_timeout_secs}
+                  onChange={(e) => updateSettings({ default_timeout_secs: parseInt(e.target.value) || 30 })}
+                />
+              </div>
+              <div>
+                <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>History Retention (days)</label>
+                <select
+                  className="text-input"
+                  style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                  value={settings.history_retention_days}
+                  onChange={(e) => updateSettings({ history_retention_days: parseInt(e.target.value) })}
+                >
+                  <option value={0}>Forever</option>
+                  <option value={7}>7 Days</option>
+                  <option value={30}>30 Days (Recommended)</option>
+                  <option value={90}>90 Days</option>
+                </select>
+              </div>
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-primary)' }}>
                 <input
                   type="checkbox"
@@ -115,6 +131,31 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 />
                 Verify SSL Certificates
               </label>
+            </div>
+
+            <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-primary)', marginBottom: settings.proxy_enabled ? '12px' : '0' }}>
+                <input
+                  type="checkbox"
+                  checked={settings.proxy_enabled}
+                  onChange={(e) => updateSettings({ proxy_enabled: e.target.checked })}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }}
+                />
+                Enable HTTP Proxy
+              </label>
+              {settings.proxy_enabled && (
+                <div>
+                  <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>Proxy URL (e.g. http://proxy.com:8080)</label>
+                  <input
+                    type="text"
+                    className="text-input"
+                    placeholder="http://user:pass@host:port"
+                    style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                    value={settings.proxy_url || ''}
+                    onChange={(e) => updateSettings({ proxy_url: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
           </section>
 

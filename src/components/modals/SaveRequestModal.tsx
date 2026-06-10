@@ -74,7 +74,7 @@ export default function SaveRequestModal({ isOpen, onClose, request }: SaveReque
 
     if (requestExists && existingCollectionId === selectedCollection && existingFolderId === (selectedFolder || null)) {
       // Just update it if it's in the same location
-      updateRequest(existingCollectionId, existingFolderId, request.id, finalRequest);
+      updateRequest(existingCollectionId, request.id, finalRequest);
       toast.success(`Request "${finalRequest.name}" updated`);
     } else {
       // Either it's new, or user chose a different collection/folder. We'll add it as new (or could move it, but adding is safer for now)
