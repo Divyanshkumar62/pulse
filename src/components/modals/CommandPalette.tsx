@@ -33,7 +33,7 @@ export default function CommandPalette() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  const { workspaces, activeWorkspaceId, setActiveWorkspaceId } = useWorkspaceStore();
+  const { workspaces, activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore();
   const { openTab } = useTabStore();
   const [items, setItems] = useState<PaletteItem[]>([]);
   const [filtered, setFiltered] = useState<PaletteItem[]>([]);
@@ -117,7 +117,7 @@ export default function CommandPalette() {
     });
     newItems.push({
       id: 'nav-mocks', title: 'Switch to Mock Servers', category: 'Navigation', 
-      icon: <Server size={16} />, action: () => setSidebarTab('mock')
+      icon: <Server size={16} />, action: () => setSidebarTab('mock-servers')
     });
 
     // 3. WORKSPACES
@@ -126,7 +126,7 @@ export default function CommandPalette() {
         id: `ws-${w.id}`, title: `Switch to Workspace: ${w.name}`, 
         subtitle: w.id === activeWorkspaceId ? 'Currently Active' : 'Change workspace',
         category: 'Workspaces', icon: <ArrowRightLeft size={16} />,
-        action: () => setActiveWorkspaceId(w.id)
+        action: () => setActiveWorkspace(w.id)
       });
 
       // 4. CROSS-WORKSPACE REQUESTS
@@ -138,7 +138,7 @@ export default function CommandPalette() {
               subtitle: `${w.name} • ${path} • ${r.method} ${r.url}`,
               category: 'Requests', icon: <Zap size={16} color="var(--accent-primary)" />,
               action: () => {
-                if (w.id !== activeWorkspaceId) setActiveWorkspaceId(w.id);
+                if (w.id !== activeWorkspaceId) setActiveWorkspace(w.id);
                 openTab(r, c.id);
               }
             });
@@ -159,7 +159,7 @@ export default function CommandPalette() {
     });
 
     setItems(newItems);
-  }, [workspaces, activeWorkspaceId, openTab, setSettingsOpen, setSidebarTab, setActiveWorkspaceId]);
+  }, [workspaces, activeWorkspaceId, openTab, setSettingsOpen, setSidebarTab, setActiveWorkspace]);
 
   useEffect(() => {
     if (mode !== 'search') return;
@@ -207,6 +207,23 @@ export default function CommandPalette() {
     const timer = setTimeout(triggerSearch, 50);
     return () => clearTimeout(timer);
   }, [search, items, mode]);
+
+  const handleImportCurl = () => {
+    if (!curlInput.trim()) return;
+    try {
+      const parsedRequest = CurlParser.parse(curlInput);
+      openTab({
+        ...parsedRequest,
+        id: crypto.randomUUID()
+      });
+      setCommandPaletteOpen(false);
+      setCurlInput('');
+      setMode('search');
+    } catch (error: any) {
+      console.error('Failed to parse cURL:', error);
+      alert('Failed to parse cURL: ' + error.message);
+    }
+  };
 
   if (!isCommandPaletteOpen) return null;
 

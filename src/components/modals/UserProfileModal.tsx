@@ -13,14 +13,11 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   const { settings, updateSettings } = useSettingsStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (settings) {
       setName(settings.name || '');
       setEmail(settings.email || '');
-      setAvatarUrl(settings.avatarUrl || '');
     }
   }, [settings, isOpen]);
 
@@ -28,7 +25,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
   const handleSave = async () => {
     try {
-      await updateSettings({ name, email, avatarUrl });
+      await updateSettings({ name, email });
       toast.success('Profile updated successfully');
       onClose();
     } catch (e) {
@@ -36,30 +33,8 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     }
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Check file size (limit to 1MB for Base64 efficiency)
-      if (file.size > 1024 * 1024) {
-        toast.error('Image must be less than 1MB');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeAvatar = () => {
-    setAvatarUrl('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  // Determine display avatar for preview
-  const previewAvatar = avatarUrl || (email ? getGravatarUrl(email, 100) : null);
+  // Determine display avatar for preview (Gravatar only)
+  const previewAvatar = email ? getGravatarUrl(email, 100) : null;
 
   return (
     <div 
@@ -102,7 +77,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
             <div style={{ position: 'relative' }}>
                 <div 
-                onClick={() => fileInputRef.current?.click()}
                 style={{
                     width: '100px',
                     height: '100px',
@@ -116,60 +90,21 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                     fontSize: '32px',
                     fontWeight: 700,
                     color: 'white',
-                    cursor: 'pointer',
                     overflow: 'hidden',
                     border: '4px solid var(--bg-elevated)',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
                 }}
                 >
                 {!previewAvatar && (name ? name.charAt(0).toUpperCase() : '?')}
-                <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: 0,
-                    transition: 'opacity 0.2s',
-                    borderRadius: '50%'
-                }}
-                className="avatar-hover-overlay"
-                >
-                    <Camera size={24} color="white" />
                 </div>
-                </div>
-
-                {avatarUrl && (
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); removeAvatar(); }}
-                        style={{ 
-                            position: 'absolute', bottom: 0, right: 0, 
-                            background: '#ef4444', color: 'white', border: 'none', 
-                            borderRadius: '50%', width: '28px', height: '28px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-                        }}
-                        title="Remove Local Image"
-                    >
-                        <Trash2 size={14} />
-                    </button>
-                )}
             </div>
             
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleAvatarChange}
-              accept="image/*"
-              style={{ display: 'none' }}
-            />
             <div style={{ textAlign: 'center' }}>
                 <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-tertiary)' }}>
-                    {avatarUrl ? 'Using custom local image' : (email ? 'Using Gravatar based on email' : 'Using initial fallback')}
+                    {email ? 'Using Gravatar based on email' : 'Using initial fallback'}
                 </p>
                 <p style={{ margin: '4px 0 0', fontSize: '11px', opacity: 0.6, color: 'var(--text-tertiary)' }}>
-                    Click image to upload a different local one
+                    Avatars are automatically synchronized via Gravatar
                 </p>
             </div>
           </div>

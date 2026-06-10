@@ -41,7 +41,6 @@ export default function Header() {
               <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor" />
             </svg>
           </div>
-          <span className="brand-name">Pulse</span>
         </div>
 
         <div className="workspace-switcher-container" ref={dropdownRef}>
@@ -108,20 +107,17 @@ export default function Header() {
       </div>
 
       <div className="header-right">
-        <div style={{ width: '200px' }}>
+        <div style={{ width: '160px', marginRight: '-40px', zIndex: 10 }}>
           <CustomSelect
             value={activeEnvId || ''}
             onChange={(val) => setActiveEnvId(val || null)}
-            options={[
-              { value: '', label: 'No Environment' },
-              ...environments.map(env => ({
-                value: env.id,
-                label: env.name
-              }))
-            ]}
+            options={environments.map(env => ({
+              value: env.id,
+              label: env.name
+            }))}
           />
         </div>
-        <div className="user-profile" onClick={() => setProfileOpen(true)}>
+        <div className="user-profile" onClick={() => setProfileOpen(true)} style={{ zIndex: 11 }}>
           {displayAvatar ? (
             <img src={displayAvatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (

@@ -47,17 +47,27 @@ export default function App() {
   const { settings } = useSettingsStore();
 
   useEffect(() => {
-    initSettingsStore().then(() => {
-      initTeamStore().then(() => {
-        initWorkspaceStore().then(() => {
-          initMockStore().then(() => {
-            initTabStore();
-          });
-        });
-      });
+    // Phase 1: Initialize Settings, Teams, Environments, and History in parallel
+    Promise.all([
+      initSettingsStore(),
+      initTeamStore(),
+      initEnvStore(),
+      initHistoryStore()
+    ])
+    .then(() => {
+      // Phase 2: Workspaces depend on Teams metadata to map team workspaces
+      return initWorkspaceStore();
+    })
+    .then(() => {
+      // Phase 3: Mock servers and tab states depend on active workspace configurations
+      return Promise.all([
+        initMockStore(),
+        initTabStore()
+      ]);
+    })
+    .catch((error) => {
+      console.error("[Pulse] Error during store initialization:", error);
     });
-    initEnvStore();
-    initHistoryStore();
   }, [initEnvStore, initSettingsStore, initTeamStore, initWorkspaceStore, initHistoryStore, initMockStore, initTabStore]);
 
   const showMonitorDashboard = sidebarTab === 'monitor' && selectedMonitorId;
