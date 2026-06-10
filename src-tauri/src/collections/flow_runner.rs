@@ -250,7 +250,7 @@ impl FlowRunner {
             graphql: None,
         };
 
-        let response = send_request(method.to_string(), resolved_url, headers, body, 30, true, true).await
+        let response = send_request(method.to_string(), resolved_url, headers, body, 30, true, true, false, None).await
             .map_err(|e| format!("Request failed: {}", e))?;
 
         let history_resp = HistoryResponse {

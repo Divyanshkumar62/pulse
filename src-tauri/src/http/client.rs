@@ -14,16 +14,29 @@ pub async fn send_request(
     timeout_secs: u64,
     follow_redirects: bool,
     verify_ssl: bool,
+    proxy_enabled: bool,
+    proxy_url: Option<String>,
 ) -> Result<HttpResponse, HttpError> {
-    let client = Client::builder()
+    let mut client_builder = Client::builder()
         .timeout(std::time::Duration::from_secs(timeout_secs))
         .danger_accept_invalid_certs(!verify_ssl)
         .redirect(if follow_redirects { 
             reqwest::redirect::Policy::default() 
         } else { 
             reqwest::redirect::Policy::none() 
-        })
-        .build()
+        });
+
+    if proxy_enabled {
+        if let Some(url) = proxy_url {
+            if !url.is_empty() {
+                let proxy = reqwest::Proxy::all(&url)
+                    .map_err(|e| HttpError::InvalidUrl(format!("Invalid proxy URL: {}", e)))?;
+                client_builder = client_builder.proxy(proxy);
+            }
+        }
+    }
+
+    let client = client_builder.build()
         .map_err(|e| HttpError::InvalidUrl(format!("Failed to create client: {}", e)))?;
     
     

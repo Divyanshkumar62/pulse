@@ -1,9 +1,11 @@
+pub mod utils;
 mod oauth;
 pub mod collections;
 mod http;
 mod mock_server;
 pub mod script_runner;
 mod search;
+pub mod secrets;
 
 #[tauri::command]
 async fn start_oauth_flow(
@@ -88,25 +90,8 @@ use http::client::send_request;
 use http::types::HttpResponse;
 use mock_server::{start_mock_server, stop_mock_server, load_mock_servers, save_mock_servers, get_running_mock_servers, save_workspace_mock_servers, load_workspace_mock_servers};
 use url::Url;
-use std::path::PathBuf;
-use std::sync::OnceLock;
-use dirs;
 use serde::{Deserialize, Serialize};
 
-static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
-
-fn get_data_dir() -> &'static PathBuf {
-    DATA_DIR.get_or_init(|| {
-        let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-        let path = home.join(".pulse");
-        if !path.exists() {
-            if let Err(e) = std::fs::create_dir_all(&path) {
-                eprintln!("Warning: Failed to create data directory: {}", e);
-            }
-        }
-        path
-    })
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserSettings {
@@ -117,6 +102,9 @@ pub struct UserSettings {
     pub follow_redirects: bool,
     pub verify_ssl: bool,
     pub theme: String,
+    pub proxy_enabled: bool,
+    pub proxy_url: Option<String>,
+    pub history_retention_days: u32,
 }
 
 impl Default for UserSettings {
@@ -129,6 +117,9 @@ impl Default for UserSettings {
             follow_redirects: true,
             verify_ssl: true,
             theme: "dark".to_string(),
+            proxy_enabled: false,
+            proxy_url: None,
+            history_retention_days: 30,
         }
     }
 }
@@ -148,29 +139,43 @@ async fn send_http_request(
         body, 
         settings.default_timeout_secs,
         settings.follow_redirects,
-        settings.verify_ssl
+        settings.verify_ssl,
+        settings.proxy_enabled,
+        settings.proxy_url
     )
     .await
     .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn load_collection(path: String) -> Result<collections::types::Collection, String> {
+async fn load_collection(path: String) -> Result<collections::types::Collection, String> {
     let sanitized_path = collections::utils::sanitize_path(&path)?;
-    loader::load_from_file(sanitized_path).map_err(|e| e.to_string())
+    tokio::task::spawn_blocking(move || {
+        loader::load_from_file(sanitized_path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn save_collection(collection: collections::types::Collection, path: String) -> Result<(), String> {
+async fn save_collection(collection: collections::types::Collection, path: String) -> Result<(), String> {
     let sanitized_path = collections::utils::sanitize_path(&path)?;
-    loader::save_to_file(&collection, sanitized_path).map_err(|e| e.to_string())
+    tokio::task::spawn_blocking(move || {
+        loader::save_to_file(&collection, sanitized_path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn load_environments() -> Result<Vec<Environment>, String> {
-    let path = get_data_dir().join("environments.yaml");
+async fn load_environments() -> Result<Vec<Environment>, String> {
+    let path = crate::utils::get_pulse_data_dir().join("environments.yaml");
     if path.exists() {
-        loader::load_environments(path).map_err(|e| e.to_string())
+        tokio::task::spawn_blocking(move || {
+            loader::load_environments(path).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| e.to_string())?
     } else {
         Ok(default_environments())
     }
@@ -192,6 +197,7 @@ fn default_environments() -> Vec<Environment> {
                     value: "http://localhost:3000".to_string(),
                     enabled: true,
                     description: None,
+                    secret: None,
                 },
             ],
         },
@@ -204,6 +210,7 @@ fn default_environments() -> Vec<Environment> {
                     value: "https://staging.api.com".to_string(),
                     enabled: true,
                     description: None,
+                    secret: None,
                 },
             ],
         },
@@ -216,6 +223,7 @@ fn default_environments() -> Vec<Environment> {
                     value: "https://api.com".to_string(),
                     enabled: true,
                     description: None,
+                    secret: None,
                 },
             ],
         },
@@ -223,25 +231,37 @@ fn default_environments() -> Vec<Environment> {
 }
 
 #[tauri::command]
-fn save_environments(environments: Vec<Environment>) -> Result<(), String> {
-    let path = get_data_dir().join("environments.yaml");
-    loader::save_environments(&environments, &path).map_err(|e| e.to_string())
+async fn save_environments(environments: Vec<Environment>) -> Result<(), String> {
+    let path = crate::utils::get_pulse_data_dir().join("environments.yaml");
+    tokio::task::spawn_blocking(move || {
+        loader::save_environments(&environments, &path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn load_history() -> Result<Vec<HistoryEntry>, String> {
-    let path = get_data_dir().join("history.json");
+async fn load_history() -> Result<Vec<HistoryEntry>, String> {
+    let path = crate::utils::get_pulse_data_dir().join("history.json");
     if path.exists() {
-        loader::load_history(&path).map_err(|e| e.to_string())
+        tokio::task::spawn_blocking(move || {
+            loader::load_history(&path).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| e.to_string())?
     } else {
         Ok(vec![])
     }
 }
 
 #[tauri::command]
-fn save_history(history: Vec<HistoryEntry>) -> Result<(), String> {
-    let path = get_data_dir().join("history.json");
-    loader::save_history(&history, &path).map_err(|e| e.to_string())
+async fn save_history(history: Vec<HistoryEntry>) -> Result<(), String> {
+    let path = crate::utils::get_pulse_data_dir().join("history.json");
+    tokio::task::spawn_blocking(move || {
+        loader::save_history(&history, &path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -347,67 +367,91 @@ async fn run_collection(
 }
 
 #[tauri::command]
-fn get_user_settings() -> Result<UserSettings, String> {
-    let path = get_data_dir().join("settings.json");
+async fn get_user_settings() -> Result<UserSettings, String> {
+    let path = crate::utils::get_pulse_data_dir().join("settings.json");
     if path.exists() {
-        let content = std::fs::read_to_string(&path)
-            .map_err(|e| format!("Failed to read settings: {}", e))?;
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse settings: {}", e))
+        tokio::task::spawn_blocking(move || {
+            let content = std::fs::read_to_string(&path)
+                .map_err(|e| format!("Failed to read settings: {}", e))?;
+            serde_json::from_str(&content)
+                .map_err(|e| format!("Failed to parse settings: {}", e))
+        })
+        .await
+        .map_err(|e| e.to_string())?
     } else {
         Ok(UserSettings::default())
     }
 }
 
 #[tauri::command]
-fn save_user_settings(settings: UserSettings) -> Result<(), String> {
-    let path = get_data_dir().join("settings.json");
-    let json = serde_json::to_string_pretty(&settings)
-        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
-    std::fs::write(&path, json)
-        .map_err(|e| format!("Failed to write settings: {}", e))
+async fn save_user_settings(settings: UserSettings) -> Result<(), String> {
+    let path = crate::utils::get_pulse_data_dir().join("settings.json");
+    tokio::task::spawn_blocking(move || {
+        let json = serde_json::to_string_pretty(&settings)
+            .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+        std::fs::write(&path, json)
+            .map_err(|e| format!("Failed to write settings: {}", e))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn create_data_dir() -> Result<String, String> {
-    let path = get_data_dir();
-    let collections_path = path.join("collections");
-    if !collections_path.exists() {
-        std::fs::create_dir_all(&collections_path).map_err(|e| e.to_string())?;
-    }
-    Ok(path.to_string_lossy().to_string())
+async fn create_data_dir() -> Result<String, String> {
+    let path = crate::utils::get_pulse_data_dir().clone();
+    tokio::task::spawn_blocking(move || {
+        let collections_path = path.join("collections");
+        if !collections_path.exists() {
+            std::fs::create_dir_all(&collections_path).map_err(|e| e.to_string())?;
+        }
+        Ok(path.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn load_collections() -> Result<Vec<Collection>, String> {
-    let collections_path = get_data_dir().join("collections");
-    loader::load_all_collections(collections_path).map_err(|e| e.to_string())
+async fn load_collections() -> Result<Vec<Collection>, String> {
+    let collections_path = crate::utils::get_pulse_data_dir().join("collections");
+    tokio::task::spawn_blocking(move || {
+        loader::load_all_collections(collections_path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn create_team(name: String, owner_email: String, owner_name: String) -> Result<Team, String> {
+async fn create_team(name: String, owner_email: String, owner_name: String) -> Result<Team, String> {
     log::info!("Creating team: {} for owner: {} ({})", name, owner_name, owner_email);
-    let teams_path = get_data_dir().join("teams.yaml");
+    let teams_path = crate::utils::get_pulse_data_dir().join("teams.yaml");
     
-    let result = team_loader::create_team(
-        teams_path.to_str().unwrap_or("teams.yaml"),
-        name,
-        uuid::Uuid::new_v4().to_string(),
-        owner_email,
-        owner_name,
-    );
-    
-    if let Ok(ref team) = result {
-        log::info!("Team created successfully with ID: {}", team.id);
-    }
-    
-    result
+    tokio::task::spawn_blocking(move || {
+        let result = team_loader::create_team(
+            teams_path.to_str().unwrap_or("teams.yaml"),
+            name,
+            uuid::Uuid::new_v4().to_string(),
+            owner_email,
+            owner_name,
+        );
+        
+        if let Ok(ref team) = result {
+            log::info!("Team created successfully with ID: {}", team.id);
+        }
+        
+        result
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn get_teams() -> Result<Vec<Team>, String> {
-    let teams_path = get_data_dir().join("teams.yaml");
-    team_loader::load_teams(teams_path.to_str().unwrap_or("teams.yaml")).map_err(|e| e.to_string())
+async fn get_teams() -> Result<Vec<Team>, String> {
+    let teams_path = crate::utils::get_pulse_data_dir().join("teams.yaml");
+    tokio::task::spawn_blocking(move || {
+        team_loader::load_teams(teams_path.to_str().unwrap_or("teams.yaml")).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -419,8 +463,8 @@ async fn invite_to_team(
     invited_by: String,
     invited_by_name: String,
 ) -> Result<Invitation, String> {
-    let teams_path = get_data_dir().join("teams.yaml");
-    let invitations_path = get_data_dir().join("invitations.json");
+    let teams_path = crate::utils::get_pulse_data_dir().join("teams.yaml");
+    let invitations_path = crate::utils::get_pulse_data_dir().join("invitations.json");
     
     let role_enum = match role.to_lowercase().as_str() {
         "admin" => TeamRole::Admin,
@@ -448,73 +492,106 @@ async fn invite_to_team(
 }
 
 #[tauri::command]
-fn get_pending_invitations() -> Result<Vec<Invitation>, String> {
-    let invitations_path = get_data_dir().join("invitations.json");
-    team_loader::get_pending_invitations(invitations_path)
+async fn get_pending_invitations() -> Result<Vec<Invitation>, String> {
+    let invitations_path = crate::utils::get_pulse_data_dir().join("invitations.json");
+    tokio::task::spawn_blocking(move || {
+        team_loader::get_pending_invitations(invitations_path)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn get_all_invitations() -> Result<Vec<Invitation>, String> {
-    let invitations_path = get_data_dir().join("invitations.json");
-    team_loader::load_invitations(invitations_path).map_err(|e| e.to_string())
+async fn get_all_invitations() -> Result<Vec<Invitation>, String> {
+    let invitations_path = crate::utils::get_pulse_data_dir().join("invitations.json");
+    tokio::task::spawn_blocking(move || {
+        team_loader::load_invitations(invitations_path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn accept_invitation(invitation_id: String) -> Result<(), String> {
-    let invitations_path = get_data_dir().join("invitations.json");
-    let teams_path = get_data_dir().join("teams.yaml");
-    let settings = get_user_settings()?;
+async fn accept_invitation(invitation_id: String) -> Result<(), String> {
+    let invitations_path = crate::utils::get_pulse_data_dir().join("invitations.json");
+    let teams_path = crate::utils::get_pulse_data_dir().join("teams.yaml");
+    let settings = get_user_settings().await?;
     
-    team_loader::accept_invitation(
-        invitations_path,
-        teams_path.to_str().unwrap_or("teams.yaml"),
-        invitation_id,
-        uuid::Uuid::new_v4().to_string(),
-        settings.email,
-        settings.name,
-    )
+    tokio::task::spawn_blocking(move || {
+        team_loader::accept_invitation(
+            invitations_path,
+            teams_path.to_str().unwrap_or("teams.yaml"),
+            invitation_id,
+            uuid::Uuid::new_v4().to_string(),
+            settings.email,
+            settings.name,
+        )
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn decline_invitation(invitation_id: String) -> Result<(), String> {
-    let invitations_path = get_data_dir().join("invitations.json");
-    team_loader::decline_invitation(invitations_path, invitation_id)
+async fn decline_invitation(invitation_id: String) -> Result<(), String> {
+    let invitations_path = crate::utils::get_pulse_data_dir().join("invitations.json");
+    tokio::task::spawn_blocking(move || {
+        team_loader::decline_invitation(invitations_path, invitation_id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn rename_team(team_id: String, new_name: String) -> Result<(), String> {
-    let teams_path = get_data_dir().join("teams.yaml");
-    team_loader::rename_team(teams_path.to_str().unwrap_or("teams.yaml"), team_id, new_name)
+async fn rename_team(team_id: String, new_name: String) -> Result<(), String> {
+    let teams_path = crate::utils::get_pulse_data_dir().join("teams.yaml");
+    tokio::task::spawn_blocking(move || {
+        team_loader::rename_team(teams_path.to_str().unwrap_or("teams.yaml"), team_id, new_name)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn delete_team(team_id: String) -> Result<(), String> {
-    let teams_path = get_data_dir().join("teams.yaml");
-    team_loader::delete_team(teams_path.to_str().unwrap_or("teams.yaml"), team_id)
+async fn delete_team(team_id: String) -> Result<(), String> {
+    let teams_path = crate::utils::get_pulse_data_dir().join("teams.yaml");
+    tokio::task::spawn_blocking(move || {
+        team_loader::delete_team(teams_path.to_str().unwrap_or("teams.yaml"), team_id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn pin_team(team_id: String, pinned: bool) -> Result<(), String> {
-    let teams_path = get_data_dir().join("teams.yaml");
-    team_loader::pin_team(teams_path.to_str().unwrap_or("teams.yaml"), team_id, pinned)
+async fn pin_team(team_id: String, pinned: bool) -> Result<(), String> {
+    let teams_path = crate::utils::get_pulse_data_dir().join("teams.yaml");
+    tokio::task::spawn_blocking(move || {
+        team_loader::pin_team(teams_path.to_str().unwrap_or("teams.yaml"), team_id, pinned)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-fn remove_team_member(team_id: String, user_id: String) -> Result<(), String> {
-    let teams_path = get_data_dir().join("teams.yaml");
-    team_loader::remove_member(teams_path.to_str().unwrap_or("teams.yaml"), team_id, user_id)
+async fn remove_team_member(team_id: String, user_id: String) -> Result<(), String> {
+    let teams_path = crate::utils::get_pulse_data_dir().join("teams.yaml");
+    tokio::task::spawn_blocking(move || {
+        team_loader::remove_member(teams_path.to_str().unwrap_or("teams.yaml"), team_id, user_id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
 fn write_file_content(path: String, file_path: String, content: String) -> Result<(), String> {
     let sanitized_path = collections::utils::validate_workspace_path(&path)?;
-    let full_path = sanitized_path.join(file_path);
+    let full_path = collections::utils::validate_sub_path(&sanitized_path, &file_path)?;
     std::fs::write(full_path, content).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn read_conflicted_file(path: String, file_path: String, stage: u8) -> Result<String, String> {
     let sanitized_path = collections::utils::validate_workspace_path(&path)?;
+    let _ = collections::utils::validate_sub_path(&sanitized_path, &file_path)?;
     let path_str = sanitized_path.to_str().unwrap_or(&path);
     
     let output = std::process::Command::new("git")
@@ -532,7 +609,7 @@ fn read_conflicted_file(path: String, file_path: String, stage: u8) -> Result<St
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let _ = get_data_dir();
+    let _ = crate::utils::get_pulse_data_dir();
     
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
@@ -603,4 +680,39 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod security_tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_d1_01_path_traversal() {
+        let workspace = std::env::current_dir().unwrap();
+        let result = collections::utils::validate_sub_path(&workspace, "../../.ssh/test.txt");
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err();
+        assert!(err_msg.contains("traversal") || err_msg.contains("escapes"));
+    }
+
+    #[test]
+    fn test_d4_01_script_timeout() {
+        let context = script_runner::ScriptContext {
+            environment: HashMap::new(),
+            collection: HashMap::new(),
+            request: script_runner::RequestInfo {
+                url: "http://localhost".to_string(),
+                method: "GET".to_string(),
+                headers: HashMap::new(),
+            },
+            response: None,
+        };
+        let start = std::time::Instant::now();
+        let result = script_runner::run_script("while(true){}".to_string(), context);
+        let elapsed = start.elapsed().as_secs();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Script execution timed out after 5 seconds");
+        assert!(elapsed >= 5 && elapsed < 10);
+    }
 }

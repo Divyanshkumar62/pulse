@@ -26,7 +26,8 @@
     }
   },
   "plugins": {
-    "notification": null
+    "notification": null,
+    "fs": {}
   },
   "bundle": {
     "active": true,

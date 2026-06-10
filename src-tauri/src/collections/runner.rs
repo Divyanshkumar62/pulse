@@ -97,6 +97,8 @@ impl CollectionRunner {
             30,   // timeout
             true, // follow redirects
             true, // verify ssl
+            false, // proxy enabled
+            None,  // proxy url
         ).await;
 
         let elapsed = start_time.elapsed().as_millis() as u64;

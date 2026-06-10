@@ -9,6 +9,9 @@ export interface UserSettings {
   follow_redirects: boolean;
   verify_ssl: boolean;
   theme: string;
+  proxy_enabled: boolean;
+  proxy_url?: string;
+  history_retention_days: number; // 0 means forever
 }
 
 export async function sendRequest(

@@ -25,7 +25,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
           default_timeout_secs: 30, 
           follow_redirects: true, 
           verify_ssl: true,
-          theme: 'dark'
+          theme: 'dark',
+          proxy_enabled: false,
+          proxy_url: '',
+          history_retention_days: 30
         } 
       });
     } finally {

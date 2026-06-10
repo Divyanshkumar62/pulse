@@ -50,6 +50,7 @@ regex = "1.10"
 fuzzy-matcher = "0.3.7"
 tauri-plugin-notification = "2"
 async-recursion = "1.1.1"
+keyring = "2"
 
 [profile.release]
 panic = "abort"
