@@ -28,7 +28,7 @@ fn has_remote(path: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn get_remote_url(path: &str) -> Option<String> {
+pub fn get_remote_url(path: &str) -> Option<String> {
     Command::new("git")
         .args(["remote", "get-url", "origin"])
         .current_dir(path)

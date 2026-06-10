@@ -12,6 +12,8 @@ export interface UserSettings {
   proxy_enabled: boolean;
   proxy_url?: string;
   history_retention_days: number; // 0 means forever
+  github_token?: string;
+  github_username?: string;
 }
 
 export async function sendRequest(

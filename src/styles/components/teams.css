@@ -273,9 +273,14 @@
 }
 
 .avatar-stack-item {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
   border: 2px solid #080a0f; /* dynamic outline overlay */
   margin-right: -8px;
   display: flex;
@@ -287,8 +292,26 @@
   background: var(--bg-overlay);
   text-transform: uppercase;
   flex-shrink: 0;
-  object-fit: cover;
+  object-fit: cover !important;
   max-width: none;
+  box-sizing: border-box !important;
+}
+
+img.avatar-stack-item {
+  display: block;
+}
+
+.member-avatar-img {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  box-sizing: border-box !important;
+  object-fit: cover !important;
 }
 
 .avatar-stack-item.user-avatar-item {
@@ -679,5 +702,18 @@
 
 .btn-danger:active {
   transform: translateY(0);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite;
 }
 

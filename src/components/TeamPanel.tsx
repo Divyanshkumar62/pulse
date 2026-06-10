@@ -1,9 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import type { Team, Invitation, TeamRole } from '../types';
+import type { Team, Invitation, TeamRole, TeamMember } from '../types';
 import '../styles/components/teams.css';
 import CustomSelect from './ui/CustomSelect';
 import { getGravatarUrl } from '../utils/gravatar';
+import { useWorkspaceStore } from '../stores/useWorkspaceStore';
+import { useSettingsStore } from '../stores/useSettingsStore';
+import { invoke } from '@tauri-apps/api/core';
+import { toast } from 'sonner';
+
+interface CachedRepoData {
+  timestamp: number;
+  owner: string;
+  repo: string;
+  members: TeamMember[];
+  invitations: Invitation[];
+}
+
+const githubCache: Record<string, CachedRepoData> = {};
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache TTL
 
 interface TeamPanelProps {
   teams: Team[];
@@ -34,6 +49,110 @@ export default function TeamPanel({
   onTogglePin,
   onRemoveMember,
 }: TeamPanelProps) {
+  const { workspaces } = useWorkspaceStore();
+  const { settings } = useSettingsStore();
+  const [githubData, setGithubData] = useState<Record<string, {
+    owner: string;
+    repo: string;
+    members: TeamMember[];
+    invitations: Invitation[];
+    loading: boolean;
+  }>>({});
+
+  const fetchGithubDataForTeam = async (teamId: string, force = false) => {
+    const token = settings?.github_token;
+    if (!token) return;
+
+    const team = teams.find(t => t.id === teamId);
+    if (!team) return;
+
+    const workspace = workspaces.find(w => w.teamId === team.id);
+    if (!workspace?.path) return;
+
+    try {
+      const repoInfo = await invoke<[string, string] | null>('get_github_repo_info', { path: workspace.path });
+      if (repoInfo) {
+        const [owner, repo] = repoInfo;
+        
+        const cached = githubCache[team.id];
+        const now = Date.now();
+        if (!force && cached && cached.owner === owner && cached.repo === repo && (now - cached.timestamp < CACHE_TTL_MS)) {
+          setGithubData(prev => ({
+            ...prev,
+            [team.id]: {
+              owner,
+              repo,
+              members: cached.members,
+              invitations: cached.invitations,
+              loading: false
+            }
+          }));
+          return;
+        }
+
+        setGithubData(prev => ({
+          ...prev,
+          [team.id]: {
+            ...(prev[team.id] || { members: [], invitations: [] }),
+            owner,
+            repo,
+            loading: true
+          }
+        }));
+
+        try {
+          const [members, invites] = await Promise.all([
+            invoke<TeamMember[]>('get_github_collaborators', { token, owner, repo }),
+            invoke<Invitation[]>('get_github_invitations', { token, owner, repo })
+          ]);
+
+          githubCache[team.id] = {
+            timestamp: now,
+            owner,
+            repo,
+            members,
+            invitations: invites
+          };
+
+          setGithubData(prev => ({
+            ...prev,
+            [team.id]: {
+              owner,
+              repo,
+              members,
+              invitations: invites,
+              loading: false
+            }
+          }));
+        } catch (err) {
+          console.error(`Failed to fetch GitHub data for repo ${owner}/${repo}:`, err);
+          setGithubData(prev => ({
+            ...prev,
+            [team.id]: {
+              ...(prev[team.id] || { members: [], invitations: [] }),
+              owner,
+              repo,
+              loading: false
+            }
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to get repo info:", e);
+    }
+  };
+
+  useEffect(() => {
+    const loadGithubData = async () => {
+      if (!settings?.github_token) return;
+      for (const team of teams) {
+        await fetchGithubDataForTeam(team.id, false);
+      }
+    };
+
+    loadGithubData();
+  }, [teams, workspaces, settings?.github_token]);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState<string | null>(null);
   const [showRenameModal, setShowRenameModal] = useState<string | null>(null);
@@ -47,6 +166,15 @@ export default function TeamPanel({
   const [isCreating, setIsCreating] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (showManageMembersModal) {
+      const isGithubTeam = !!githubData[showManageMembersModal];
+      if (isGithubTeam) {
+        fetchGithubDataForTeam(showManageMembersModal, true);
+      }
+    }
+  }, [showManageMembersModal]);
 
   const incomingInvitations = invitations.filter(i => i.status === 'pending' && i.email.toLowerCase() === currentUserEmail.toLowerCase());
   const sentInvitations = invitations.filter(i => i.status === 'pending' && i.invited_by.toLowerCase() === currentUserEmail.toLowerCase());
@@ -76,15 +204,56 @@ export default function TeamPanel({
 
   const handleInvite = async () => {
     if (showInviteModal && inviteEmail.trim()) {
-      const team = teams.find(t => t.id === showInviteModal);
-      if (team) {
+      const gitTeam = githubData[showInviteModal];
+      if (gitTeam && settings?.github_token) {
         try {
-          await onInvite(showInviteModal, team.name, inviteEmail.trim(), inviteRole);
+          await invoke('invite_github_collaborator', {
+            token: settings.github_token,
+            owner: gitTeam.owner,
+            repo: gitTeam.repo,
+            username: inviteEmail.trim(),
+            role: inviteRole
+          });
+          toast.success(`GitHub invitation sent to ${inviteEmail.trim()}`);
+          
+          const invites = await invoke<Invitation[]>('get_github_invitations', {
+            token: settings.github_token,
+            owner: gitTeam.owner,
+            repo: gitTeam.repo
+          });
+          
+          // Update cache
+          if (githubCache[showInviteModal]) {
+            githubCache[showInviteModal].invitations = invites;
+            githubCache[showInviteModal].timestamp = Date.now();
+          }
+
+          setGithubData(prev => ({
+            ...prev,
+            [showInviteModal]: {
+              ...prev[showInviteModal],
+              invitations: invites
+            }
+          }));
+          
           setInviteEmail('');
           setInviteRole('member');
           setShowInviteModal(null);
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to invite:', error);
+          toast.error(error.toString() || 'Failed to send GitHub invitation');
+        }
+      } else {
+        const team = teams.find(t => t.id === showInviteModal);
+        if (team) {
+          try {
+            await onInvite(showInviteModal, team.name, inviteEmail.trim(), inviteRole);
+            setInviteEmail('');
+            setInviteRole('member');
+            setShowInviteModal(null);
+          } catch (error) {
+            console.error('Failed to invite:', error);
+          }
         }
       }
     }
@@ -192,15 +361,24 @@ export default function TeamPanel({
         {activeTab === 'teams' && (
           <div className="teams-grid">
             {sortedTeams.map(team => {
-              const currentUserMember = team.members.find(m => 
-                m.email.toLowerCase() === currentUserEmail.toLowerCase() || 
-                (currentUserEmail === '' && m.email === 'user@example.com')
-              );
-              const role = currentUserMember?.role || 'member';
+              const isGithubTeam = !!githubData[team.id];
+              const gitData = githubData[team.id];
               
-              // Sent invitations for this team
-              const teamSentInvites = sentInvitations.filter(i => i.team_id === team.id);
-              const totalExtraCount = team.members.length + teamSentInvites.length - 1; // excluding user
+              const displayMembers = isGithubTeam ? (gitData.members || []) : team.members;
+              const displayInvitations = isGithubTeam ? (gitData.invitations || []) : sentInvitations.filter(i => i.team_id === team.id);
+
+              const hasCurrentUser = displayMembers.some(m => isGithubTeam
+                ? (settings?.github_username && m.name.toLowerCase() === settings.github_username.toLowerCase())
+                : (m.role === 'owner' || m.email.toLowerCase() === currentUserEmail.toLowerCase() || m.email === 'user@example.com')
+              );
+
+              const currentUserMember = displayMembers.find(m => isGithubTeam
+                ? (settings?.github_username && m.name.toLowerCase() === settings.github_username.toLowerCase())
+                : (m.role === 'owner' || m.email.toLowerCase() === currentUserEmail.toLowerCase() || (currentUserEmail === '' && m.email === 'user@example.com'))
+              );
+              
+              const role = currentUserMember?.role || (isGithubTeam ? 'member' : 'owner');
+              const totalExtraCount = displayMembers.length + displayInvitations.length - (hasCurrentUser ? 1 : 0);
 
               return (
                 <div key={team.id} className="premium-team-card">
@@ -215,7 +393,13 @@ export default function TeamPanel({
                       </div>
                       <div className="team-card-meta">
                         <h3 className="team-card-title">{team.name}</h3>
-                        <span className="team-card-subtitle">{team.members.length} {team.members.length === 1 ? 'Member' : 'Members'}</span>
+                        <span className="team-card-subtitle">
+                          {isGithubTeam && gitData.loading ? (
+                            'Loading members...'
+                          ) : (
+                            `${displayMembers.length} ${displayMembers.length === 1 ? 'Member' : 'Members'}`
+                          )}
+                        </span>
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -223,6 +407,25 @@ export default function TeamPanel({
                         {role.toUpperCase()}
                       </span>
                       <div className="team-card-actions-top">
+                        {/* Sync GitHub Collaborators (visible only for GitHub teams) */}
+                        {isGithubTeam && gitData && (
+                          <button 
+                            className={`team-action-icon-btn refresh-btn ${gitData.loading ? 'loading' : ''}`}
+                            title="Sync Collaborators"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await fetchGithubDataForTeam(team.id, true);
+                            }}
+                            disabled={gitData.loading}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={gitData.loading ? 'spin-animation' : ''}>
+                              <path d="M23 4v6h-6" />
+                              <path d="M1 20v-6h6" />
+                              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                            </svg>
+                          </button>
+                        )}
+
                         {/* Pin Button */}
                         <button 
                           className={`team-action-icon-btn pin-btn ${team.pinned ? 'pinned' : ''}`}
@@ -274,9 +477,9 @@ export default function TeamPanel({
                   </div>
 
                   {/* Pending Invites Row (if any) */}
-                  {teamSentInvites.length > 0 && (
+                  {displayInvitations.length > 0 && (
                     <div className="team-pending-invites">
-                      {teamSentInvites.map(inv => (
+                      {displayInvitations.map(inv => (
                         <div key={inv.id} className="team-pending-row">
                           <span className="pending-email" title={inv.email}>{inv.email}</span>
                           <span className="pending-badge">PENDING</span>
@@ -295,20 +498,28 @@ export default function TeamPanel({
                     >
                       <div className="avatar-stack">
                         {/* Render the user's avatar */}
-                        <img 
-                          className="avatar-stack-item user-avatar-item"
-                          title={`${currentUserName || 'You'} (${role})`}
-                          src={getGravatarUrl(currentUserEmail || 'user@example.com', 32)}
-                          alt={currentUserName || 'You'}
-                          style={{ zIndex: 10, padding: 0, objectFit: 'cover', width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, maxWidth: 'none' }}
-                        />
+                        {hasCurrentUser && (
+                          <img 
+                            className="avatar-stack-item user-avatar-item"
+                            title={`${isGithubTeam ? (settings?.github_username || 'You') : (currentUserName || 'You')} (${role})`}
+                            src={isGithubTeam && settings?.github_username
+                              ? `https://github.com/${settings.github_username}.png`
+                              : getGravatarUrl(currentUserEmail || 'user@example.com', 32)
+                            }
+                            alt={isGithubTeam ? (settings?.github_username || 'You') : (currentUserName || 'You')}
+                            style={{ zIndex: 10, padding: 0, objectFit: 'cover', width: '28px', height: '28px', minWidth: '28px', minHeight: '28px', maxWidth: '28px', maxHeight: '28px', borderRadius: '50%', flexShrink: 0 }}
+                          />
+                        )}
                         
                         {/* Render other members */}
-                        {team.members
+                        {displayMembers
                           .filter(m => {
-                            const isCurrent = m.email.toLowerCase() === currentUserEmail.toLowerCase() ||
-                              (currentUserEmail === '' && m.email === 'user@example.com') ||
-                              (m.email === 'user@example.com' && currentUserEmail !== '');
+                            const isCurrent = isGithubTeam
+                              ? (settings?.github_username && m.name.toLowerCase() === settings.github_username.toLowerCase())
+                              : (m.role === 'owner' ||
+                                 m.email.toLowerCase() === currentUserEmail.toLowerCase() ||
+                                 (currentUserEmail === '' && m.email === 'user@example.com') ||
+                                 (m.email === 'user@example.com' && currentUserEmail !== ''));
                             return !isCurrent;
                           })
                           .slice(0, 2)
@@ -317,9 +528,12 @@ export default function TeamPanel({
                               key={member.user_id} 
                               className="avatar-stack-item"
                               title={`${member.name} (${member.role})`}
-                              src={getGravatarUrl(member.email, 32)}
+                              src={isGithubTeam
+                                ? `https://github.com/${member.name}.png`
+                                : getGravatarUrl(member.email, 32)
+                              }
                               alt={member.name}
-                              style={{ zIndex: 9 - idx, padding: 0, objectFit: 'cover', width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, maxWidth: 'none' }}
+                              style={{ zIndex: 9 - idx, padding: 0, objectFit: 'cover', width: '28px', height: '28px', minWidth: '28px', minHeight: '28px', maxWidth: '28px', maxHeight: '28px', borderRadius: '50%', flexShrink: 0 }}
                             />
                           ))
                         }
@@ -422,40 +636,45 @@ export default function TeamPanel({
         document.getElementById('root') || document.body
       )}
 
-      {showInviteModal && createPortal(
-        <div className="modal-overlay" onClick={() => setShowInviteModal(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2 className="text-h2">Invite Member</h2>
-            <div style={{ marginBottom: '24px', marginTop: '16px' }}>
-              <label className="text-label" style={{ fontSize: '14px', fontWeight: 700, marginBottom: '8px', display: 'block' }}>Email Address</label>
-              <input
-                type="email"
-                className="text-input"
-                placeholder="name@company.com"
-                value={inviteEmail}
-                onChange={e => setInviteEmail(e.target.value)}
-                autoFocus
-              />
+      {showInviteModal && (() => {
+        const isGithubTeam = !!githubData[showInviteModal];
+        return createPortal(
+          <div className="modal-overlay" onClick={() => setShowInviteModal(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <h2 className="text-h2">Invite Member</h2>
+              <div style={{ marginBottom: '24px', marginTop: '16px' }}>
+                <label className="text-label" style={{ fontSize: '14px', fontWeight: 700, marginBottom: '8px', display: 'block' }}>
+                  {isGithubTeam ? 'GitHub Username' : 'Email Address'}
+                </label>
+                <input
+                  type={isGithubTeam ? 'text' : 'email'}
+                  className="text-input"
+                  placeholder={isGithubTeam ? 'e.g., octocat' : 'name@company.com'}
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div style={{ marginBottom: '32px' }}>
+                <label className="text-label" style={{ fontSize: '13px', fontWeight: 700, marginBottom: '16px', display: 'block' }}>Role</label>
+                <CustomSelect 
+                  value={inviteRole}
+                  onChange={(val) => setInviteRole(val as TeamRole)}
+                  options={[
+                    { value: 'member', label: 'Member' },
+                    { value: 'admin', label: 'Admin' },
+                  ]}
+                />
+              </div>
+              <div className="modal-actions">
+                <button className="btn-secondary" onClick={() => setShowInviteModal(null)}>Cancel</button>
+                <button className="btn-primary" onClick={handleInvite} disabled={!inviteEmail.trim()}>Send Invite</button>
+              </div>
             </div>
-            <div style={{ marginBottom: '32px' }}>
-              <label className="text-label" style={{ fontSize: '13px', fontWeight: 700, marginBottom: '16px', display: 'block' }}>Role</label>
-              <CustomSelect 
-                value={inviteRole}
-                onChange={(val) => setInviteRole(val as TeamRole)}
-                options={[
-                  { value: 'member', label: 'Member' },
-                  { value: 'admin', label: 'Admin' },
-                ]}
-              />
-            </div>
-            <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setShowInviteModal(null)}>Cancel</button>
-              <button className="btn-primary" onClick={handleInvite} disabled={!inviteEmail.trim()}>Send Invite</button>
-            </div>
-          </div>
-        </div>,
-        document.getElementById('root') || document.body
-      )}
+          </div>,
+          document.getElementById('root') || document.body
+        );
+      })()}
 
       {showRenameModal && createPortal(
         <div className="modal-overlay" onClick={() => setShowRenameModal(null)}>
@@ -513,94 +732,110 @@ export default function TeamPanel({
         document.getElementById('root') || document.body
       )}
 
-      {showManageMembersModal && createPortal(
-        <div className="modal-overlay" onClick={() => setShowManageMembersModal(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ width: '480px' }}>
-            <h2 className="text-h2" style={{ marginBottom: '24px' }}>Manage Members</h2>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto', marginBottom: '24px', paddingRight: '4px' }}>
-              {teams.find(t => t.id === showManageMembersModal)?.members.map(member => {
-                const team = teams.find(t => t.id === showManageMembersModal);
-                 const isOwner = team?.owner_id === member.user_id;
-                 const isCurrentUser = member.email.toLowerCase() === currentUserEmail.toLowerCase() || 
-                   (currentUserEmail === '' && member.email === 'user@example.com') ||
-                   (member.email === 'user@example.com');
-                 const currentUserMember = team?.members.find(m => 
-                   m.email.toLowerCase() === currentUserEmail.toLowerCase() || 
-                   m.email === 'user@example.com'
-                 );
-                 const currentUserIsOwner = team?.owner_id === currentUserMember?.user_id;
-                 const canActuallyRemove = currentUserIsOwner && !isOwner && !isCurrentUser;
+      {showManageMembersModal && (() => {
+        const team = teams.find(t => t.id === showManageMembersModal);
+        if (!team) return null;
+        
+        const isGithubTeam = !!githubData[team.id];
+        const gitData = githubData[team.id];
+        const displayMembers = isGithubTeam ? (gitData.members || []) : team.members;
+        
+        return createPortal(
+          <div className="modal-overlay" onClick={() => setShowManageMembersModal(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ width: '480px' }}>
+              <h2 className="text-h2" style={{ marginBottom: '24px' }}>Manage Members</h2>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto', marginBottom: '24px', paddingRight: '4px' }}>
+                {displayMembers.map(member => {
+                   const isOwner = isGithubTeam ? (member.role === 'owner') : (team.owner_id === member.user_id || member.role === 'owner');
+                   const isCurrentUser = isGithubTeam
+                     ? (settings?.github_username && member.name.toLowerCase() === settings.github_username.toLowerCase())
+                     : (member.role === 'owner' ||
+                        member.email.toLowerCase() === currentUserEmail.toLowerCase() || 
+                        (currentUserEmail === '' && member.email === 'user@example.com') ||
+                        (member.email === 'user@example.com'));
+                   
+                   const currentUserMember = displayMembers.find(m => isGithubTeam
+                     ? (settings?.github_username && m.name.toLowerCase() === settings.github_username.toLowerCase())
+                     : (m.role === 'owner' || m.email.toLowerCase() === currentUserEmail.toLowerCase() || m.email === 'user@example.com')
+                   );
+                   const currentUserIsAdmin = isGithubTeam
+                     ? (currentUserMember?.role === 'owner' || currentUserMember?.role === 'admin')
+                     : (team.owner_id === currentUserMember?.user_id || currentUserMember?.role === 'owner');
+                   
+                   const canActuallyRemove = !isGithubTeam && !isCurrentUser && currentUserIsAdmin && !isOwner;
 
-                 // Reflect updated name/email for current user
-                 const displayName = isCurrentUser ? (currentUserName || member.name) : member.name;
-                 const displayEmail = isCurrentUser ? (currentUserEmail || member.email) : member.email;
-                const avatarUrl = getGravatarUrl(displayEmail, 64);
+                   // Reflect updated name/email for current user
+                   const displayName = isCurrentUser 
+                     ? (isGithubTeam ? (settings?.github_username || member.name) : (currentUserName || member.name)) 
+                     : member.name;
+                   const displayEmail = isCurrentUser 
+                     ? (isGithubTeam ? (settings?.github_username || member.email) : (currentUserEmail || member.email)) 
+                     : member.email;
+                   const avatarUrl = isGithubTeam
+                     ? `https://github.com/${member.name}.png`
+                     : getGravatarUrl(displayEmail, 64);
 
-                return (
-                  <div key={member.user_id} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '12px', 
-                    padding: '12px', 
-                    background: 'var(--bg-surface)', 
-                    borderRadius: 'var(--radius-lg)',
-                    border: '1px solid var(--border-subtle)'
-                  }}>
-                    <img 
-                      src={avatarUrl}
-                      alt={displayName}
-                      style={{ 
-                        width: '32px', 
-                        height: '32px', 
-                        borderRadius: '50%', 
-                        border: '1px solid var(--border-subtle)',
-                        flexShrink: 0,
-                        maxWidth: 'none'
-                      }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {displayName} {isCurrentUser && <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(you)</span>}
+                  return (
+                    <div key={member.user_id} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '12px', 
+                      padding: '12px', 
+                      background: 'var(--bg-surface)', 
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--border-subtle)'
+                    }}>
+                      <img 
+                        src={avatarUrl}
+                        alt={displayName}
+                        className="member-avatar-img"
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {displayName} {isCurrentUser && <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(you)</span>}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {isGithubTeam ? `@${displayEmail}` : displayEmail}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayEmail}</div>
+                      <span className={`premium-role-badge ${getRoleBadgeClass(member.role)}`} style={{ fontSize: '9px' }}>
+                        {member.role.toUpperCase()}
+                      </span>
+                      {canActuallyRemove && (
+                        <button 
+                          className="team-action-icon-btn delete-btn"
+                          title="Remove Member"
+                          onClick={() => handleRemoveMember(team.id, member.user_id)}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                          </svg>
+                        </button>
+                      )}
                     </div>
-                    <span className={`premium-role-badge ${getRoleBadgeClass(member.role)}`} style={{ fontSize: '9px' }}>
-                      {member.role.toUpperCase()}
-                    </span>
-                    {canActuallyRemove && (
-                      <button 
-                        className="team-action-icon-btn delete-btn"
-                        title="Remove Member"
-                        onClick={() => handleRemoveMember(showManageMembersModal, member.user_id)}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <line x1="18" y1="6" x2="6" y2="18"></line>
-                          <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
 
-            <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setShowManageMembersModal(null)}>Close</button>
-              <button 
-                className="btn-primary" 
-                onClick={() => {
-                  setShowManageMembersModal(null);
-                  setShowInviteModal(showManageMembersModal);
-                }}
-              >
-                Invite New Member
-              </button>
+              <div className="modal-actions">
+                <button className="btn-secondary" onClick={() => setShowManageMembersModal(null)}>Close</button>
+                <button 
+                  className="btn-primary" 
+                  onClick={() => {
+                    setShowManageMembersModal(null);
+                    setShowInviteModal(showManageMembersModal);
+                  }}
+                >
+                  Invite New Member
+                </button>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.getElementById('root') || document.body
-      )}
+          </div>,
+          document.getElementById('root') || document.body
+        );
+      })()}
     </div>
   );
 }

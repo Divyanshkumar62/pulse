@@ -13,11 +13,15 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   const { settings, updateSettings } = useSettingsStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [githubUsername, setGithubUsername] = useState('');
+  const [githubToken, setGithubToken] = useState('');
 
   useEffect(() => {
     if (settings) {
       setName(settings.name || '');
       setEmail(settings.email || '');
+      setGithubUsername(settings.github_username || '');
+      setGithubToken(settings.github_token || '');
     }
   }, [settings, isOpen]);
 
@@ -25,7 +29,12 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
   const handleSave = async () => {
     try {
-      await updateSettings({ name, email });
+      await updateSettings({ 
+        name, 
+        email,
+        github_username: githubUsername || undefined,
+        github_token: githubToken || undefined
+      });
       toast.success('Profile updated successfully');
       onClose();
     } catch (e) {
@@ -135,6 +144,28 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                         <Mail size={14} />
                     </div>
                 </div>
+            </div>
+
+            <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>GitHub Username</label>
+                <input
+                type="text"
+                style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' }}
+                value={githubUsername}
+                onChange={(e) => setGithubUsername(e.target.value)}
+                placeholder="Enter your GitHub username"
+                />
+            </div>
+
+            <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>GitHub Personal Access Token</label>
+                <input
+                type="password"
+                style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '8px', color: 'var(--text-primary)', outline: 'none' }}
+                value={githubToken}
+                onChange={(e) => setGithubToken(e.target.value)}
+                placeholder="ghp_xxxxxxxxxxxx"
+                />
             </div>
           </div>
         </div>

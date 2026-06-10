@@ -105,6 +105,8 @@ pub struct UserSettings {
     pub proxy_enabled: bool,
     pub proxy_url: Option<String>,
     pub history_retention_days: u32,
+    pub github_token: Option<String>,
+    pub github_username: Option<String>,
 }
 
 impl Default for UserSettings {
@@ -120,6 +122,8 @@ impl Default for UserSettings {
             proxy_enabled: false,
             proxy_url: None,
             history_retention_days: 30,
+            github_token: None,
+            github_username: None,
         }
     }
 }
@@ -680,6 +684,223 @@ fn read_conflicted_file(path: String, file_path: String, stage: u8) -> Result<St
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
+#[tauri::command]
+async fn get_github_repo_info(path: String) -> Result<Option<(String, String)>, String> {
+    let sanitized_path = collections::utils::validate_workspace_path(&path)?;
+    let path_str = sanitized_path.to_string_lossy().into_owned();
+    
+    tokio::task::spawn_blocking(move || {
+        if let Some(url) = crate::collections::git::get_remote_url(&path_str) {
+            Ok(parse_github_remote(&url))
+        } else {
+            Ok(None)
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+fn parse_github_remote(url: &str) -> Option<(String, String)> {
+    let url = url.trim();
+    if url.contains("github.com") {
+        if url.starts_with("git@") {
+            let parts: Vec<&str> = url.split(':').collect();
+            if parts.len() == 2 {
+                let repo_part = parts[1].trim_end_matches(".git");
+                let subparts: Vec<&str> = repo_part.split('/').collect();
+                if subparts.len() == 2 {
+                    return Some((subparts[0].to_string(), subparts[1].to_string()));
+                }
+            }
+        } else if url.starts_with("https://") || url.starts_with("http://") {
+            let clean_url = url.trim_start_matches("https://").trim_start_matches("http://");
+            let parts: Vec<&str> = clean_url.split('/').collect();
+            if parts.len() >= 3 && parts[0].contains("github.com") {
+                let repo = parts[2].trim_end_matches(".git");
+                return Some((parts[1].to_string(), repo.to_string()));
+            }
+        }
+    }
+    None
+}
+
+#[tauri::command]
+async fn get_github_collaborators(
+    token: String,
+    owner: String,
+    repo: String,
+) -> Result<Vec<collections::team::TeamMember>, String> {
+    let client = reqwest::Client::new();
+    let url = format!("https://api.github.com/repos/{}/{}/collaborators", owner, repo);
+    
+    let res = client
+        .get(&url)
+        .header("Authorization", format!("token {}", token))
+        .header("Accept", "application/vnd.github+json")
+        .header("User-Agent", "pulse-api-client")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send GitHub request: {}", e))?;
+        
+    if !res.status().is_success() {
+        let err_body = res.text().await.unwrap_or_default();
+        return Err(format!("GitHub API error: {}", err_body));
+    }
+    
+    #[derive(Deserialize)]
+    struct GithubCollaboratorResponse {
+        id: u64,
+        login: String,
+        avatar_url: String,
+        permissions: Option<serde_json::Value>,
+    }
+    
+    let github_members: Vec<GithubCollaboratorResponse> = res
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse GitHub response: {}", e))?;
+        
+    let mut members = Vec::new();
+    for gm in github_members {
+        let is_admin = gm.permissions
+            .as_ref()
+            .and_then(|p| p.get("admin"))
+            .and_then(|a| a.as_bool())
+            .unwrap_or(false);
+            
+        let role = if gm.login.eq_ignore_ascii_case(&owner) {
+            collections::team::TeamRole::Owner
+        } else if is_admin {
+            collections::team::TeamRole::Admin
+        } else {
+            collections::team::TeamRole::Member
+        };
+        
+        members.push(collections::team::TeamMember {
+            user_id: gm.id.to_string(),
+            email: gm.login.clone(),
+            name: gm.login,
+            role,
+            joined_at: chrono::Utc::now(),
+        });
+    }
+    
+    Ok(members)
+}
+
+#[tauri::command]
+async fn get_github_invitations(
+    token: String,
+    owner: String,
+    repo: String,
+) -> Result<Vec<collections::team::Invitation>, String> {
+    let client = reqwest::Client::new();
+    let url = format!("https://api.github.com/repos/{}/{}/invitations", owner, repo);
+    
+    let res = client
+        .get(&url)
+        .header("Authorization", format!("token {}", token))
+        .header("Accept", "application/vnd.github+json")
+        .header("User-Agent", "pulse-api-client")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send GitHub request: {}", e))?;
+        
+    if !res.status().is_success() {
+        let err_body = res.text().await.unwrap_or_default();
+        return Err(format!("GitHub API error: {}", err_body));
+    }
+    
+    #[derive(Deserialize)]
+    struct GithubInvitee {
+        login: String,
+    }
+    #[derive(Deserialize)]
+    struct GithubInviter {
+        login: String,
+    }
+    #[derive(Deserialize)]
+    struct GithubInvitationResponse {
+        id: u64,
+        invitee: GithubInvitee,
+        inviter: GithubInviter,
+        created_at: String,
+        permissions: String,
+    }
+    
+    let github_invites: Vec<GithubInvitationResponse> = res
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse GitHub response: {}", e))?;
+        
+    let mut invites = Vec::new();
+    for gi in github_invites {
+        let role = if gi.permissions == "admin" {
+            collections::team::TeamRole::Admin
+        } else {
+            collections::team::TeamRole::Member
+        };
+        
+        let created_at = chrono::DateTime::parse_from_rfc3339(&gi.created_at)
+            .map(|dt| dt.with_timezone(&chrono::Utc))
+            .unwrap_or_else(|_| chrono::Utc::now());
+            
+        invites.push(collections::team::Invitation {
+            id: gi.id.to_string(),
+            team_id: repo.clone(),
+            team_name: repo.clone(),
+            email: gi.invitee.login,
+            role,
+            status: collections::team::InvitationStatus::Pending,
+            invited_by: gi.inviter.login,
+            invited_at: created_at,
+            expires_at: created_at + chrono::Duration::days(7),
+            accepted_at: None,
+        });
+    }
+    
+    Ok(invites)
+}
+
+#[tauri::command]
+async fn invite_github_collaborator(
+    token: String,
+    owner: String,
+    repo: String,
+    username: String,
+    role: String,
+) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let url = format!("https://api.github.com/repos/{}/{}/collaborators/{}", owner, repo, username);
+    
+    let github_permission = match role.to_lowercase().as_str() {
+        "admin" => "admin",
+        "member" => "push",
+        _ => "push",
+    };
+    
+    let body = serde_json::json!({
+        "permission": github_permission
+    });
+    
+    let res = client
+        .put(&url)
+        .header("Authorization", format!("token {}", token))
+        .header("Accept", "application/vnd.github+json")
+        .header("User-Agent", "pulse-api-client")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send GitHub request: {}", e))?;
+        
+    if !res.status().is_success() {
+        let err_body = res.text().await.unwrap_or_default();
+        return Err(format!("GitHub API error: {}", err_body));
+    }
+    
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let _ = crate::utils::get_pulse_data_dir();
@@ -688,6 +909,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
 
             send_http_request,
@@ -750,6 +972,10 @@ pub fn run() {
             search::fuzzy_search,
             read_conflicted_file,
             write_file_content,
+            get_github_repo_info,
+            get_github_collaborators,
+            get_github_invitations,
+            invite_github_collaborator,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
