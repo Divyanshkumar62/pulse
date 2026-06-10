@@ -23,7 +23,7 @@ describe('useTabStore', () => {
 
   beforeEach(() => {
     useTabStore.setState({ tabs: [], activeTabId: null, isInitialized: true });
-    global.localStorage = {
+    (globalThis as any).localStorage = {
       setItem: vi.fn(),
       getItem: vi.fn(),
       removeItem: vi.fn(),

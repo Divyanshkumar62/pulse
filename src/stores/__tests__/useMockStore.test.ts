@@ -16,7 +16,7 @@ describe('useMockStore', () => {
   beforeEach(() => {
     useMockStore.setState({ mockServers: [], activeMockServerId: null, isLoading: false });
     // Mock localStorage for fallback saves
-    global.localStorage = {
+    (globalThis as any).localStorage = {
       setItem: vi.fn(),
       getItem: vi.fn(),
       removeItem: vi.fn(),

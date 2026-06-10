@@ -24,7 +24,7 @@ describe('WebSocketManager', () => {
       readyState: 1 // WebSocket.OPEN
     };
     
-    global.WebSocket = class {
+    (globalThis as any).WebSocket = class {
       static OPEN = 1;
       readyState = 1;
       send = mockWebSocket.send;

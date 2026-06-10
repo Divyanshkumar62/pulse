@@ -21,8 +21,7 @@ describe('Document Generator Service', () => {
     status: 200,
     status_text: 'OK',
     time_ms: 45,
-    size_bytes: 120,
-    headers: { 'Content-Type': 'application/json' },
+    headers: [{ key: 'Content-Type', value: 'application/json' }],
     body: JSON.stringify({
       id: 123,
       name: "John Doe",

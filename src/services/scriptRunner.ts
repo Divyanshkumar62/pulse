@@ -48,7 +48,12 @@ export async function executeScript(
       url: request.url,
       method: request.method,
       headers: (request.headers || []).reduce((acc, h) => {
-        if (h.enabled !== false) acc[h.key] = h.value;
+        if (h.enabled !== false) {
+          const lowerKey = h.key.toLowerCase();
+          if (lowerKey !== 'authorization' && lowerKey !== 'cookie') {
+            acc[h.key] = h.value;
+          }
+        }
         return acc;
       }, {} as Record<string, string>)
     },
@@ -78,16 +83,3 @@ export async function executeScript(
   }
 }
 
-/**
- * @deprecated Use executeScript instead. This remains for backward compatibility during transition.
- */
-export function executePreRequestScriptSync(
-  script: string, 
-  request: Request, 
-  environment?: Environment,
-  response?: HttpResponse
-): any {
-  console.warn('executePreRequestScriptSync is deprecated and uses insecure eval. Switch to executeScript.');
-  // ... old implementation if needed, but we'll prefer the async one
-  return { addedHeaders: [], environmentUpdates: {} };
-}
