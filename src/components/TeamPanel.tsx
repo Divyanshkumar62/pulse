@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { Team, Invitation, TeamRole } from '../types';
 import '../styles/components/teams.css';
 import CustomSelect from './ui/CustomSelect';
+import { getGravatarUrl } from '../utils/gravatar';
 
 interface TeamPanelProps {
   teams: Team[];
@@ -47,8 +48,8 @@ export default function TeamPanel({
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const incomingInvitations = invitations.filter(i => i.status === 'pending' && i.email === currentUserEmail);
-  const sentInvitations = invitations.filter(i => i.status === 'pending' && i.invited_by === currentUserEmail);
+  const incomingInvitations = invitations.filter(i => i.status === 'pending' && i.email.toLowerCase() === currentUserEmail.toLowerCase());
+  const sentInvitations = invitations.filter(i => i.status === 'pending' && i.invited_by.toLowerCase() === currentUserEmail.toLowerCase());
   
   // Sort teams: Pinned teams first, then alphabetical by name
   const sortedTeams = [...teams].sort((a, b) => {
@@ -191,7 +192,10 @@ export default function TeamPanel({
         {activeTab === 'teams' && (
           <div className="teams-grid">
             {sortedTeams.map(team => {
-              const currentUserMember = team.members.find(m => m.email === currentUserEmail);
+              const currentUserMember = team.members.find(m => 
+                m.email.toLowerCase() === currentUserEmail.toLowerCase() || 
+                (currentUserEmail === '' && m.email === 'user@example.com')
+              );
               const role = currentUserMember?.role || 'member';
               
               // Sent invitations for this team
@@ -291,27 +295,32 @@ export default function TeamPanel({
                     >
                       <div className="avatar-stack">
                         {/* Render the user's avatar */}
-                        <div 
+                        <img 
                           className="avatar-stack-item user-avatar-item"
                           title={`${currentUserName || 'You'} (${role})`}
-                          style={{ zIndex: 10 }}
-                        >
-                          {(currentUserName || 'Y').charAt(0).toUpperCase()}
-                        </div>
+                          src={getGravatarUrl(currentUserEmail || 'user@example.com', 32)}
+                          alt={currentUserName || 'You'}
+                          style={{ zIndex: 10, padding: 0, objectFit: 'cover', width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, maxWidth: 'none' }}
+                        />
                         
                         {/* Render other members */}
                         {team.members
-                          .filter(m => m.email !== currentUserEmail)
+                          .filter(m => {
+                            const isCurrent = m.email.toLowerCase() === currentUserEmail.toLowerCase() ||
+                              (currentUserEmail === '' && m.email === 'user@example.com') ||
+                              (m.email === 'user@example.com' && currentUserEmail !== '');
+                            return !isCurrent;
+                          })
                           .slice(0, 2)
                           .map((member, idx) => (
-                            <div 
+                            <img 
                               key={member.user_id} 
                               className="avatar-stack-item"
                               title={`${member.name} (${member.role})`}
-                              style={{ zIndex: 9 - idx }}
-                            >
-                              {member.name.charAt(0).toUpperCase()}
-                            </div>
+                              src={getGravatarUrl(member.email, 32)}
+                              alt={member.name}
+                              style={{ zIndex: 9 - idx, padding: 0, objectFit: 'cover', width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, maxWidth: 'none' }}
+                            />
                           ))
                         }
                         
@@ -417,11 +426,8 @@ export default function TeamPanel({
         <div className="modal-overlay" onClick={() => setShowInviteModal(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 className="text-h2">Invite Member</h2>
-            <p className="text-body">
-              Add a colleague to <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{teams.find(t => t.id === showInviteModal)?.name}</span>.
-            </p>
-            <div style={{ marginBottom: '24px' }}>
-              <label className="text-label">Email Address</label>
+            <div style={{ marginBottom: '24px', marginTop: '16px' }}>
+              <label className="text-label" style={{ fontSize: '14px', fontWeight: 700, marginBottom: '8px', display: 'block' }}>Email Address</label>
               <input
                 type="email"
                 className="text-input"
@@ -432,7 +438,7 @@ export default function TeamPanel({
               />
             </div>
             <div style={{ marginBottom: '32px' }}>
-              <label className="text-label">Role</label>
+              <label className="text-label" style={{ fontSize: '13px', fontWeight: 700, marginBottom: '16px', display: 'block' }}>Role</label>
               <CustomSelect 
                 value={inviteRole}
                 onChange={(val) => setInviteRole(val as TeamRole)}
@@ -510,19 +516,26 @@ export default function TeamPanel({
       {showManageMembersModal && createPortal(
         <div className="modal-overlay" onClick={() => setShowManageMembersModal(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ width: '480px' }}>
-            <h2 className="text-h2">Manage Members</h2>
-            <p className="text-body" style={{ marginBottom: '24px' }}>
-              Members of <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{teams.find(t => t.id === showManageMembersModal)?.name}</span>.
-            </p>
+            <h2 className="text-h2" style={{ marginBottom: '24px' }}>Manage Members</h2>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto', marginBottom: '24px', paddingRight: '4px' }}>
               {teams.find(t => t.id === showManageMembersModal)?.members.map(member => {
                 const team = teams.find(t => t.id === showManageMembersModal);
-                const isOwner = team?.owner_id === member.user_id;
-                const isCurrentUser = member.email === currentUserEmail;
-                const currentUserMember = team?.members.find(m => m.email === currentUserEmail);
-                const currentUserIsOwner = team?.owner_id === currentUserMember?.user_id;
-                const canActuallyRemove = currentUserIsOwner && !isOwner && !isCurrentUser;
+                 const isOwner = team?.owner_id === member.user_id;
+                 const isCurrentUser = member.email.toLowerCase() === currentUserEmail.toLowerCase() || 
+                   (currentUserEmail === '' && member.email === 'user@example.com') ||
+                   (member.email === 'user@example.com');
+                 const currentUserMember = team?.members.find(m => 
+                   m.email.toLowerCase() === currentUserEmail.toLowerCase() || 
+                   m.email === 'user@example.com'
+                 );
+                 const currentUserIsOwner = team?.owner_id === currentUserMember?.user_id;
+                 const canActuallyRemove = currentUserIsOwner && !isOwner && !isCurrentUser;
+
+                 // Reflect updated name/email for current user
+                 const displayName = isCurrentUser ? (currentUserName || member.name) : member.name;
+                 const displayEmail = isCurrentUser ? (currentUserEmail || member.email) : member.email;
+                const avatarUrl = getGravatarUrl(displayEmail, 64);
 
                 return (
                   <div key={member.user_id} style={{ 
@@ -534,26 +547,23 @@ export default function TeamPanel({
                     borderRadius: 'var(--radius-lg)',
                     border: '1px solid var(--border-subtle)'
                   }}>
-                    <div style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      borderRadius: '50%', 
-                      background: 'var(--bg-deep)', 
-                      color: 'var(--accent-primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '12px',
-                      fontWeight: 800,
-                      border: '1px solid var(--accent-subtle)'
-                    }}>
-                      {member.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {member.name} {isCurrentUser && <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(you)</span>}
+                    <img 
+                      src={avatarUrl}
+                      alt={displayName}
+                      style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        borderRadius: '50%', 
+                        border: '1px solid var(--border-subtle)',
+                        flexShrink: 0,
+                        maxWidth: 'none'
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {displayName} {isCurrentUser && <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(you)</span>}
                       </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{member.email}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayEmail}</div>
                     </div>
                     <span className={`premium-role-badge ${getRoleBadgeClass(member.role)}`} style={{ fontSize: '9px' }}>
                       {member.role.toUpperCase()}

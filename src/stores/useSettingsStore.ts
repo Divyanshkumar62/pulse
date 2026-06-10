@@ -39,9 +39,18 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   updateSettings: async (updates) => {
     const { settings } = get();
     if (!settings) return;
+    
+    const emailChanged = updates.email !== undefined && updates.email !== settings.email;
+    const nameChanged = updates.name !== undefined && updates.name !== settings.name;
+
     const newSettings = { ...settings, ...updates };
     set({ settings: newSettings });
     await saveUserSettings(newSettings);
+    
+    if (emailChanged || nameChanged) {
+        const { useTeamStore } = await import('./useTeamStore');
+        await useTeamStore.getState().initialize();
+    }
   }
 }));
 

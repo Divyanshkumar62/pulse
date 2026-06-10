@@ -59,7 +59,7 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
     const retentionMs = settings.history_retention_days * 24 * 60 * 60 * 1000;
     
     const newHistory = history.filter(entry => {
-      const entryTime = entry.timestamp || now; // Fallback if no timestamp
+      const entryTime = entry.timestamp ? new Date(entry.timestamp).getTime() : now; // Fallback if no timestamp
       return (now - entryTime) <= retentionMs;
     });
 

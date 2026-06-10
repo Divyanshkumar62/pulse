@@ -286,6 +286,9 @@
   color: var(--text-primary);
   background: var(--bg-overlay);
   text-transform: uppercase;
+  flex-shrink: 0;
+  object-fit: cover;
+  max-width: none;
 }
 
 .avatar-stack-item.user-avatar-item {

@@ -386,11 +386,51 @@ async fn get_user_settings() -> Result<UserSettings, String> {
 #[tauri::command]
 async fn save_user_settings(settings: UserSettings) -> Result<(), String> {
     let path = crate::utils::get_pulse_data_dir().join("settings.json");
+    let teams_path = crate::utils::get_pulse_data_dir().join("teams.yaml");
     tokio::task::spawn_blocking(move || {
+        let mut old_email = None;
+        if path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                if let Ok(old_settings) = serde_json::from_str::<UserSettings>(&content) {
+                    old_email = Some(old_settings.email.clone());
+                }
+            }
+        }
+
         let json = serde_json::to_string_pretty(&settings)
             .map_err(|e| format!("Failed to serialize settings: {}", e))?;
         std::fs::write(&path, json)
-            .map_err(|e| format!("Failed to write settings: {}", e))
+            .map_err(|e| format!("Failed to write settings: {}", e))?;
+
+        let search_emails = vec![
+            settings.email.clone(),
+            "user@example.com".to_string(),
+            old_email.unwrap_or_default(),
+        ];
+
+        if teams_path.exists() {
+            if let Ok(mut teams) = crate::collections::team_loader::load_teams(&teams_path) {
+                let mut changed = false;
+                for team in teams.iter_mut() {
+                    for member in team.members.iter_mut() {
+                        let is_owner = team.owner_id == member.user_id;
+                        let email_matches = search_emails.iter().any(|e| !e.is_empty() && e.eq_ignore_ascii_case(&member.email));
+                        
+                        if is_owner || email_matches {
+                            if member.email != settings.email || member.name != settings.name {
+                                member.email = settings.email.clone();
+                                member.name = settings.name.clone();
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+                if changed {
+                    let _ = crate::collections::team_loader::save_teams(&teams, &teams_path);
+                }
+            }
+        }
+        Ok(())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -447,8 +487,41 @@ async fn create_team(name: String, owner_email: String, owner_name: String) -> R
 #[tauri::command]
 async fn get_teams() -> Result<Vec<Team>, String> {
     let teams_path = crate::utils::get_pulse_data_dir().join("teams.yaml");
+    let settings_path = crate::utils::get_pulse_data_dir().join("settings.json");
     tokio::task::spawn_blocking(move || {
-        team_loader::load_teams(teams_path.to_str().unwrap_or("teams.yaml")).map_err(|e| e.to_string())
+        let mut teams = team_loader::load_teams(teams_path.to_str().unwrap_or("teams.yaml")).map_err(|e| e.to_string())?;
+        
+        // Synchronize current user settings into the teams list to keep member records up-to-date
+        if settings_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&settings_path) {
+                if let Ok(settings) = serde_json::from_str::<UserSettings>(&content) {
+                    let mut changed = false;
+                    let search_emails = vec![
+                        settings.email.clone(),
+                        "user@example.com".to_string(),
+                    ];
+                    for team in teams.iter_mut() {
+                        for member in team.members.iter_mut() {
+                            let is_owner = team.owner_id == member.user_id;
+                            let email_matches = search_emails.iter().any(|e| !e.is_empty() && e.eq_ignore_ascii_case(&member.email));
+                            
+                            if is_owner || email_matches {
+                                if member.email != settings.email || member.name != settings.name {
+                                    member.email = settings.email.clone();
+                                    member.name = settings.name.clone();
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                    if changed {
+                        let _ = team_loader::save_teams(&teams, &teams_path);
+                    }
+                }
+            }
+        }
+        
+        Ok(teams)
     })
     .await
     .map_err(|e| e.to_string())?
