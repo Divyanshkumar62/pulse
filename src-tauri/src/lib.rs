@@ -751,6 +751,7 @@ async fn get_github_collaborators(
     struct GithubCollaboratorResponse {
         id: u64,
         login: String,
+        #[allow(dead_code)]
         avatar_url: String,
         permissions: Option<serde_json::Value>,
     }
