@@ -1,0 +1,11 @@
+{
+  "version": "v1.0.5",
+  "notes": "Testing the auto-updater popup.",
+  "pub_date": "2026-06-12T00:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "bypass_for_testing",
+      "url": "https://github.com/Divyanshkumar62/pulse/releases/download/v1.0.5/Pulse_1.0.5_x64_en-US.msi"
+    }
+  }
+}
