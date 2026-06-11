@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import AppShell from './components/layout/AppShell';
 import TabBar from './components/tabs/TabBar';
 import TabContent from './components/tabs/TabContent';
@@ -18,9 +18,8 @@ import { ReactFlowProvider } from '@xyflow/react';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import MockServerEditor from './components/mock/MockServerEditor';
 import { usePresence } from './hooks/usePresence';
-import { check } from '@tauri-apps/plugin-updater';
-import { ask } from '@tauri-apps/plugin-dialog';
-import { relaunch } from '@tauri-apps/plugin-process';
+import { check, Update } from '@tauri-apps/plugin-updater';
+import { UpdateModal } from './components/ui/UpdateModal';
 
 export default function App() {
   const initEnvStore = useEnvStore(state => state.initialize);
@@ -30,6 +29,7 @@ export default function App() {
   const initHistoryStore = useHistoryStore(state => state.initialize);
   const initMockStore = useMockStore(state => state.initialize);
   const initTabStore = useTabStore(state => state.initialize);
+  const [updateAvailable, setUpdateAvailable] = useState<Update | null>(null);
   
   usePresence();
 
@@ -40,16 +40,7 @@ export default function App() {
         const update = await check();
         if (update && update.available) {
           console.log("[Pulse] Update available:", update.version);
-          const yes = await ask(
-            `A new version (${update.version}) of Pulse is available. Would you like to install it and restart the app?`,
-            { title: 'Update Available', kind: 'info', okLabel: 'Yes', cancelLabel: 'No' }
-          );
-          if (yes) {
-            console.log("[Pulse] Downloading and installing update...");
-            await update.downloadAndInstall();
-            console.log("[Pulse] Relaunching app...");
-            await relaunch();
-          }
+          setUpdateAvailable(update);
         } else {
           console.log("[Pulse] No updates available");
         }
@@ -141,6 +132,12 @@ export default function App() {
             <TabBar />
             <TabContent />
           </div>
+        )}
+        {updateAvailable && (
+          <UpdateModal 
+            update={updateAvailable} 
+            onClose={() => setUpdateAvailable(null)} 
+          />
         )}
       </AppShell>
     </ErrorBoundary>
