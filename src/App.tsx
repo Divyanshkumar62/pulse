@@ -18,6 +18,9 @@ import { ReactFlowProvider } from '@xyflow/react';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import MockServerEditor from './components/mock/MockServerEditor';
 import { usePresence } from './hooks/usePresence';
+import { check } from '@tauri-apps/plugin-updater';
+import { ask } from '@tauri-apps/plugin-dialog';
+import { relaunch } from '@tauri-apps/plugin-process';
 
 export default function App() {
   const initEnvStore = useEnvStore(state => state.initialize);
@@ -29,6 +32,33 @@ export default function App() {
   const initTabStore = useTabStore(state => state.initialize);
   
   usePresence();
+
+  useEffect(() => {
+    async function checkForUpdates() {
+      try {
+        console.log("[Pulse] Checking for updates...");
+        const update = await check();
+        if (update && update.available) {
+          console.log("[Pulse] Update available:", update.version);
+          const yes = await ask(
+            `A new version (${update.version}) of Pulse is available. Would you like to install it and restart the app?`,
+            { title: 'Update Available', kind: 'info', okLabel: 'Yes', cancelLabel: 'No' }
+          );
+          if (yes) {
+            console.log("[Pulse] Downloading and installing update...");
+            await update.downloadAndInstall();
+            console.log("[Pulse] Relaunching app...");
+            await relaunch();
+          }
+        } else {
+          console.log("[Pulse] No updates available");
+        }
+      } catch (err) {
+        console.warn("[Pulse] Updater check failed or ignored (normal if running in browser):", err);
+      }
+    }
+    checkForUpdates();
+  }, []);
 
   const { sidebarTab, selectedMonitorId, selectedEnvironmentId } = useAppStore();
   const activeMockServerId = useMockStore(state => state.activeMockServerId);
