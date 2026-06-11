@@ -27,7 +27,13 @@
   },
   "plugins": {
     "notification": null,
-    "fs": {}
+    "fs": {},
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYwNTQ3QjRCODREOUFBN0UKUldSK3F0bUVTM3RVOEE1Z21kc2libXFQcXpvekdzcHNtS1BEb0U2STQvYW9jQU9IaVlhY2lLYksK",
+      "endpoints": [
+        "https://raw.githubusercontent.com/Divyanshkumar62/pulse/main/updater.json"
+      ]
+    }
   },
   "bundle": {
     "active": true,
