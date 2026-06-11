@@ -6,6 +6,7 @@ import { usePresenceStore } from '../../stores/usePresenceStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { v4 as uuidv4 } from 'uuid';
 import { getGravatarUrl } from '../../utils/gravatar';
+import { Avatar } from '../ui/Avatar';
 import { LayoutDashboard, Folder, ChevronDown, ChevronRight, Clock, Globe, GitBranch, MoreVertical, Pin, Lock, Sparkles } from 'lucide-react';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import ConfirmModal from '../ui/ConfirmModal';
@@ -278,7 +279,7 @@ export default function FlowSidebar() {
                               {presence
                                 .filter(p => p.item_id === flow.id && p.email !== settings?.email)
                                 .map(p => (
-                                  <img 
+                                  <Avatar 
                                     key={p.email}
                                     src={getGravatarUrl(p.email, 32)} 
                                     alt={p.email}

@@ -4,6 +4,7 @@ import type { Team, Invitation, TeamRole, TeamMember } from '../types';
 import '../styles/components/teams.css';
 import CustomSelect from './ui/CustomSelect';
 import { getGravatarUrl } from '../utils/gravatar';
+import { Avatar } from './ui/Avatar';
 import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { invoke } from '@tauri-apps/api/core';
@@ -499,7 +500,7 @@ export default function TeamPanel({
                       <div className="avatar-stack">
                         {/* Render the user's avatar */}
                         {hasCurrentUser && (
-                          <img 
+                          <Avatar 
                             className="avatar-stack-item user-avatar-item"
                             title={`${isGithubTeam ? (settings?.github_username || 'You') : (currentUserName || 'You')} (${role})`}
                             src={isGithubTeam && settings?.github_username
@@ -524,7 +525,7 @@ export default function TeamPanel({
                           })
                           .slice(0, 2)
                           .map((member, idx) => (
-                            <img 
+                            <Avatar 
                               key={member.user_id} 
                               className="avatar-stack-item"
                               title={`${member.name} (${member.role})`}
@@ -786,7 +787,7 @@ export default function TeamPanel({
                       borderRadius: 'var(--radius-lg)',
                       border: '1px solid var(--border-subtle)'
                     }}>
-                      <img 
+                      <Avatar 
                         src={avatarUrl}
                         alt={displayName}
                         className="member-avatar-img"

@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../stores/useSettingsStore';
 import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import ConfirmModal from '../ui/ConfirmModal';
 import EmptyState from '../ui/EmptyState';
+import { Avatar } from '../ui/Avatar';
 import { MoreVertical, Pin, FolderOpen, Eye, Folder as FolderIcon, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
@@ -501,7 +502,7 @@ export default function CollectionTree() {
             {presence
               .filter(p => p.item_id === item.id && p.email !== settings?.email)
               .map(p => (
-                <img 
+                <Avatar 
                   key={p.email}
                   src={getGravatarUrl(p.email, 32)} 
                   alt={p.email}
@@ -602,7 +603,7 @@ export default function CollectionTree() {
             {presence
               .filter(p => p.item_id === item.id && p.email !== settings?.email)
               .map(p => (
-                <img 
+                <Avatar 
                   key={p.email}
                   src={getGravatarUrl(p.email, 32)} 
                   alt={p.email}

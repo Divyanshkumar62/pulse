@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useTeamStore } from '../stores/useTeamStore';
 import { useWorkspaceStore } from '../stores/useWorkspaceStore';
 import { getGravatarUrl } from '../utils/gravatar';
+import { Avatar } from './ui/Avatar';
 import { GitCommit, Clock, User } from 'lucide-react';
 
 export default function TeamActivityFeed() {
@@ -68,7 +69,7 @@ export default function TeamActivityFeed() {
               }}
               className="activity-item-hover"
             >
-              <img 
+              <Avatar 
                 src={getGravatarUrl(log.author_email, 64)} 
                 alt={log.author_name}
                 style={{ 

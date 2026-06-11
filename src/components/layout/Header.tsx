@@ -7,6 +7,7 @@ import CustomSelect from '../ui/CustomSelect';
 import '../../styles/components/header.css';
 import GitSync from './GitSync';
 import { getGravatarUrl } from '../../utils/gravatar';
+import { Avatar } from '../ui/Avatar';
 
 export default function Header() {
   const { setProfileOpen, setSidebarTab, sidebarVisible, toggleSidebar } = useAppStore();
@@ -118,24 +119,11 @@ export default function Header() {
           />
         </div>
         <div className="user-profile" onClick={() => setProfileOpen(true)} style={{ zIndex: 11 }}>
-          {displayAvatar ? (
-            <img src={displayAvatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <div style={{ 
-              width: '100%', 
-              height: '100%', 
-              background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              fontSize: '12px', 
-              fontWeight: 700, 
-              color: 'white',
-              lineHeight: 1
-            }}>
-              {settings?.name ? settings.name.charAt(0).toUpperCase() : '?'}
-            </div>
-          )}
+          <Avatar 
+            src={displayAvatar} 
+            alt={settings?.name || 'User'} 
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
         </div>
       </div>
     </header>
