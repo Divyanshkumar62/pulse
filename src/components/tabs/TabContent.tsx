@@ -7,7 +7,6 @@ import CollectionDocs from '../collections/CollectionDocs';
 import WelcomeScreen from '../layout/WelcomeScreen';
 import { useResizable } from '../../hooks/useResizable';
 import '../../styles/components/tab-content.css';
-import { motion, AnimatePresence } from 'framer-motion';
 
 export default function TabContent() {
   const { tabs, activeTabId, closeTab } = useTabStore();
@@ -74,32 +73,25 @@ export default function TabContent() {
 
   // Default: Request Builder
   return (
-    <AnimatePresence mode="wait">
-      <motion.div 
-        key={activeTab.id}
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -4 }}
-        transition={{ duration: 0.15, ease: 'easeOut' }}
-        className={`tab-content-layout ${isBottom ? 'dock-bottom' : 'dock-right'}`}
-        style={{ width: '100%', height: '100%' }}
+    <div 
+      className={`tab-content-layout ${isBottom ? 'dock-bottom' : 'dock-right'}`}
+      style={{ width: '100%', height: '100%' }}
+    >
+      <div className="request-pane">
+        <RequestBuilder />
+      </div>
+      
+      <div 
+        className={`pane-resizer ${isDraggingRow || isDraggingCol ? 'dragging' : ''}`}
+        onMouseDown={isBottom ? startDragRow : startDragCol}
+      />
+      
+      <div 
+        className="response-pane" 
+        style={isBottom ? { height: `${resHeight}px` } : { width: `${resWidth}px` }}
       >
-        <div className="request-pane">
-          <RequestBuilder />
-        </div>
-        
-        <div 
-          className={`pane-resizer ${isDraggingRow || isDraggingCol ? 'dragging' : ''}`}
-          onMouseDown={isBottom ? startDragRow : startDragCol}
-        />
-        
-        <div 
-          className="response-pane" 
-          style={isBottom ? { height: `${resHeight}px` } : { width: `${resWidth}px` }}
-        >
-          {showDocsSplit ? <CollectionDocs /> : <ResponseViewer />}
-        </div>
-      </motion.div>
-    </AnimatePresence>
+        {showDocsSplit ? <CollectionDocs /> : <ResponseViewer />}
+      </div>
+    </div>
   );
 }

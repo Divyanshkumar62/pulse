@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, memo } from 'react';
 import { EditorState, Extension } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
@@ -56,7 +56,7 @@ const customTheme = EditorView.theme({
   }
 }, { dark: true });
 
-export default function CodeEditor({ value, onChange, language = 'javascript', height = '100%', placeholder }: CodeEditorProps) {
+const CodeEditor = memo(function CodeEditor({ value, onChange, language = 'javascript', height = '100%', placeholder }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
@@ -138,4 +138,6 @@ export default function CodeEditor({ value, onChange, language = 'javascript', h
       <div ref={containerRef} style={{ height: '100%' }} />
     </div>
   );
-}
+});
+
+export default CodeEditor;

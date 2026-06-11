@@ -22,24 +22,38 @@ export const Avatar: React.FC<AvatarProps> = ({
   if (!src || hasError) {
     const initial = fallbackInitial || (alt ? alt.charAt(0).toUpperCase() : '?');
     return (
-      <div
+      <svg
+        viewBox="0 0 100 100"
         className={className}
-        title={title}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))',
-          color: 'white',
-          fontWeight: 700,
-          fontSize: style?.width ? `calc(${style.width} * 0.45)` : '12px',
-          lineHeight: 1,
+          width: '100%',
+          height: '100%',
           borderRadius: '50%',
+          display: 'block',
           ...style,
         }}
       >
-        {initial}
-      </div>
+        {title && <title>{title}</title>}
+        <circle cx="50" cy="50" r="50" fill="url(#avatar-grad)" />
+        <defs>
+          <linearGradient id="avatar-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="var(--accent-primary)" />
+            <stop offset="100%" stopColor="var(--accent-hover)" />
+          </linearGradient>
+        </defs>
+        <text
+          x="50%"
+          y="54%"
+          dominantBaseline="middle"
+          textAnchor="middle"
+          fill="white"
+          fontSize="45"
+          fontWeight="bold"
+          fontFamily="system-ui, -apple-system, sans-serif"
+        >
+          {initial}
+        </text>
+      </svg>
     );
   }
 
@@ -48,7 +62,13 @@ export const Avatar: React.FC<AvatarProps> = ({
       src={src}
       alt={alt}
       className={className}
-      style={style}
+      style={{
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        display: 'block',
+        ...style,
+      }}
       title={title}
       onError={() => setHasError(true)}
     />
