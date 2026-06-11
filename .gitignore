@@ -16,7 +16,6 @@ src-tauri/*.dmg
 src-tauri/*.app
 src-tauri/*.deb
 src-tauri/*.rpm
-src-tauri/icons/
 
 # Environment files
 .env
