@@ -50,7 +50,6 @@ Desktop.ini
 
 # Rust
 **/*.rs.bk
-Cargo.lock
 
 # Temporary files
 *.tmp
