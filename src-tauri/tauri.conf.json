@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Pulse",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "identifier": "com.pulse.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -29,10 +29,10 @@
     "notification": null,
     "fs": {},
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZGRUUwQzkyREZCMTJFMQpSV1RoRXZzdHllRCtCcEhLelhNbG91WGdFK1R2YnV3eUdLVjFCWDVhSXNDd3dEd0ttL3pSajhxYgo=",
       "endpoints": [
         "https://raw.githubusercontent.com/Divyanshkumar62/pulse/main/updater.json"
-      ]
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZGRUUwQzkyREZCMTJFMQpSV1RoRXZzdHllRCtCcEhLelhNbG91WGdFK1R2YnV3eUdLVjFCWDVhSXNDd3dEd0ttL3pSajhxYgo="
     }
   },
   "bundle": {
