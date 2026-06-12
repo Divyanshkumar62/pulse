@@ -30,31 +30,25 @@ export default function App() {
   const initMockStore = useMockStore(state => state.initialize);
   const initTabStore = useTabStore(state => state.initialize);
   const [updateAvailable, setUpdateAvailable] = useState<Update | null>(null);
+  const [debugStatus, setDebugStatus] = useState<string | null>(null);
   
   usePresence();
 
   useEffect(() => {
     async function checkForUpdates() {
-      const lastDismissed = localStorage.getItem('pulse-last-update-dismissal');
-      if (lastDismissed) {
-        const diff = Date.now() - parseInt(lastDismissed, 10);
-        if (diff < 24 * 60 * 60 * 1000) {
-          console.log("[Pulse] Update check skipped (dismissed within last 24 hours)");
-          return;
-        }
-      }
+      setDebugStatus("Updater Debug: Starting check");
 
       try {
-        console.log("[Pulse] Invoking check() to check for updates...");
         const update = await check();
         if (update && update.available) {
-          console.log("[Pulse] Update available:", update.version);
+          setDebugStatus(`Updater Debug: Update available - version ${update.version}`);
           setUpdateAvailable(update);
         } else {
-          console.log("[Pulse] No updates available");
+          setDebugStatus("No update available");
         }
       } catch (err) {
-        console.warn("[Pulse] Updater check failed or ignored (normal if running in browser):", err);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        setDebugStatus(`Updater Error:\n${errMsg}`);
       }
     }
     checkForUpdates();
@@ -146,11 +140,38 @@ export default function App() {
           <UpdateModal 
             update={updateAvailable} 
             onClose={() => {
-              console.log("[Pulse] Update modal dismissed by user. Setting 24-hour suppression.");
-              localStorage.setItem('pulse-last-update-dismissal', Date.now().toString());
+              // Suppression logic removed temporarily
               setUpdateAvailable(null);
             }} 
           />
+        )}
+        {debugStatus && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.95)',
+            color: 'white',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999999,
+            fontSize: '18px',
+            fontFamily: 'monospace',
+            padding: '24px',
+            textAlign: 'center'
+          }}>
+            <div style={{ maxWidth: '600px', backgroundColor: '#111', border: '1px solid #333', padding: '32px', borderRadius: '12px' }}>
+              <h2 style={{ marginBottom: '16px', color: '#ff4444', fontSize: '22px' }}>Tauri Updater Debugger</h2>
+              <p style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{debugStatus}</p>
+              <button 
+                onClick={() => setDebugStatus(null)} 
+                style={{ marginTop: '24px', padding: '8px 24px', backgroundColor: '#333', border: 'none', color: 'white', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
         )}
       </AppShell>
     </ErrorBoundary>
