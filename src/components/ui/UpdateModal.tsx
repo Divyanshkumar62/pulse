@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { getVersion } from '@tauri-apps/api/app';
 import { ArrowDownToLine, RefreshCw, X } from 'lucide-react';
 
 interface UpdateModalProps {
@@ -10,6 +11,11 @@ interface UpdateModalProps {
 export function UpdateModal({ update, onClose }: UpdateModalProps) {
   const [isInstalling, setIsInstalling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentVersion, setCurrentVersion] = useState<string>('Loading...');
+
+  useEffect(() => {
+    getVersion().then(setCurrentVersion).catch(() => setCurrentVersion('Unknown'));
+  }, []);
 
   const handleInstall = async () => {
     try {
@@ -49,6 +55,11 @@ export function UpdateModal({ update, onClose }: UpdateModalProps) {
           <h3 className="mb-2 text-xl font-medium text-center text-white">
             Version {update?.version || 'Unknown'} is ready
           </h3>
+          
+          <div className="mb-4 p-3 bg-white/5 border border-[#1e2235] rounded-lg text-sm text-center text-gray-300 space-y-1">
+            <div>Current Version: <span className="font-semibold text-white">{currentVersion}</span></div>
+            <div>Available Version: <span className="font-semibold text-blue-400">{update?.version || 'Unknown'}</span></div>
+          </div>
           
           <p className="mb-6 text-sm text-center text-gray-400">
             A new version of Pulse is available. Would you like to install it now? The application will restart automatically after the installation completes.

@@ -30,25 +30,18 @@ export default function App() {
   const initMockStore = useMockStore(state => state.initialize);
   const initTabStore = useTabStore(state => state.initialize);
   const [updateAvailable, setUpdateAvailable] = useState<Update | null>(null);
-  const [debugStatus, setDebugStatus] = useState<string | null>(null);
   
   usePresence();
 
   useEffect(() => {
     async function checkForUpdates() {
-      setDebugStatus("Updater Debug: Starting check");
-
       try {
         const update = await check();
         if (update && update.available) {
-          setDebugStatus(`Updater Debug: Update available - version ${update.version}`);
           setUpdateAvailable(update);
-        } else {
-          setDebugStatus("No update available");
         }
       } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        setDebugStatus(`Updater Error:\n${errMsg}`);
+        // Silently ignore updater check errors in production/testing
       }
     }
     checkForUpdates();
@@ -144,34 +137,6 @@ export default function App() {
               setUpdateAvailable(null);
             }} 
           />
-        )}
-        {debugStatus && (
-          <div style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.95)',
-            color: 'white',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 999999,
-            fontSize: '18px',
-            fontFamily: 'monospace',
-            padding: '24px',
-            textAlign: 'center'
-          }}>
-            <div style={{ maxWidth: '600px', backgroundColor: '#111', border: '1px solid #333', padding: '32px', borderRadius: '12px' }}>
-              <h2 style={{ marginBottom: '16px', color: '#ff4444', fontSize: '22px' }}>Tauri Updater Debugger</h2>
-              <p style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{debugStatus}</p>
-              <button 
-                onClick={() => setDebugStatus(null)} 
-                style={{ marginTop: '24px', padding: '8px 24px', backgroundColor: '#333', border: 'none', color: 'white', borderRadius: '6px', cursor: 'pointer' }}
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
         )}
       </AppShell>
     </ErrorBoundary>
