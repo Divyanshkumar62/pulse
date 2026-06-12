@@ -35,8 +35,17 @@ export default function App() {
 
   useEffect(() => {
     async function checkForUpdates() {
+      const lastDismissed = localStorage.getItem('pulse-last-update-dismissal');
+      if (lastDismissed) {
+        const diff = Date.now() - parseInt(lastDismissed, 10);
+        if (diff < 24 * 60 * 60 * 1000) {
+          console.log("[Pulse] Update check skipped (dismissed within last 24 hours)");
+          return;
+        }
+      }
+
       try {
-        console.log("[Pulse] Checking for updates...");
+        console.log("[Pulse] Invoking check() to check for updates...");
         const update = await check();
         if (update && update.available) {
           console.log("[Pulse] Update available:", update.version);
@@ -136,7 +145,11 @@ export default function App() {
         {updateAvailable && (
           <UpdateModal 
             update={updateAvailable} 
-            onClose={() => setUpdateAvailable(null)} 
+            onClose={() => {
+              console.log("[Pulse] Update modal dismissed by user. Setting 24-hour suppression.");
+              localStorage.setItem('pulse-last-update-dismissal', Date.now().toString());
+              setUpdateAvailable(null);
+            }} 
           />
         )}
       </AppShell>

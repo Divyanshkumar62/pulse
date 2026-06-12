@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/useSettingsStore';
+import { getVersion } from '@tauri-apps/api/app';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -8,6 +9,11 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { settings, updateSettings } = useSettingsStore();
+  const [appVersion, setAppVersion] = useState<string>('Loading...');
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => setAppVersion('Unknown'));
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -211,7 +217,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
              <div style={{ background: 'var(--bg-surface)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span className="text-label" style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Version</span>
-                  <span className="text-mono" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>0.1.0-alpha</span>
+                  <span className="text-mono" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{appVersion}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span className="text-label" style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>Data Directory</span>

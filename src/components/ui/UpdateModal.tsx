@@ -15,11 +15,14 @@ export function UpdateModal({ update, onClose }: UpdateModalProps) {
     try {
       setIsInstalling(true);
       setError(null);
+      console.log('[Pulse] Initiating update download and installation via downloadAndInstall()...');
       await update.downloadAndInstall();
+      console.log('[Pulse] downloadAndInstall() completed successfully. Initiating relaunch()...');
       await relaunch();
     } catch (err) {
-      console.error('Failed to install update:', err);
-      setError(err instanceof Error ? err.message : String(err));
+      console.error('[Pulse] Failed to install update:', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setError(`Failed to install update: ${errMsg}`);
       setIsInstalling(false);
     }
   };
