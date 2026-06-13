@@ -68,7 +68,9 @@ export async function executeScript(
   };
 
   try {
-    const result = await invoke<RustScriptResult>('run_script', { script, context });
+    // Add pulse alias to pm for backward compatibility with the new namespace
+    const scriptWithAlias = `var pulse = pm; ${script}`;
+    const result = await invoke<RustScriptResult>('run_script', { script: scriptWithAlias, context });
     
     // Process results back into our ScriptResult format
     return {

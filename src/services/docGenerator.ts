@@ -63,7 +63,7 @@ export function generateDocumentation(request: Request, response?: HttpResponse)
     markdown += `\n`;
   }
 
-  if (body && body.content) {
+  if (body && body.type !== 'none' && body.content && method !== 'GET' && method !== 'HEAD') {
     markdown += `### Body (\`${body.type}\`)\n\n`;
     if (body.type === 'json') {
       markdown += `\`\`\`json\n${body.content}\n\`\`\`\n\n`;

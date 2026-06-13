@@ -11,7 +11,7 @@ export function generateCurl(request: Request): string {
     });
   }
   
-if (request.body && request.body.content) {
+if (request.body && request.body.type !== 'none' && request.body.content && request.method !== 'GET' && request.method !== 'HEAD') {
      // Escape single quotes safely for bash
      const escapedBody = request.body.content.replace(/'/g, "'\\''");
      cmd += ` \\\n  -d '${escapedBody}'`;
@@ -34,7 +34,7 @@ export function generateFetch(request: Request): string {
     code += `,\n  headers: {\n${headersStr}\n  }`;
   }
   
-  if (request.body && request.method !== 'GET' && request.method !== 'HEAD') {
+  if (request.body && request.body.type !== 'none' && request.method !== 'GET' && request.method !== 'HEAD') {
 // Determine if it looks like raw json so we can parse it beautifully, or pass as string
      let isJson = false;
      try {
@@ -76,7 +76,7 @@ export function generatePython(request: Request): string {
   const method = request.method.toLowerCase();
   let payload = '';
   
-  if (request.body && request.body.content && method !== 'get' && method !== 'head') {
+  if (request.body && request.body.type !== 'none' && request.body.content && method !== 'get' && method !== 'head') {
     try {
       JSON.parse(request.body.content);
       payload = `, json=${request.body.content}`;
@@ -96,7 +96,7 @@ export function generateGo(request: Request): string {
   code += `\turl := "${request.url}"\n`;
   code += `\tmethod := "${request.method}"\n\n`;
 
-  if (request.body && request.body.content) {
+  if (request.body && request.body.type !== 'none' && request.body.content && request.method !== "GET" && request.method !== "HEAD") {
     code += `\tpayload := strings.NewReader(\`${request.body.content}\`)\n`;
   } else {
     code += `\tpayload := nil\n`;
@@ -134,7 +134,7 @@ public class Main {
             .uri(URI.create("${request.url}"))
             .method("${request.method}", `;
             
-  if (request.body && request.body.content && request.method !== "GET" && request.method !== "HEAD") {
+  if (request.body && request.body.type !== 'none' && request.body.content && request.method !== "GET" && request.method !== "HEAD") {
       const escapedBody = request.body.content.replace(/"/g, '\\"').replace(/\n/g, '\\n');
       code += `HttpRequest.BodyPublishers.ofString("${escapedBody}")`;
   } else {

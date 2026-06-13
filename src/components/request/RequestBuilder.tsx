@@ -16,7 +16,7 @@ import { useEnvStore } from '../../stores/useEnvStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { useHistoryStore } from '../../stores/useHistoryStore';
 import { useGlobalStore } from '../../stores/useGlobalStore';
-import { executeScript } from '../../services/scriptRunner';
+import * as SandboxEngine from '../../services/SandboxEngine';
 import { toast } from 'sonner';
 import type { HttpRequest, KeyValuePair } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -25,7 +25,17 @@ import '../../styles/components/request.css';
 type ConfigTab = 'params' | 'headers' | 'body' | 'auth' | 'scripts';
 
 export default function RequestBuilder() {
-  const { tabs, activeTabId, setTabResponse, updateActiveTabRequest, setTabLoading } = useTabStore();
+  const { 
+    tabs, 
+    activeTabId, 
+    setTabResponse, 
+    updateActiveTabRequest, 
+    setTabLoading,
+    setTabTestResults,
+    setTabConsoleLogs,
+    clearTabSandboxResults
+  } = useTabStore();
+  
   const { settings } = useSettingsStore();
   const { environments, activeEnvId, updateEnvironment } = useEnvStore();
   const { collections } = useCollectionStore();
@@ -77,9 +87,11 @@ export default function RequestBuilder() {
     }
 
     setIsLoading(true);
+    clearTabSandboxResults(activeTab.id);
+
     try {
       const { method, url, headers, body, auth, preRequestScript, testScript } = request;
-      
+
       const activeCollection = collections.find(c => c.id === activeTab.collectionId);
       
       // Get all parent objects (collection and folders) for inheritance
@@ -111,25 +123,93 @@ export default function RequestBuilder() {
       const activeEnv = environments.find(e => e.id === activeEnvId);
 
       for (const parent of inheritanceChain) {
-        if (parent.preRequestScript) {
-          const res = await executeScript(parent.preRequestScript, request, activeEnv, undefined, collectionVariables);
-          if (res.modifiedUrl) finalUrl = res.modifiedUrl;
-          res.addedHeaders.forEach(h => { injectedHeaders[h.key] = h.value; });
+        if (parent.preRequestScript && parent.preRequestScript.trim()) {
+          const headerRecord: Record<string, string> = { ...injectedHeaders };
+          const sandboxContext = {
+            request: { url: finalUrl, method, headers: headerRecord },
+            variables: {
+              environment: (environments.find(e => e.id === activeEnvId)?.variables || []).reduce((acc, v) => {
+                if (v.enabled !== false) acc[v.key] = v.value;
+                return acc;
+              }, {} as Record<string, string>),
+              collection: collectionVariables,
+              globals: globalVariables
+            }
+          };
+          const res = await SandboxEngine.executeScript(parent.preRequestScript, sandboxContext);
+          
+          if (res.logs && res.logs.length > 0) {
+            setTabConsoleLogs(activeTab.id, res.logs);
+          }
+          if (res.tests && res.tests.length > 0) {
+            setTabTestResults(activeTab.id, res.tests);
+          }
+
+          if (res.error) {
+            setTabConsoleLogs(activeTab.id, [{
+              type: 'error',
+              message: `Inherited Pre-request Script Error: ${res.error}`,
+              timestamp: new Date().toISOString()
+            }]);
+            setIsLoading(false);
+            return;
+          }
+
+          // Handle environment updates from inherited scripts
+          const envUpdates = (res.context as any)?.environmentUpdates;
+          if (envUpdates && Object.keys(envUpdates).length > 0 && activeEnv) {
+            const newVariables = [...activeEnv.variables];
+            Object.entries(envUpdates).forEach(([key, value]) => {
+              const idx = newVariables.findIndex(v => v.key === key);
+              if (idx >= 0) newVariables[idx] = { ...newVariables[idx], value: String(value) };
+              else newVariables.push({ key, value: String(value), enabled: true });
+            });
+            updateEnvironment(activeEnv.id, { variables: newVariables });
+          }
         }
       }
       
       // 1.b Execute Local Pre-request Script
-      if (preRequestScript) {
-        const scriptResult = await executeScript(preRequestScript, request, activeEnv, undefined, collectionVariables);
-        if (scriptResult.modifiedUrl) finalUrl = scriptResult.modifiedUrl;
-        scriptResult.addedHeaders.forEach(h => { injectedHeaders[h.key] = h.value; });
+      if (preRequestScript && preRequestScript.trim()) {
+        const headerRecord: Record<string, string> = { ...injectedHeaders };
+        const sandboxContext = {
+          request: { url: finalUrl, method, headers: headerRecord },
+          variables: {
+            environment: (environments.find(e => e.id === activeEnvId)?.variables || []).reduce((acc, v) => {
+              if (v.enabled !== false) acc[v.key] = v.value;
+              return acc;
+            }, {} as Record<string, string>),
+            collection: collectionVariables,
+            globals: globalVariables
+          }
+        };
+        const scriptResult = await SandboxEngine.executeScript(preRequestScript, sandboxContext);
         
-        if (Object.keys(scriptResult.environmentUpdates).length > 0 && activeEnv) {
+        if (scriptResult.logs && scriptResult.logs.length > 0) {
+          setTabConsoleLogs(activeTab.id, scriptResult.logs);
+        }
+        if (scriptResult.tests && scriptResult.tests.length > 0) {
+          setTabTestResults(activeTab.id, scriptResult.tests);
+        }
+
+        if (scriptResult.error) {
+          setTabConsoleLogs(activeTab.id, [{
+            type: 'error',
+            message: `Pre-request Script Error: ${scriptResult.error}`,
+            timestamp: new Date().toISOString()
+          }]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Handle environment updates from local script
+        const envUpdates = (scriptResult.context as any)?.environmentUpdates;
+        if (envUpdates && Object.keys(envUpdates).length > 0 && activeEnv) {
           const newVariables = [...activeEnv.variables];
-          Object.entries(scriptResult.environmentUpdates).forEach(([key, value]) => {
+          Object.entries(envUpdates).forEach(([key, value]) => {
             const idx = newVariables.findIndex(v => v.key === key);
-            if (idx >= 0) newVariables[idx] = { ...newVariables[idx], value };
-            else newVariables.push({ key, value, enabled: true });
+            if (idx >= 0) newVariables[idx] = { ...newVariables[idx], value: String(value) };
+            else newVariables.push({ key, value: String(value), enabled: true });
           });
           updateEnvironment(activeEnv.id, { variables: newVariables });
         }
@@ -212,27 +292,81 @@ export default function RequestBuilder() {
         response: response,
       });
 
-      // 3. Execute Test Script (Post-request)
-      if (testScript) {
-        const activeEnv = environments.find(e => e.id === activeEnvId);
-        const testResult = await executeScript(testScript, request, activeEnv, response, collectionVariables);
-        
-        if (Object.keys(testResult.environmentUpdates).length > 0 && activeEnv) {
-          const newVariables = [...activeEnv.variables];
-          Object.entries(testResult.environmentUpdates).forEach(([key, value]) => {
-            const idx = newVariables.findIndex(v => v.key === key);
-            if (idx >= 0) newVariables[idx] = { ...newVariables[idx], value };
-            else newVariables.push({ key, value, enabled: true });
-          });
-          updateEnvironment(activeEnv.id, { variables: newVariables });
+      // 3. Execute Test Script (Post-request) using new SandboxEngine
+      if (testScript && testScript.trim()) {
+        try {
+          // Construct execution context for the sandbox
+          const sandboxContext = {
+            response: {
+              status: response.status,
+              statusText: response.status_text,
+              headers: response.headers.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+              body: response.body,
+              time: response.time_ms
+            },
+            variables: {
+              environment: (environments.find(e => e.id === activeEnvId)?.variables || []).reduce((acc, v) => {
+                if (v.enabled !== false) acc[v.key] = v.value;
+                return acc;
+              }, {} as Record<string, string>),
+              collection: collectionVariables,
+              globals: globalVariables
+            }
+          };
+
+          const sandboxResult = await SandboxEngine.executeScript(testScript, sandboxContext);
+          
+          setTabTestResults(activeTab.id, sandboxResult.tests);
+          setTabConsoleLogs(activeTab.id, sandboxResult.logs);
+
+          if (sandboxResult.error) {
+            toast.error(`Script error: ${sandboxResult.error}`);
+          }
+        } catch (sandboxError: any) {
+          console.error('Sandbox execution failed:', sandboxError);
+          setTabConsoleLogs(activeTab.id, [{
+            type: 'error',
+            message: `Sandbox Error: ${sandboxError.message || String(sandboxError)}`,
+            timestamp: new Date().toISOString()
+          }]);
         }
       }
 
       // 3.b Execute Inherited Test Scripts (Child to Parent)
       for (let i = inheritanceChain.length - 1; i >= 0; i--) {
         const parent = inheritanceChain[i];
-        if (parent.testScript) {
-          await executeScript(parent.testScript, request, activeEnv, response, collectionVariables);
+        if (parent.testScript && parent.testScript.trim()) {
+          try {
+            const sandboxContext = {
+              response: {
+                status: response.status,
+                statusText: response.status_text,
+                headers: response.headers.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}),
+                body: response.body,
+                time: response.time_ms
+              },
+              variables: {
+                environment: (environments.find(e => e.id === activeEnvId)?.variables || []).reduce((acc, v) => {
+                  if (v.enabled !== false) acc[v.key] = v.value;
+                  return acc;
+                }, {} as Record<string, string>),
+                collection: collectionVariables,
+                globals: globalVariables
+              }
+            };
+
+            const sandboxResult = await SandboxEngine.executeScript(parent.testScript, sandboxContext);
+            
+            // Store automatically appends these
+            setTabTestResults(activeTab.id, sandboxResult.tests);
+            setTabConsoleLogs(activeTab.id, sandboxResult.logs);
+
+            if (sandboxResult.error) {
+              toast.error(`Inherited script error: ${sandboxResult.error}`);
+            }
+          } catch (sandboxError: any) {
+            console.error('Inherited sandbox execution failed:', sandboxError);
+          }
         }
       }
     } catch (error: any) {
@@ -241,7 +375,7 @@ export default function RequestBuilder() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, isWebSocket, environments, activeEnvId, updateEnvironment, setTabResponse, settings, globalVariables, request]);
+  }, [activeTab, isWebSocket, environments, activeEnvId, updateEnvironment, setTabResponse, settings, globalVariables, request, clearTabSandboxResults, setTabTestResults, setTabConsoleLogs, addEntry, collections]);
 
   useEffect(() => {
     const onSendRequest = () => handleSend();
