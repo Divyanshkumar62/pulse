@@ -9,6 +9,7 @@ interface GlobalStore {
   updateGlobalVariable: (id: string, updates: Partial<Variable>) => void;
   deleteGlobalVariable: (id: string) => void;
   setGlobalVariables: (variables: Variable[]) => void;
+  updateGlobalVariables: (updates: Record<string, any>) => void;
 }
 
 export const useGlobalStore = create<GlobalStore>()(
@@ -29,6 +30,19 @@ export const useGlobalStore = create<GlobalStore>()(
       })),
       
       setGlobalVariables: (variables) => set({ globalVariables: variables }),
+      
+      updateGlobalVariables: (updates) => set((state) => {
+        const newVariables = [...state.globalVariables];
+        Object.entries(updates).forEach(([key, value]) => {
+          const idx = newVariables.findIndex((v: any) => v.key === key);
+          if (idx >= 0) {
+            newVariables[idx] = { ...newVariables[idx], value: String(value) };
+          } else {
+            newVariables.push({ id: uuidv4(), key, value: String(value), enabled: true } as any);
+          }
+        });
+        return { globalVariables: newVariables };
+      }),
     }),
     {
       name: 'pulse-global-storage',

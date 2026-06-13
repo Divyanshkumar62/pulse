@@ -38,8 +38,8 @@ export default function RequestBuilder() {
   
   const { settings } = useSettingsStore();
   const { environments, activeEnvId, updateEnvironment } = useEnvStore();
-  const { collections } = useCollectionStore();
-  const { globalVariables } = useGlobalStore();
+  const { collections, updateCollectionVariables } = useCollectionStore();
+  const { globalVariables, updateGlobalVariables } = useGlobalStore();
   const { addEntry } = useHistoryStore();
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('params');
   const [isLoading, setIsLoading] = useState(false);
@@ -112,30 +112,100 @@ export default function RequestBuilder() {
         findParentFolders(activeCollection.folders, request.id, []);
       }
 
-      const collectionVariables = (activeCollection?.variables || []).reduce((acc, v) => {
-        if (v.enabled !== false) acc[v.key] = v.value;
-        return acc;
-      }, {} as Record<string, string>);
+      const getFreshVariables = () => {
+        const activeCollection = useCollectionStore.getState().collections.find(c => c.id === activeTab.collectionId);
+        const activeEnv = useEnvStore.getState().environments.find(e => e.id === activeEnvId);
+        const globalVariables = useGlobalStore.getState().globalVariables;
+
+        const collectionVars = activeCollection?.variables?.filter(v => v.enabled !== false && v.key) || [];
+        const envVars = activeEnv?.variables?.filter(v => v.enabled !== false && v.key) || [];
+        const globVars = globalVariables.filter(v => v.enabled !== false && v.key) || [];
+
+        const collectionVariablesRecord = collectionVars.reduce((acc, v) => {
+          if (v.key) acc[v.key] = v.value;
+          return acc;
+        }, {} as Record<string, string>);
+
+        const envVariablesRecord = envVars.reduce((acc, v) => {
+          if (v.key) acc[v.key] = v.value;
+          return acc;
+        }, {} as Record<string, string>);
+
+        const globalVariablesRecord = globVars.reduce((acc, v) => {
+          if (v.key) acc[v.key] = v.value;
+          return acc;
+        }, {} as Record<string, string>);
+
+        return {
+          collectionVars,
+          envVars,
+          globalVars: globalVariables,
+          collectionVariablesRecord,
+          envVariablesRecord,
+          globalVariablesRecord
+        };
+      };
+
+      const getRawRequestHeaders = () => {
+        let effectiveAuth = auth;
+        if (!auth || auth.type === 'inherit') {
+          for (let i = inheritanceChain.length - 1; i >= 0; i--) {
+            if (inheritanceChain[i].auth && inheritanceChain[i].auth.type !== 'inherit') {
+              effectiveAuth = inheritanceChain[i].auth;
+              break;
+            }
+          }
+        }
+
+        const fresh = getFreshVariables();
+        const rawHeaders: Record<string, string> = {};
+        
+        if (effectiveAuth?.type === 'bearer' && effectiveAuth.config?.token) {
+          const resolvedToken = VariableResolver.resolve(effectiveAuth.config.token, fresh.collectionVars, fresh.envVars, fresh.globalVars);
+          rawHeaders['Authorization'] = `Bearer ${resolvedToken}`;
+        } else if (effectiveAuth?.type === 'oauth2' && effectiveAuth.config?.accessToken) {
+          const resolvedToken = VariableResolver.resolve(effectiveAuth.config.accessToken, fresh.collectionVars, fresh.envVars, fresh.globalVars);
+          rawHeaders['Authorization'] = `Bearer ${resolvedToken}`;
+        } else if (effectiveAuth?.type === 'basic' && effectiveAuth.config?.username) {
+          const resolvedUsername = VariableResolver.resolve(effectiveAuth.config.username, fresh.collectionVars, fresh.envVars, fresh.globalVars);
+          const resolvedPassword = VariableResolver.resolve(effectiveAuth.config.password || '', fresh.collectionVars, fresh.envVars, fresh.globalVars);
+          const credentials = btoa(`${resolvedUsername}:${resolvedPassword}`);
+          rawHeaders['Authorization'] = `Basic ${credentials}`;
+        }
+
+        headers.forEach((h: KeyValuePair) => {
+          if (h.enabled !== false && h.key) {
+              rawHeaders[h.key] = h.value;
+          }
+        });
+
+        return rawHeaders;
+      };
 
       // 1. Execute Inherited Pre-request Scripts (Parent to Child)
       let finalUrl = url;
-      const injectedHeaders: Record<string, string> = {};
-      const activeEnv = environments.find(e => e.id === activeEnvId);
 
       for (const parent of inheritanceChain) {
         if (parent.preRequestScript && parent.preRequestScript.trim()) {
-          const headerRecord: Record<string, string> = { ...injectedHeaders };
+          const fresh = getFreshVariables();
+          const rawHeaders = getRawRequestHeaders();
+
+          // Resolve URL and headers before passing to script
+          const resolvedUrl = VariableResolver.resolve(finalUrl, fresh.collectionVars, fresh.envVars, fresh.globalVars);
+          const resolvedHeaders: Record<string, string> = {};
+          Object.entries(rawHeaders).forEach(([key, value]) => {
+            resolvedHeaders[key] = VariableResolver.resolve(value, fresh.collectionVars, fresh.envVars, fresh.globalVars);
+          });
+
           const sandboxContext = {
-            request: { url: finalUrl, method, headers: headerRecord },
+            request: { url: resolvedUrl, method, headers: resolvedHeaders },
             variables: {
-              environment: (environments.find(e => e.id === activeEnvId)?.variables || []).reduce((acc, v) => {
-                if (v.enabled !== false) acc[v.key] = v.value;
-                return acc;
-              }, {} as Record<string, string>),
-              collection: collectionVariables,
-              globals: globalVariables
+              environment: fresh.envVariablesRecord,
+              collection: fresh.collectionVariablesRecord,
+              globals: fresh.globalVariablesRecord
             }
           };
+
           const res = await SandboxEngine.executeScript(parent.preRequestScript, sandboxContext);
           
           if (res.logs && res.logs.length > 0) {
@@ -157,32 +227,54 @@ export default function RequestBuilder() {
 
           // Handle environment updates from inherited scripts
           const envUpdates = (res.context as any)?.environmentUpdates;
-          if (envUpdates && Object.keys(envUpdates).length > 0 && activeEnv) {
-            const newVariables = [...activeEnv.variables];
-            Object.entries(envUpdates).forEach(([key, value]) => {
-              const idx = newVariables.findIndex(v => v.key === key);
-              if (idx >= 0) newVariables[idx] = { ...newVariables[idx], value: String(value) };
-              else newVariables.push({ key, value: String(value), enabled: true });
-            });
-            updateEnvironment(activeEnv.id, { variables: newVariables });
+          if (envUpdates && Object.keys(envUpdates).length > 0 && activeEnvId) {
+            const currentEnv = useEnvStore.getState().environments.find(e => e.id === activeEnvId);
+            if (currentEnv) {
+              const newVariables = [...currentEnv.variables];
+              Object.entries(envUpdates).forEach(([key, value]) => {
+                const idx = newVariables.findIndex(v => v.key === key);
+                if (idx >= 0) newVariables[idx] = { ...newVariables[idx], value: String(value) };
+                else newVariables.push({ key, value: String(value), enabled: true });
+              });
+              await useEnvStore.getState().updateEnvironment(activeEnvId, { variables: newVariables });
+            }
+          }
+
+          // Handle collection updates from inherited scripts
+          const colUpdates = (res.context as any)?.collectionUpdates;
+          if (colUpdates && Object.keys(colUpdates).length > 0 && activeTab.collectionId) {
+            await updateCollectionVariables(activeTab.collectionId, colUpdates);
+          }
+
+          // Handle global updates from inherited scripts
+          const globUpdates = (res.context as any)?.globalUpdates;
+          if (globUpdates && Object.keys(globUpdates).length > 0) {
+            updateGlobalVariables(globUpdates);
           }
         }
       }
       
       // 1.b Execute Local Pre-request Script
       if (preRequestScript && preRequestScript.trim()) {
-        const headerRecord: Record<string, string> = { ...injectedHeaders };
+        const fresh = getFreshVariables();
+        const rawHeaders = getRawRequestHeaders();
+
+        // Resolve URL and headers before passing to script
+        const resolvedUrl = VariableResolver.resolve(finalUrl, fresh.collectionVars, fresh.envVars, fresh.globalVars);
+        const resolvedHeaders: Record<string, string> = {};
+        Object.entries(rawHeaders).forEach(([key, value]) => {
+          resolvedHeaders[key] = VariableResolver.resolve(value, fresh.collectionVars, fresh.envVars, fresh.globalVars);
+        });
+
         const sandboxContext = {
-          request: { url: finalUrl, method, headers: headerRecord },
+          request: { url: resolvedUrl, method, headers: resolvedHeaders },
           variables: {
-            environment: (environments.find(e => e.id === activeEnvId)?.variables || []).reduce((acc, v) => {
-              if (v.enabled !== false) acc[v.key] = v.value;
-              return acc;
-            }, {} as Record<string, string>),
-            collection: collectionVariables,
-            globals: globalVariables
+            environment: fresh.envVariablesRecord,
+            collection: fresh.collectionVariablesRecord,
+            globals: fresh.globalVariablesRecord
           }
         };
+
         const scriptResult = await SandboxEngine.executeScript(preRequestScript, sandboxContext);
         
         if (scriptResult.logs && scriptResult.logs.length > 0) {
@@ -204,64 +296,49 @@ export default function RequestBuilder() {
 
         // Handle environment updates from local script
         const envUpdates = (scriptResult.context as any)?.environmentUpdates;
-        if (envUpdates && Object.keys(envUpdates).length > 0 && activeEnv) {
-          const newVariables = [...activeEnv.variables];
-          Object.entries(envUpdates).forEach(([key, value]) => {
-            const idx = newVariables.findIndex(v => v.key === key);
-            if (idx >= 0) newVariables[idx] = { ...newVariables[idx], value: String(value) };
-            else newVariables.push({ key, value: String(value), enabled: true });
-          });
-          updateEnvironment(activeEnv.id, { variables: newVariables });
-        }
-      }
-
-      const headerRecord: Record<string, string> = { ...injectedHeaders };
-      
-      // Resolve Auth (Inheritance logic)
-      let effectiveAuth = auth;
-      if (!auth || auth.type === 'inherit') {
-        // Look up the chain (Child to Parent)
-        for (let i = inheritanceChain.length - 1; i >= 0; i--) {
-          if (inheritanceChain[i].auth && inheritanceChain[i].auth.type !== 'inherit') {
-            effectiveAuth = inheritanceChain[i].auth;
-            break;
+        if (envUpdates && Object.keys(envUpdates).length > 0 && activeEnvId) {
+          const currentEnv = useEnvStore.getState().environments.find(e => e.id === activeEnvId);
+          if (currentEnv) {
+            const newVariables = [...currentEnv.variables];
+            Object.entries(envUpdates).forEach(([key, value]) => {
+              const idx = newVariables.findIndex(v => v.key === key);
+              if (idx >= 0) newVariables[idx] = { ...newVariables[idx], value: String(value) };
+              else newVariables.push({ key, value: String(value), enabled: true });
+            });
+            await useEnvStore.getState().updateEnvironment(activeEnvId, { variables: newVariables });
           }
         }
-      }
 
-      if (effectiveAuth?.type === 'bearer' && effectiveAuth.config?.token) {
-        headerRecord['Authorization'] = `Bearer ${effectiveAuth.config.token}`;
-      } else if (effectiveAuth?.type === 'oauth2' && effectiveAuth.config?.accessToken) {
-        headerRecord['Authorization'] = `Bearer ${effectiveAuth.config.accessToken}`;
-      } else if (effectiveAuth?.type === 'basic' && effectiveAuth.config?.username) {
-        const credentials = btoa(`${effectiveAuth.config.username}:${effectiveAuth.config.password || ''}`);
-        headerRecord['Authorization'] = `Basic ${credentials}`;
-      }
-
-      headers.forEach((h: KeyValuePair) => {
-        if (h.enabled !== false && h.key) {
-            headerRecord[h.key] = h.value;
+        // Handle collection updates from local script
+        const colUpdates = (scriptResult.context as any)?.collectionUpdates;
+        if (colUpdates && Object.keys(colUpdates).length > 0 && activeTab.collectionId) {
+          await updateCollectionVariables(activeTab.collectionId, colUpdates);
         }
-      });
+
+        // Handle global updates from local script
+        const globUpdates = (scriptResult.context as any)?.globalUpdates;
+        if (globUpdates && Object.keys(globUpdates).length > 0) {
+          updateGlobalVariables(globUpdates);
+        }
+      }
+
+      // 2. Final Variable Resolution Pass on URL, Headers, and Body
+      const freshFinal = getFreshVariables();
+      const finalRawHeaders = getRawRequestHeaders();
       
-      // Resolve variables in URL and headers before sending
-      const envVars = activeEnv?.variables?.filter(v => v.enabled !== false && v.key) || [];
-      const collectionVars = activeCollection?.variables?.filter(v => v.enabled !== false && v.key) || [];
+      finalUrl = VariableResolver.resolve(finalUrl, freshFinal.collectionVars, freshFinal.envVars, freshFinal.globalVars);
       
-      finalUrl = VariableResolver.resolve(finalUrl, collectionVars, envVars, globalVariables);
-      
-      // Resolve variables in header values
       const resolvedHeaders: Record<string, string> = {};
-      Object.entries(headerRecord).forEach(([key, value]) => {
-        resolvedHeaders[key] = VariableResolver.resolve(value, collectionVars, envVars, globalVariables);
+      Object.entries(finalRawHeaders).forEach(([key, value]) => {
+        resolvedHeaders[key] = VariableResolver.resolve(value, freshFinal.collectionVars, freshFinal.envVars, freshFinal.globalVars);
       });
       
       // Resolve variables in body content if it's a string
-      let resolvedBody = request.body;
-      if (request.body && typeof request.body === 'object' && 'content' in request.body && typeof request.body.content === 'string') {
+      let resolvedBody = body;
+      if (body && typeof body === 'object' && 'content' in body && typeof body.content === 'string') {
         resolvedBody = {
-          ...request.body,
-          content: VariableResolver.resolve(request.body.content, collectionVars, envVars, globalVariables)
+          ...body,
+          content: VariableResolver.resolve(body.content, freshFinal.collectionVars, freshFinal.envVars, freshFinal.globalVars)
         };
       }
       
@@ -295,6 +372,7 @@ export default function RequestBuilder() {
       // 3. Execute Test Script (Post-request) using new SandboxEngine
       if (testScript && testScript.trim()) {
         try {
+          const freshPost = getFreshVariables();
           // Construct execution context for the sandbox
           const sandboxContext = {
             response: {
@@ -305,12 +383,9 @@ export default function RequestBuilder() {
               time: response.time_ms
             },
             variables: {
-              environment: (environments.find(e => e.id === activeEnvId)?.variables || []).reduce((acc, v) => {
-                if (v.enabled !== false) acc[v.key] = v.value;
-                return acc;
-              }, {} as Record<string, string>),
-              collection: collectionVariables,
-              globals: globalVariables
+              environment: freshPost.envVariablesRecord,
+              collection: freshPost.collectionVariablesRecord,
+              globals: freshPost.globalVariablesRecord
             }
           };
 
@@ -337,6 +412,7 @@ export default function RequestBuilder() {
         const parent = inheritanceChain[i];
         if (parent.testScript && parent.testScript.trim()) {
           try {
+            const freshPost = getFreshVariables();
             const sandboxContext = {
               response: {
                 status: response.status,
@@ -346,18 +422,14 @@ export default function RequestBuilder() {
                 time: response.time_ms
               },
               variables: {
-                environment: (environments.find(e => e.id === activeEnvId)?.variables || []).reduce((acc, v) => {
-                  if (v.enabled !== false) acc[v.key] = v.value;
-                  return acc;
-                }, {} as Record<string, string>),
-                collection: collectionVariables,
-                globals: globalVariables
+                environment: freshPost.envVariablesRecord,
+                collection: freshPost.collectionVariablesRecord,
+                globals: freshPost.globalVariablesRecord
               }
             };
 
             const sandboxResult = await SandboxEngine.executeScript(parent.testScript, sandboxContext);
             
-            // Store automatically appends these
             setTabTestResults(activeTab.id, sandboxResult.tests);
             setTabConsoleLogs(activeTab.id, sandboxResult.logs);
 
@@ -375,7 +447,7 @@ export default function RequestBuilder() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, isWebSocket, environments, activeEnvId, updateEnvironment, setTabResponse, settings, globalVariables, request, clearTabSandboxResults, setTabTestResults, setTabConsoleLogs, addEntry, collections]);
+  }, [activeTab, isWebSocket, environments, activeEnvId, updateEnvironment, setTabResponse, settings, globalVariables, request, clearTabSandboxResults, setTabTestResults, setTabConsoleLogs, addEntry, collections, updateCollectionVariables, updateGlobalVariables]);
 
   useEffect(() => {
     const onSendRequest = () => handleSend();

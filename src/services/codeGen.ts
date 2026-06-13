@@ -1,15 +1,103 @@
 import { Request } from '../types';
+import { useEnvStore } from '../stores/useEnvStore';
+import { useCollectionStore } from '../stores/useCollectionStore';
+import { useGlobalStore } from '../stores/useGlobalStore';
+import { VariableResolver } from './variableResolver';
+
+export function getResolvedAuthHeaders(request: Request): Record<string, string> {
+  const auth = request.auth;
+  if (!auth || auth.type === 'none') return {};
+
+  let effectiveAuth = auth;
+  if (auth.type === 'inherit') {
+    const collections = useCollectionStore.getState().collections;
+    const inheritanceChain: any[] = [];
+    const activeCollection = collections.find(c => {
+      const findParentFolders = (folders: any[], targetId: string, currentPath: any[]): boolean => {
+        for (const f of folders) {
+          if (f.requests.some((r: any) => r.id === targetId)) {
+            inheritanceChain.push(...currentPath, f);
+            return true;
+          }
+          if (f.folders && findParentFolders(f.folders, targetId, [...currentPath, f])) return true;
+        }
+        return false;
+      };
+      
+      if (c.requests.some(r => r.id === request.id)) {
+        return true;
+      }
+      return findParentFolders(c.folders, request.id, []);
+    });
+
+    if (activeCollection) {
+      inheritanceChain.unshift(activeCollection);
+      for (let i = inheritanceChain.length - 1; i >= 0; i--) {
+        if (inheritanceChain[i].auth && inheritanceChain[i].auth.type !== 'inherit') {
+          effectiveAuth = inheritanceChain[i].auth;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!effectiveAuth || effectiveAuth.type === 'none' || effectiveAuth.type === 'inherit') {
+    return {};
+  }
+
+  const activeEnvId = useEnvStore.getState().activeEnvId;
+  const activeEnv = useEnvStore.getState().environments.find(e => e.id === activeEnvId);
+  const collections = useCollectionStore.getState().collections;
+  
+  const activeCollection = collections.find(c => {
+    const checkFolders = (folders: any[]): boolean => {
+      for (const f of folders) {
+        if (f.requests.some((r: any) => r.id === request.id)) return true;
+        if (f.folders && checkFolders(f.folders)) return true;
+      }
+      return false;
+    };
+    return c.requests.some(r => r.id === request.id) || checkFolders(c.folders);
+  });
+
+  const envVars = activeEnv?.variables?.filter(v => v.enabled !== false && v.key) || [];
+  const collectionVars = activeCollection?.variables?.filter(v => v.enabled !== false && v.key) || [];
+  const globalVariables = useGlobalStore.getState().globalVariables.filter(v => v.enabled !== false && v.key) || [];
+
+  const resolveVal = (val: string) => {
+    return VariableResolver.resolve(val, collectionVars, envVars, globalVariables);
+  };
+
+  const headers: Record<string, string> = {};
+  if (effectiveAuth.type === 'bearer' && effectiveAuth.config?.token) {
+    headers['Authorization'] = `Bearer ${resolveVal(effectiveAuth.config.token)}`;
+  } else if (effectiveAuth.type === 'oauth2' && effectiveAuth.config?.accessToken) {
+    headers['Authorization'] = `Bearer ${resolveVal(effectiveAuth.config.accessToken)}`;
+  } else if (effectiveAuth.type === 'basic' && effectiveAuth.config?.username) {
+    const credentials = btoa(`${resolveVal(effectiveAuth.config.username)}:${resolveVal(effectiveAuth.config.password || '')}`);
+    headers['Authorization'] = `Basic ${credentials}`;
+  }
+
+  return headers;
+}
+
 
 export function generateCurl(request: Request): string {
   if (!request.url) return 'Please enter a URL first.';
   
   let cmd = `curl -X ${request.method} "${request.url}"`;
   
+  const authHeaders = getResolvedAuthHeaders(request);
+  const allHeaders: Record<string, string> = { ...authHeaders };
   if (request.headers) {
     request.headers.filter(h => h.enabled !== false && h.key).forEach(h => {
-      cmd += ` \\\n  -H "${h.key}: ${h.value}"`;
+      allHeaders[h.key] = h.value;
     });
   }
+
+  Object.entries(allHeaders).forEach(([key, value]) => {
+    cmd += ` \\\n  -H "${key}: ${value}"`;
+  });
   
 if (request.body && request.body.type !== 'none' && request.body.content && request.method !== 'GET' && request.method !== 'HEAD') {
      // Escape single quotes safely for bash
@@ -23,9 +111,16 @@ if (request.body && request.body.type !== 'none' && request.body.content && requ
 export function generateFetch(request: Request): string {
   if (!request.url) return '// Please enter a URL first.';
 
-  const headersStr = (request.headers || [])
-    .filter(h => h.enabled !== false && h.key)
-    .map(h => `    "${h.key}": "${h.value.replace(/"/g, '\\"')}"`)
+  const authHeaders = getResolvedAuthHeaders(request);
+  const headersObj: Record<string, string> = { ...authHeaders };
+  if (request.headers) {
+    request.headers.filter(h => h.enabled !== false && h.key).forEach(h => {
+      headersObj[h.key] = h.value;
+    });
+  }
+
+  const headersStr = Object.entries(headersObj)
+    .map(([key, value]) => `    "${key}": "${value.replace(/"/g, '\\"')}"`)
     .join(',\n');
 
   let code = `const options = {\n  method: '${request.method}'`;
@@ -60,12 +155,13 @@ export function generatePython(request: Request): string {
 
   let code = `import requests\n\nurl = "${request.url}"\n`;
   
-  const headers = (request.headers || [])
-    .filter(h => h.enabled !== false && h.key)
-    .reduce((acc, h) => {
-      acc[h.key] = h.value;
-      return acc;
-    }, {} as Record<string, string>);
+  const authHeaders = getResolvedAuthHeaders(request);
+  const headers: Record<string, string> = { ...authHeaders };
+  if (request.headers) {
+    request.headers.filter(h => h.enabled !== false && h.key).forEach(h => {
+      headers[h.key] = h.value;
+    });
+  }
 
   if (Object.keys(headers).length > 0) {
     code += `headers = ${JSON.stringify(headers, null, 4)}\n`;
@@ -106,8 +202,16 @@ export function generateGo(request: Request): string {
   code += `\treq, err := http.NewRequest(method, url, payload)\n`;
   code += `\tif err != nil {\n\t\tfmt.Println(err)\n\t\treturn\n\t}\n`;
 
-  (request.headers || []).filter(h => h.enabled !== false && h.key).forEach(h => {
-    code += `\treq.Header.Add("${h.key}", "${h.value}")\n`;
+  const authHeaders = getResolvedAuthHeaders(request);
+  const headersObj: Record<string, string> = { ...authHeaders };
+  if (request.headers) {
+    request.headers.filter(h => h.enabled !== false && h.key).forEach(h => {
+      headersObj[h.key] = h.value;
+    });
+  }
+
+  Object.entries(headersObj).forEach(([key, value]) => {
+    code += `\treq.Header.Add("${key}", "${value}")\n`;
   });
 
   code += `\n\tres, err := client.Do(req)\n`;
@@ -142,8 +246,16 @@ public class Main {
   }
   code += `);\n\n`;
 
-  (request.headers || []).filter(h => h.enabled !== false && h.key).forEach(h => {
-    code += `        builder.header("${h.key}", "${h.value}");\n`;
+  const authHeaders = getResolvedAuthHeaders(request);
+  const headersObj: Record<string, string> = { ...authHeaders };
+  if (request.headers) {
+    request.headers.filter(h => h.enabled !== false && h.key).forEach(h => {
+      headersObj[h.key] = h.value;
+    });
+  }
+
+  Object.entries(headersObj).forEach(([key, value]) => {
+    code += `        builder.header("${key}", "${value}");\n`;
   });
 
   code += `

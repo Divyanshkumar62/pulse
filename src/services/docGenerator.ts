@@ -1,5 +1,5 @@
 import { Request, HttpResponse } from '../types';
-import { generateCurl, generateFetch, generatePython, generateGo } from './codeGen';
+import { generateCurl, generateFetch, generatePython, generateGo, getResolvedAuthHeaders } from './codeGen';
 
 export interface CodeSnippet {
   language: string;
@@ -53,11 +53,17 @@ export function generateDocumentation(request: Request, response?: HttpResponse)
   markdown += `**Method**: \`${method}\`  \n`;
   markdown += `**URL**: \`${url || 'Not specified'}\`  \n\n`;
 
-  if (headers && headers.length > 0 && headers.some(h => h.enabled !== false && h.key)) {
+  const authHeaders = getResolvedAuthHeaders(request);
+  const headersList = [
+    ...Object.entries(authHeaders).map(([key, value]) => ({ key, value, description: 'Generated Authorization Header', enabled: true })),
+    ...(headers || [])
+  ];
+
+  if (headersList.length > 0 && headersList.some(h => h.enabled !== false && h.key)) {
     markdown += `### Headers\n\n`;
     markdown += `| Key | Value | Description |\n`;
     markdown += `| :--- | :--- | :--- |\n`;
-    headers.filter(h => h.enabled !== false && h.key).forEach(h => {
+    headersList.filter(h => h.enabled !== false && h.key).forEach(h => {
       markdown += `| \`${h.key}\` | \`${h.value}\` | ${h.description || '-'} |\n`;
     });
     markdown += `\n`;
