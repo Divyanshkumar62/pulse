@@ -147,14 +147,18 @@
 
 .response-content {
   flex: 1;
-  overflow-y: auto;
-  padding: var(--space-4);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .headers-view {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  padding: var(--space-4);
+  overflow-y: auto;
+  height: 100%;
 }
 
 .header-row {

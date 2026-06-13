@@ -16,10 +16,10 @@ export default function TestResultsTab() {
 
   if (testResults.length === 0) {
     return (
-      <div className="empty-results">
-        <div className="empty-icon">🧪</div>
-        <p>No tests were run for this request.</p>
-        <span className="hint-text">Add tests in the 'Scripts' tab using pulse.test()</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-tertiary)', padding: '24px', textAlign: 'center', flexDirection: 'column' }}>
+        <div style={{ fontSize: '32px', marginBottom: '12px' }}>🧪</div>
+        <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-secondary)' }}>No tests were run for this request</h3>
+        <p style={{ margin: 0, maxWidth: '300px' }}>Add tests in the 'Scripts' tab using pulse.test()</p>
       </div>
     );
   }
@@ -184,9 +184,10 @@ export default function TestResultsTab() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 100%;
+          flex: 1;
           color: var(--text-tertiary);
           gap: 12px;
+          text-align: center;
         }
 
         .empty-icon {

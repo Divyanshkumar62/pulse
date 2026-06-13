@@ -32,7 +32,7 @@ export default function BodyEditor() {
             'graphql': 'GraphQL'
           };
           return (
-          <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '11px', color: body.type === type ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontWeight: body.type === type ? 600 : 400 }}>
+          <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '11px', color: body.type === type ? '#FFFFFF' : '#D1D5DB', fontWeight: body.type === type ? 700 : 500 }}>
             <input
               type="radio"
               name="bodyType"

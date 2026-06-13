@@ -17,6 +17,8 @@
   padding: 6px;
   box-shadow: var(--shadow-lg), 0 0 20px rgba(0, 112, 243, 0.05);
   transition: all var(--transition-base);
+  position: relative;
+  z-index: 100;
 }
 
 .url-bar-glass:focus-within {
@@ -68,7 +70,7 @@
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  z-index: 500;
+  z-index: 1000;
   min-width: 160px;
   background: rgba(22, 27, 34, 0.72);
   backdrop-filter: blur(40px) saturate(180%);

@@ -8,10 +8,10 @@ export default function ConsoleTab() {
 
   if (consoleLogs.length === 0) {
     return (
-      <div className="empty-console">
-        <div className="empty-icon">⌨️</div>
-        <p>Console is empty.</p>
-        <span className="hint-text">Use console.log() in your scripts to see output here.</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#4b5563', padding: '24px', textAlign: 'center', flexDirection: 'column', background: '#0f1115' }}>
+        <div style={{ fontSize: '32px', marginBottom: '12px' }}>⌨️</div>
+        <h3 style={{ margin: '0 0 8px 0', color: '#9ca3af' }}>Console is empty</h3>
+        <p style={{ margin: 0, maxWidth: '300px' }}>Use console.log() in your scripts to see output here.</p>
       </div>
     );
   }
@@ -123,10 +123,11 @@ export default function ConsoleTab() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 100%;
+          flex: 1;
           color: #4b5563;
           gap: 12px;
           background: #0f1115;
+          text-align: center;
         }
 
         .empty-icon {
