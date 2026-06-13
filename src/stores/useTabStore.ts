@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { Request, HttpResponse, WebSocketMessage, WebSocketStatus, Collection } from '../types';
+import { LogEntry, TestResult } from '../types/sandbox';
 
 export type TabType = 'request' | 'runner' | 'docs';
 
@@ -11,6 +12,8 @@ export interface Tab {
   request?: Request;
   collection?: Collection;
   response?: HttpResponse;
+  testResults?: TestResult[];
+  consoleLogs?: LogEntry[];
   isDirty?: boolean;
   isLoading?: boolean;
   wsMessages?: WebSocketMessage[];
@@ -35,6 +38,9 @@ interface TabStore {
   setTabLoading: (id: string, isLoading: boolean) => void;
   updateTabRequestName: (requestId: string, newName: string) => void;
   setTabResponse: (id: string, response: HttpResponse) => void;
+  setTabTestResults: (id: string, testResults: TestResult[]) => void;
+  setTabConsoleLogs: (id: string, consoleLogs: LogEntry[]) => void;
+  clearTabSandboxResults: (id: string) => void;
   addWsMessage: (tabId: string, message: WebSocketMessage) => void;
   setWsStatus: (tabId: string, status: WebSocketStatus) => void;
   clearWsMessages: (tabId: string) => void;
@@ -235,11 +241,38 @@ export const useTabStore = create<TabStore>()(
     });
   },
 
-  setTabResponse: (id, response) => {
+  setTabResponse: (id: string, response: HttpResponse) => {
     const { tabs } = get();
     set({
       tabs: tabs.map(t => 
         t.id === id ? { ...t, response } : t
+      )
+    });
+  },
+
+  setTabTestResults: (id: string, testResults: TestResult[]) => {
+    const { tabs } = get();
+    set({
+      tabs: tabs.map(t => 
+        t.id === id ? { ...t, testResults: [...(t.testResults || []), ...testResults] } : t
+      )
+    });
+  },
+
+  setTabConsoleLogs: (id: string, consoleLogs: LogEntry[]) => {
+    const { tabs } = get();
+    set({
+      tabs: tabs.map(t => 
+        t.id === id ? { ...t, consoleLogs: [...(t.consoleLogs || []), ...consoleLogs] } : t
+      )
+    });
+  },
+
+  clearTabSandboxResults: (id: string) => {
+    const { tabs } = get();
+    set({
+      tabs: tabs.map(t => 
+        t.id === id ? { ...t, testResults: [], consoleLogs: [] } : t
       )
     });
   },

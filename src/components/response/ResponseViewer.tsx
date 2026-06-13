@@ -5,6 +5,8 @@ import { useHistoryStore } from '../../stores/useHistoryStore';
 import ResponseBody from './ResponseBody';
 import ResponseHistory from './ResponseHistory';
 import ResponseDiff from './ResponseDiff';
+import TestResultsTab from './TestResultsTab';
+import ConsoleTab from './ConsoleTab';
 import { Copy, Check } from 'lucide-react';
 import '../../styles/components/response-viewer.css';
 
@@ -36,14 +38,6 @@ export default function ResponseViewer() {
     if (!request || !response) return null;
     const requestHistory = history.filter(h => h.requestId === request.id);
     
-    // The current response is likely the first item in history if it was just saved.
-    // We want the most recent response that is NOT the exact same timestamp/id as the current one.
-    // If the current response is not yet in history, history[0] is the previous one.
-    // If the current response IS in history[0], then history[1] is the previous one.
-    
-    // We can just find the first history entry that doesn't strictly match the current response object
-    // Or we just take the second entry if the first matches.
-    // Actually, comparing timestamps or just taking index 1 if we know index 0 is current.
     if (requestHistory.length > 0) {
       if (requestHistory[0].response.body === response.body && requestHistory[0].response.time_ms === response.time_ms) {
         return requestHistory.length > 1 ? requestHistory[1].response : null;
@@ -280,12 +274,11 @@ export default function ResponseViewer() {
               </div>
             ) : activeTab === 'history' ? (
               <ResponseHistory />
-            ) : (
-              <div className="placeholder-view">
-                <div className="placeholder-icon">🛠️</div>
-                <p>{activeTab.replace('-', ' ')} view is under development</p>
-              </div>
-            )
+            ) : activeTab === 'test-results' ? (
+              <TestResultsTab />
+            ) : activeTab === 'console' ? (
+              <ConsoleTab />
+            ) : null
           ) : (
             <div className="empty-response">
               <div className="empty-icon">📡</div>
