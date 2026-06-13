@@ -5,6 +5,7 @@ import { useHistoryStore } from '../../stores/useHistoryStore';
 import ResponseBody from './ResponseBody';
 import ResponseHistory from './ResponseHistory';
 import ResponseDiff from './ResponseDiff';
+import { Copy, Check } from 'lucide-react';
 import '../../styles/components/response-viewer.css';
 
 type ResponseTab = 'body' | 'preview' | 'headers' | 'diff' | 'test-results' | 'history' | 'console';
@@ -14,6 +15,7 @@ export default function ResponseViewer() {
   const { responsePosition, setResponsePosition } = useAppStore();
   const { history } = useHistoryStore();
   const [activeTab, setActiveTab] = useState<ResponseTab>('body');
+  const [isCopied, setIsCopied] = useState(false);
 
   const tabData = tabs.find(t => t.id === activeTabId);
   const response = tabData?.response;
@@ -61,6 +63,145 @@ export default function ResponseViewer() {
     { id: 'console', label: 'Console' },
   ];
 
+  const handleCopyResponse = () => {
+    if (!response) return;
+    let textToCopy = response.body;
+    try {
+      const parsed = JSON.parse(response.body);
+      textToCopy = JSON.stringify(parsed, null, 2);
+    } catch (err) {
+      // Not valid JSON, copy as is
+    }
+    navigator.clipboard.writeText(textToCopy);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const renderPreview = (body: string, contentType: string) => {
+    const lowerType = contentType.toLowerCase();
+    
+    if (lowerType.includes('text/html')) {
+      return (
+        <div style={{ height: '100%', width: '100%', overflow: 'hidden', borderRadius: '4px', border: '1px solid var(--border-default)' }}>
+          <iframe 
+            srcDoc={body} 
+            sandbox="" 
+            style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#ffffff' }}
+            title="HTML Response Preview"
+          />
+        </div>
+      );
+    }
+    
+    if (lowerType.includes('image/svg+xml')) {
+      const svgDoc = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body {
+                margin: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                background-color: #ffffff;
+              }
+              svg {
+                max-width: 100%;
+                max-height: 100vh;
+                height: auto;
+              }
+            </style>
+          </head>
+          <body>
+            ${body}
+          </body>
+        </html>
+      `;
+      return (
+        <div style={{ height: '100%', width: '100%', overflow: 'hidden', borderRadius: '4px', border: '1px solid var(--border-default)' }}>
+          <iframe 
+            srcDoc={svgDoc} 
+            sandbox="" 
+            style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#ffffff' }}
+            title="SVG Response Preview"
+          />
+        </div>
+      );
+    }
+
+    const isImage = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'].some(type => lowerType.includes(type));
+    if (isImage) {
+      let src = body;
+      if (!body.startsWith('data:') && !body.startsWith('http://') && !body.startsWith('https://')) {
+        try {
+          let binary = '';
+          const len = body.length;
+          for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(body.charCodeAt(i) & 0xff);
+          }
+          const base64 = window.btoa(binary);
+          const mime = lowerType.split(';')[0] || 'image/png';
+          src = `data:${mime};base64,${base64}`;
+        } catch (e) {
+          src = body;
+        }
+      }
+      
+      return (
+        <div style={{ 
+          height: '100%', 
+          width: '100%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          overflow: 'auto', 
+          padding: '16px',
+          background: 'rgba(0,0,0,0.2)',
+          borderRadius: '4px',
+          border: '1px solid var(--border-default)'
+        }}>
+          <img 
+            src={src} 
+            alt="Response Preview" 
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: '100%', 
+              objectFit: 'contain',
+              borderRadius: '2px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+            }} 
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const parent = e.currentTarget.parentElement;
+              if (parent) {
+                const errorLabel = document.createElement('div');
+                errorLabel.innerText = 'Failed to load preview image';
+                errorLabel.style.color = 'var(--text-tertiary)';
+                errorLabel.style.fontSize = '12px';
+                parent.appendChild(errorLabel);
+              }
+            }}
+          />
+        </div>
+      );
+    }
+    
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        height: '100%', 
+        color: 'var(--text-tertiary)',
+        fontSize: '13px'
+      }}>
+        No visual preview available for this content type
+      </div>
+    );
+  };
+
   return (
     <div className="response-viewer">
       <div className="response-toolbar">
@@ -78,13 +219,20 @@ export default function ResponseViewer() {
         
         <div className="response-actions">
           {response && (
-            <div className="response-meta">
-              <span className={`status-pill ${response.status < 400 ? 'success' : 'error'}`}>
-                {response.status} {response.status_text}
-              </span>
-              <span className="meta-item">{response.time_ms}ms</span>
-              <span className="meta-item">{Math.round(response.body.length / 1024 * 100) / 100} KB</span>
-            </div>
+            <>
+              <div className="response-meta">
+                <span className={`status-pill ${response.status < 400 ? 'success' : 'error'}`}>
+                  {response.status} {response.status_text}
+                </span>
+                <span className="meta-item">{response.time_ms}ms</span>
+                <span className="meta-item">{Math.round(response.body.length / 1024 * 100) / 100} KB</span>
+              </div>
+              
+              <button className="copy-response-btn" onClick={handleCopyResponse} title="Copy formatted response">
+                {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                <span>{isCopied ? 'Copied!' : 'Copy'}</span>
+              </button>
+            </>
           )}
           
           <div className="layout-toggles">
@@ -114,6 +262,11 @@ export default function ResponseViewer() {
                 content={response.body} 
                 contentType={response.headers.find((h: any) => h.key.toLowerCase() === 'content-type')?.value || 'application/json'} 
               />
+            ) : activeTab === 'preview' ? (
+              renderPreview(
+                response.body, 
+                response.headers.find((h: any) => h.key.toLowerCase() === 'content-type')?.value || ''
+              )
             ) : activeTab === 'diff' ? (
               <ResponseDiff currentResponse={response} previousResponse={previousResponse} />
             ) : activeTab === 'headers' ? (

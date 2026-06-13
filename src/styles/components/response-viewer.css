@@ -27,6 +27,8 @@
   -ms-overflow-style: none; /* IE/Edge */
   flex: 1;
   min-width: 0;
+  align-items: center;
+  white-space: nowrap;
 }
 
 .response-tabs::-webkit-scrollbar {
@@ -44,6 +46,8 @@
   padding: 0 var(--space-2);
   transition: all var(--transition-fast);
   height: 100%;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .response-tab:hover {
@@ -58,7 +62,35 @@
 .response-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
+}
+
+.response-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.copy-response-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  height: 28px;
+}
+
+.copy-response-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: var(--border-default);
 }
 
 .status-pill {

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { getVersion } from '@tauri-apps/api/app';
+import { useUpdater } from '../../hooks/useUpdater';
+
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -10,6 +12,9 @@ interface SettingsModalProps {
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { settings, updateSettings } = useSettingsStore();
   const [appVersion, setAppVersion] = useState<string>('Loading...');
+  const { updateAvailable, checkForUpdates } = useUpdater();
+  const [isChecking, setIsChecking] = useState(false);
+  const [checkMessage, setCheckMessage] = useState<string | null>(null);
 
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => setAppVersion('Unknown'));
@@ -224,6 +229,44 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <span className="text-mono" style={{ fontSize: '12px', color: 'var(--text-primary)' }}>~/.pulse/</span>
                 </div>
              </div>
+          </section>
+
+          <section style={{ paddingTop: '20px', borderTop: '1px solid var(--border-subtle)', marginBottom: '12px' }}>
+            <h3 className="text-label" style={{ marginBottom: '12px', color: 'var(--accent-primary)', letterSpacing: '0.05em' }}>Updates</h3>
+            <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>Pulse Updates</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    {updateAvailable ? `Version ${updateAvailable.version} is available!` : 'Check for the latest version.'}
+                  </div>
+                </div>
+                <button
+                  className={updateAvailable ? "btn-primary" : "btn-secondary"}
+                  onClick={async () => {
+                    setIsChecking(true);
+                    setCheckMessage(null);
+                    await checkForUpdates();
+                    setIsChecking(false);
+                    // It's a bit tricky to show "you are up to date" precisely because `checkForUpdates` handles setting global state.
+                    // If no update is available, we can set a temporary message.
+                    if (!updateAvailable) {
+                      setCheckMessage('You are on the latest version.');
+                      setTimeout(() => setCheckMessage(null), 3000);
+                    }
+                  }}
+                  disabled={isChecking}
+                  style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 500 }}
+                >
+                  {isChecking ? 'Checking...' : updateAvailable ? 'Install Update' : 'Check for Updates'}
+                </button>
+              </div>
+              {checkMessage && !updateAvailable && (
+                <div style={{ fontSize: '12px', color: 'var(--accent-primary)', marginTop: '4px' }}>
+                  {checkMessage}
+                </div>
+              )}
+            </div>
           </section>
         </div>
 

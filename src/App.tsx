@@ -20,6 +20,8 @@ import MockServerEditor from './components/mock/MockServerEditor';
 import { usePresence } from './hooks/usePresence';
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { UpdateModal } from './components/ui/UpdateModal';
+import { useUpdater } from './hooks/useUpdater';
+
 
 export default function App() {
   const initEnvStore = useEnvStore(state => state.initialize);
@@ -29,23 +31,10 @@ export default function App() {
   const initHistoryStore = useHistoryStore(state => state.initialize);
   const initMockStore = useMockStore(state => state.initialize);
   const initTabStore = useTabStore(state => state.initialize);
-  const [updateAvailable, setUpdateAvailable] = useState<Update | null>(null);
+  
+  const { updateAvailable, setUpdateAvailable } = useUpdater();
   
   usePresence();
-
-  useEffect(() => {
-    async function checkForUpdates() {
-      try {
-        const update = await check();
-        if (update && update.available) {
-          setUpdateAvailable(update);
-        }
-      } catch (err) {
-        // Silently ignore updater check errors in production/testing
-      }
-    }
-    checkForUpdates();
-  }, []);
 
   const { sidebarTab, selectedMonitorId, selectedEnvironmentId } = useAppStore();
   const activeMockServerId = useMockStore(state => state.activeMockServerId);
