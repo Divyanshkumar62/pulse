@@ -8,7 +8,8 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 vi.mock('../../hooks/useTauri', () => ({
-  deleteCollectionFromDisk: vi.fn().mockResolvedValue(undefined)
+  deleteCollectionFromDisk: vi.fn().mockResolvedValue(undefined),
+  saveCollectionToDisk: vi.fn().mockResolvedValue(undefined)
 }));
 
 vi.mock('../useWorkspaceStore', () => ({
@@ -127,6 +128,97 @@ describe('useCollectionStore', () => {
       
       const col = useCollectionStore.getState().collections[0];
       expect(col.requests.length).toBe(0);
+    });
+  });
+
+  describe('Move Operations', () => {
+    beforeEach(async () => {
+      await useCollectionStore.getState().addCollection(mockCollection, '');
+    });
+
+    it('should move a request from collection root to a folder', async () => {
+      await useCollectionStore.getState().addFolder('col-1', null, mockFolder);
+      await useCollectionStore.getState().addRequest('col-1', null, mockRequest);
+      
+      let col = useCollectionStore.getState().collections[0];
+      expect(col.requests.length).toBe(1);
+      expect(col.folders[0].requests.length).toBe(0);
+
+      await useCollectionStore.getState().moveRequest('col-1', 'col-1', 'req-1', 'fld-1', 0);
+
+      col = useCollectionStore.getState().collections[0];
+      expect(col.requests.length).toBe(0);
+      expect(col.folders[0].requests.length).toBe(1);
+      expect(col.folders[0].requests[0].id).toBe('req-1');
+    });
+
+    it('should move a folder under another folder and prevent circular dependency', async () => {
+      const folder2: Folder = {
+        id: 'fld-2',
+        name: 'Auth',
+        requests: [],
+        folders: []
+      };
+
+      await useCollectionStore.getState().addFolder('col-1', null, mockFolder); // fld-1
+      await useCollectionStore.getState().addFolder('col-1', null, folder2);   // fld-2
+
+      // Move fld-2 under fld-1
+      await useCollectionStore.getState().moveFolder('col-1', 'col-1', 'fld-2', 'fld-1', 0);
+
+      let col = useCollectionStore.getState().collections[0];
+      expect(col.folders.length).toBe(1); // Only fld-1 at root
+      expect(col.folders[0].folders!.length).toBe(1);
+      expect(col.folders[0].folders![0].id).toBe('fld-2');
+
+      // Now, try to move fld-1 (parent) under fld-2 (child) -> Circular!
+      await expect(
+        useCollectionStore.getState().moveFolder('col-1', 'col-1', 'fld-1', 'fld-2', 0)
+      ).rejects.toThrow('Circular dependency');
+    });
+
+    it('should move a request across different collections', async () => {
+      const mockCollection2: Collection = {
+        id: 'col-2',
+        name: 'Second Collection',
+        requests: [],
+        folders: [],
+        variables: []
+      };
+
+      await useCollectionStore.getState().addCollection(mockCollection2, '');
+      await useCollectionStore.getState().addRequest('col-1', null, mockRequest);
+
+      expect(useCollectionStore.getState().collections.find(c => c.id === 'col-1')?.requests.length).toBe(1);
+      expect(useCollectionStore.getState().collections.find(c => c.id === 'col-2')?.requests.length).toBe(0);
+
+      await useCollectionStore.getState().moveRequest('col-1', 'col-2', 'req-1', null, 0);
+
+      expect(useCollectionStore.getState().collections.find(c => c.id === 'col-1')?.requests.length).toBe(0);
+      expect(useCollectionStore.getState().collections.find(c => c.id === 'col-2')?.requests.length).toBe(1);
+      expect(useCollectionStore.getState().collections.find(c => c.id === 'col-2')?.requests[0].id).toBe('req-1');
+    });
+
+    it('should move a folder across different collections', async () => {
+      const mockCollection2: Collection = {
+        id: 'col-2',
+        name: 'Second Collection',
+        requests: [],
+        folders: [],
+        variables: []
+      };
+
+      await useCollectionStore.getState().addCollection(mockCollection2, '');
+      await useCollectionStore.getState().addFolder('col-1', null, mockFolder);
+
+      expect(useCollectionStore.getState().collections.find(c => c.id === 'col-1')?.folders.length).toBe(1);
+      expect(useCollectionStore.getState().collections.find(c => c.id === 'col-2')?.folders.length).toBe(0);
+
+      await useCollectionStore.getState().moveFolder('col-1', 'col-2', 'fld-1', null, 0);
+
+      expect(useCollectionStore.getState().collections.find(c => c.id === 'col-1')?.folders.length).toBe(0);
+      expect(useCollectionStore.getState().collections.find(c => c.id === 'col-2')?.folders.length).toBe(1);
+      expect(useCollectionStore.getState().collections.find(c => c.id === 'col-2')?.folders[0].id).toBe('fld-1');
     });
   });
 });
