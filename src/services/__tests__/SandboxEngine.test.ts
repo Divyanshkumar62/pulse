@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { executeScript } from '../SandboxEngine';
+import { executeScript, resetSandbox } from '../SandboxEngine';
 
-// Keep track of the mocked worker instance to inspect actions/timing
-let mockWorkerInstance: any = null;
+// Keep track of the mocked worker instances
+let createdWorkers: MockWorker[] = [];
 
 class MockWorker {
   onmessage: ((event: MessageEvent) => void) | null = null;
@@ -14,7 +14,7 @@ class MockWorker {
   constructor(scriptUrl: string, options?: any) {
     this.scriptUrl = scriptUrl;
     this.options = options;
-    mockWorkerInstance = this;
+    createdWorkers.push(this);
   }
 
   postMessage(payload: any) {
@@ -98,7 +98,8 @@ class MockWorker {
 
 describe('SandboxEngine', () => {
   beforeEach(() => {
-    mockWorkerInstance = null;
+    createdWorkers = [];
+    resetSandbox();
     vi.useFakeTimers();
   });
 
@@ -122,7 +123,8 @@ describe('SandboxEngine', () => {
     expect(result.tests).toHaveLength(1);
     expect(result.tests[0].name).toBe('assert status');
     expect(result.tests[0].passed).toBe(true);
-    expect(mockWorkerInstance.terminated).toBe(true);
+    // Persistent worker should NOT be terminated on success
+    expect(createdWorkers[0].terminated).toBe(false);
   });
 
   it('should catch errors thrown during script execution in worker', async () => {
@@ -134,7 +136,8 @@ describe('SandboxEngine', () => {
     expect(result.error).toBe('Mocked execution error');
     expect(result.logs).toHaveLength(1);
     expect(result.logs[0].type).toBe('error');
-    expect(mockWorkerInstance.terminated).toBe(true);
+    // Persistent worker should NOT be terminated on script runtime error
+    expect(createdWorkers[0].terminated).toBe(false);
   });
 
   it('should terminate worker and reject if execution exceeds 3000ms (timeout)', async () => {
@@ -147,6 +150,10 @@ describe('SandboxEngine', () => {
     vi.advanceTimersByTime(3000);
 
     await expect(executionPromise).rejects.toThrow('Timeout Error');
-    expect(mockWorkerInstance.terminated).toBe(true);
+    // The first worker should have been terminated
+    expect(createdWorkers[0].terminated).toBe(true);
+    // A second worker should have been created (respawned)
+    expect(createdWorkers).toHaveLength(2);
+    expect(createdWorkers[1].terminated).toBe(false);
   });
 });

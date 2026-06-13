@@ -81,7 +81,16 @@ const pulse = {
 
 const pm = pulse;
 
-ctx.onmessage = (event: MessageEvent<SandboxRequest>) => {
+// Phase 2: Get AsyncFunction constructor
+const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+
+// Phase 3: Hardening "Shield"
+// Disable network exfiltration APIs
+(self as any).fetch = undefined;
+(self as any).XMLHttpRequest = undefined;
+(self as any).WebSocket = undefined;
+
+ctx.onmessage = async (event: MessageEvent<SandboxRequest>) => {
   // Reset state to guarantee stateless execution runs
   logs.length = 0;
   testResults.length = 0;
@@ -98,7 +107,8 @@ ctx.onmessage = (event: MessageEvent<SandboxRequest>) => {
     const contextKeys = Object.keys(context || {});
     const contextValues = Object.values(context || {});
 
-    const runner = new Function(
+    // Create async runner
+    const runner = new AsyncFunction(
       'pulse',
       'pm',
       ...contextKeys,
@@ -108,7 +118,8 @@ ctx.onmessage = (event: MessageEvent<SandboxRequest>) => {
       `
     );
 
-    runner(pulse, pm, ...contextValues);
+    // Await execution
+    await runner(pulse, pm, ...contextValues);
 
     ctx.postMessage({
       type: 'result',

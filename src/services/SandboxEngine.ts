@@ -8,11 +8,35 @@ export interface ExecutionResult {
   error?: string;
 }
 
+let persistentWorker: Worker | null = null;
+
+function getWorker(): Worker {
+  if (!persistentWorker) {
+    persistentWorker = new SandboxWorker();
+  }
+  return persistentWorker;
+}
+
+function respawnWorker() {
+  if (persistentWorker) {
+    persistentWorker.terminate();
+    persistentWorker = null;
+  }
+  persistentWorker = new SandboxWorker();
+}
+
+export function resetSandbox() {
+  if (persistentWorker) {
+    persistentWorker.terminate();
+    persistentWorker = null;
+  }
+}
+
 export function executeScript(script: string, context: any): Promise<ExecutionResult> {
   return new Promise((resolve, reject) => {
     let worker: Worker;
     try {
-      worker = new SandboxWorker();
+      worker = getWorker();
     } catch (e) {
       reject(new Error(`Failed to instantiate sandbox worker: ${e instanceof Error ? e.message : String(e)}`));
       return;
@@ -22,9 +46,15 @@ export function executeScript(script: string, context: any): Promise<ExecutionRe
     
     // Timeout security measure: terminate if executing > 3000ms
     const timeoutId = setTimeout(() => {
-      worker.terminate();
+      respawnWorker();
       reject(new Error('Timeout Error: Script execution exceeded 3000ms limit (infinite loop detected).'));
     }, 3000) as any;
+
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      worker.onmessage = null;
+      worker.onerror = null;
+    };
 
     worker.onmessage = (event: MessageEvent) => {
       const { type, data } = event.data;
@@ -32,8 +62,7 @@ export function executeScript(script: string, context: any): Promise<ExecutionRe
       if (type === 'log') {
         logs.push(data as LogEntry);
       } else if (type === 'result') {
-        clearTimeout(timeoutId);
-        worker.terminate();
+        cleanup();
         
         const response = data as SandboxResponse;
         resolve({
@@ -46,8 +75,8 @@ export function executeScript(script: string, context: any): Promise<ExecutionRe
     };
 
     worker.onerror = (err) => {
-      clearTimeout(timeoutId);
-      worker.terminate();
+      cleanup();
+      respawnWorker();
       reject(new Error(err.message || 'Unknown sandbox worker error'));
     };
 

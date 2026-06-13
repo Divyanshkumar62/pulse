@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { toast } from 'sonner';
-import { Camera, Trash2, X, Mail } from 'lucide-react';
+import { X, Mail } from 'lucide-react';
 import { getGravatarUrl } from '../../utils/gravatar';
 
 interface UserProfileModalProps {
@@ -11,23 +11,30 @@ interface UserProfileModalProps {
 
 export default function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
   const { settings, updateSettings } = useSettingsStore();
+  
+  // Local transactional state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [githubUsername, setGithubUsername] = useState('');
   const [githubToken, setGithubToken] = useState('');
+  
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
 
   useEffect(() => {
-    if (settings) {
+    if (isOpen && settings) {
       setName(settings.name || '');
       setEmail(settings.email || '');
       setGithubUsername(settings.github_username || '');
       setGithubToken(settings.github_token || '');
+      setHasSaved(false);
     }
   }, [settings, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSave = async () => {
+    setIsSaving(true);
     try {
       await updateSettings({ 
         name, 
@@ -35,9 +42,15 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
         github_username: githubUsername || undefined,
         github_token: githubToken || undefined
       });
+      setIsSaving(false);
+      setHasSaved(true);
       toast.success('Profile updated successfully');
-      onClose();
+      setTimeout(() => {
+        setHasSaved(false);
+        onClose();
+      }, 800);
     } catch (e) {
+      setIsSaving(false);
       toast.error('Failed to save profile');
     }
   };
@@ -172,15 +185,25 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
         <div style={{ padding: '16px 24px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--border-default)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
           <button className="btn-secondary" onClick={onClose} style={{ padding: '8px 24px', borderRadius: '8px' }}>Cancel</button>
-          <button className="btn-primary" onClick={handleSave} style={{ padding: '8px 24px', borderRadius: '8px', fontWeight: 600 }}>Save Changes</button>
+          <button 
+            className="btn-primary" 
+            onClick={handleSave} 
+            disabled={isSaving}
+            style={{ 
+              padding: '8px 24px', 
+              borderRadius: '8px', 
+              fontWeight: 600,
+              minWidth: '100px',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              transform: isSaving ? 'scale(0.95)' : 'scale(1)',
+              backgroundColor: hasSaved ? '#10b981' : undefined,
+              borderColor: hasSaved ? '#10b981' : undefined
+            }}
+          >
+            {isSaving ? 'Saving...' : hasSaved ? 'Saved!' : 'Save Changes'}
+          </button>
         </div>
       </div>
-      
-      <style>{`
-        .avatar-hover-overlay:hover {
-            opacity: 1 !important;
-        }
-      `}</style>
     </div>
   );
 }

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { getVersion } from '@tauri-apps/api/app';
 import { useUpdater } from '../../hooks/useUpdater';
-
+import { toast } from 'sonner';
+import { UserSettings } from '../../hooks/useTauri';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -15,10 +16,22 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { updateAvailable, checkForUpdates } = useUpdater();
   const [isChecking, setIsChecking] = useState(false);
   const [checkMessage, setCheckMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
+
+  // Local transactional state
+  const [localSettings, setLocalSettings] = useState<UserSettings | null>(null);
 
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => setAppVersion('Unknown'));
   }, []);
+
+  useEffect(() => {
+    if (isOpen && settings) {
+      setLocalSettings({ ...settings });
+      setHasSaved(false);
+    }
+  }, [isOpen, settings]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -28,7 +41,28 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen || !settings) return null;
+  if (!isOpen || !settings || !localSettings) return null;
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateSettings(localSettings);
+      setIsSaving(false);
+      setHasSaved(true);
+      toast.success('Settings saved successfully');
+      setTimeout(() => {
+        setHasSaved(false);
+        onClose();
+      }, 800);
+    } catch (e) {
+      setIsSaving(false);
+      toast.error('Failed to save settings');
+    }
+  };
+
+  const updateLocal = (updates: Partial<UserSettings>) => {
+    setLocalSettings(prev => prev ? ({ ...prev, ...updates }) : null);
+  };
 
   return (
     <div 
@@ -77,8 +111,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   type="text"
                   className="text-input"
                   style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
-                  value={settings.name}
-                  onChange={(e) => updateSettings({ name: e.target.value })}
+                  value={localSettings.name}
+                  onChange={(e) => updateLocal({ name: e.target.value })}
                 />
               </div>
               <div>
@@ -87,8 +121,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   type="email"
                   className="text-input"
                   style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
-                  value={settings.email}
-                  onChange={(e) => updateSettings({ email: e.target.value })}
+                  value={localSettings.email}
+                  onChange={(e) => updateLocal({ email: e.target.value })}
                 />
               </div>
             </div>
@@ -103,23 +137,24 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   type="number"
                   className="text-input"
                   style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
-                  value={settings.default_timeout_secs}
-                  onChange={(e) => updateSettings({ default_timeout_secs: parseInt(e.target.value) || 30 })}
+                  value={localSettings.default_timeout_secs}
+                  onChange={(e) => updateLocal({ default_timeout_secs: parseInt(e.target.value) || 30 })}
                 />
               </div>
               <div>
-                <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>History Retention (days)</label>
+                <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>Request History Cleanup</label>
                 <select
                   className="text-input"
                   style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
-                  value={settings.history_retention_days}
-                  onChange={(e) => updateSettings({ history_retention_days: parseInt(e.target.value) })}
+                  value={localSettings.history_retention_days}
+                  onChange={(e) => updateLocal({ history_retention_days: parseInt(e.target.value) })}
                 >
-                  <option value={0}>Forever</option>
-                  <option value={7}>7 Days</option>
-                  <option value={30}>30 Days (Recommended)</option>
-                  <option value={90}>90 Days</option>
+                  <option value={0}>Keep Forever</option>
+                  <option value={7}>After 7 Days</option>
+                  <option value={30}>After 30 Days (Recommended)</option>
+                  <option value={90}>After 90 Days</option>
                 </select>
+              
               </div>
             </div>
             
@@ -127,8 +162,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-primary)' }}>
                 <input
                   type="checkbox"
-                  checked={settings.follow_redirects}
-                  onChange={(e) => updateSettings({ follow_redirects: e.target.checked })}
+                  checked={localSettings.follow_redirects}
+                  onChange={(e) => updateLocal({ follow_redirects: e.target.checked })}
                   style={{ width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }}
                 />
                 Follow HTTP Redirects
@@ -136,8 +171,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-primary)' }}>
                 <input
                   type="checkbox"
-                  checked={settings.verify_ssl}
-                  onChange={(e) => updateSettings({ verify_ssl: e.target.checked })}
+                  checked={localSettings.verify_ssl}
+                  onChange={(e) => updateLocal({ verify_ssl: e.target.checked })}
                   style={{ width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }}
                 />
                 Verify SSL Certificates
@@ -145,16 +180,16 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             </div>
 
             <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-primary)', marginBottom: settings.proxy_enabled ? '12px' : '0' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-primary)', marginBottom: localSettings.proxy_enabled ? '12px' : '0' }}>
                 <input
                   type="checkbox"
-                  checked={settings.proxy_enabled}
-                  onChange={(e) => updateSettings({ proxy_enabled: e.target.checked })}
+                  checked={localSettings.proxy_enabled}
+                  onChange={(e) => updateLocal({ proxy_enabled: e.target.checked })}
                   style={{ width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }}
                 />
                 Enable HTTP Proxy
               </label>
-              {settings.proxy_enabled && (
+              {localSettings.proxy_enabled && (
                 <div>
                   <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>Proxy URL (e.g. http://proxy.com:8080)</label>
                   <input
@@ -162,8 +197,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     className="text-input"
                     placeholder="http://user:pass@host:port"
                     style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
-                    value={settings.proxy_url || ''}
-                    onChange={(e) => updateSettings({ proxy_url: e.target.value })}
+                    value={localSettings.proxy_url || ''}
+                    onChange={(e) => updateLocal({ proxy_url: e.target.value })}
                   />
                 </div>
               )}
@@ -182,13 +217,13 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               ].map(theme => (
                 <div 
                   key={theme.id}
-                  onClick={() => updateSettings({ theme: theme.id })}
+                  onClick={() => updateLocal({ theme: theme.id })}
                   style={{
                     padding: '12px',
                     borderRadius: '10px',
                     border: '2px solid',
-                    borderColor: settings.theme === theme.id ? 'var(--accent-primary)' : 'var(--border-subtle)',
-                    backgroundColor: settings.theme === theme.id ? 'var(--accent-subtle)' : 'var(--bg-surface)',
+                    borderColor: localSettings.theme === theme.id ? 'var(--accent-primary)' : 'var(--border-subtle)',
+                    backgroundColor: localSettings.theme === theme.id ? 'var(--accent-subtle)' : 'var(--bg-surface)',
                     cursor: 'pointer',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     display: 'flex',
@@ -196,12 +231,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     gap: '10px'
                   }}
                   onMouseEnter={e => {
-                    if (settings.theme !== theme.id) {
+                    if (localSettings.theme !== theme.id) {
                       e.currentTarget.style.borderColor = 'var(--text-tertiary)';
                     }
                   }}
                   onMouseLeave={e => {
-                    if (settings.theme !== theme.id) {
+                    if (localSettings.theme !== theme.id) {
                       e.currentTarget.style.borderColor = 'var(--border-subtle)';
                     }
                   }}
@@ -248,8 +283,6 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     setCheckMessage(null);
                     await checkForUpdates();
                     setIsChecking(false);
-                    // It's a bit tricky to show "you are up to date" precisely because `checkForUpdates` handles setting global state.
-                    // If no update is available, we can set a temporary message.
                     if (!updateAvailable) {
                       setCheckMessage('You are on the latest version.');
                       setTimeout(() => setCheckMessage(null), 3000);
@@ -270,8 +303,25 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </section>
         </div>
 
-        <div style={{ padding: '16px 24px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--border-default)', display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="btn-primary" onClick={onClose} style={{ padding: '8px 24px', borderRadius: '8px', fontWeight: 600 }}>Done</button>
+        <div style={{ padding: '16px 24px', background: 'var(--bg-elevated)', borderTop: '1px solid var(--border-default)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button className="btn-secondary" onClick={onClose} style={{ padding: '8px 24px', borderRadius: '8px' }}>Cancel</button>
+          <button 
+            className="btn-primary" 
+            onClick={handleSave} 
+            disabled={isSaving}
+            style={{ 
+              padding: '8px 24px', 
+              borderRadius: '8px', 
+              fontWeight: 600,
+              minWidth: '100px',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              transform: isSaving ? 'scale(0.95)' : 'scale(1)',
+              backgroundColor: hasSaved ? '#10b981' : undefined,
+              borderColor: hasSaved ? '#10b981' : undefined
+            }}
+          >
+            {isSaving ? 'Saving...' : hasSaved ? 'Saved!' : 'Save Settings'}
+          </button>
         </div>
       </div>
     </div>
