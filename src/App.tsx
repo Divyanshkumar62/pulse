@@ -3,6 +3,7 @@ import AppShell from './components/layout/AppShell';
 import TabBar from './components/tabs/TabBar';
 import TabContent from './components/tabs/TabContent';
 import MonitorDashboard from './components/monitor/MonitorDashboardView';
+import LoadTestingView from './components/load-testing/LoadTestingView';
 import EnvironmentVariableEditor from './components/environments/EnvironmentVariableEditor';
 import FlowBuilder from './components/flow/FlowBuilder';
 import TeamPanel from './components/TeamPanel';
@@ -77,6 +78,7 @@ export default function App() {
   }, [initEnvStore, initSettingsStore, initTeamStore, initWorkspaceStore, initHistoryStore, initMockStore, initTabStore]);
 
   const showMonitorDashboard = sidebarTab === 'monitor' && selectedMonitorId;
+  const showLoadTestingDashboard = sidebarTab === 'load-testing';
   const showEnvironmentEditor = sidebarTab === 'environments' && selectedEnvironmentId;
   const showFlowBuilder = sidebarTab === 'flows';
   const showMockServerEditor = sidebarTab === 'mock-servers' && activeMockServerId;
@@ -87,6 +89,8 @@ export default function App() {
       <AppShell>
         {showMonitorDashboard ? (
           <MonitorDashboard />
+        ) : showLoadTestingDashboard ? (
+          <LoadTestingView />
         ) : showEnvironmentEditor ? (
           <EnvironmentVariableEditor />
         ) : showFlowBuilder ? (

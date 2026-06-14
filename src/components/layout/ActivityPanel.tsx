@@ -11,6 +11,7 @@ import EnvironmentsPanel from '../sidebar/EnvironmentsPanel';
 import CustomSelect from '../ui/CustomSelect';
 import MockServerPanel from '../sidebar/MockServerPanel';
 import MonitorSidebar from '../monitor/MonitorSidebar';
+import LoadTestingSidebar from '../load-testing/LoadTestingSidebar';
 import FlowSidebar from '../flow/FlowSidebar';
 import { useCollectionStore } from '../../stores/useCollectionStore';
 import { useWorkspaceStore } from '../../stores/useWorkspaceStore';
@@ -75,6 +76,12 @@ export default function ActivityPanel() {
             <path d="M16 7h6v6"></path>
           </svg>
         );
+      case 'load-testing':
+        return (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"></path>
+          </svg>
+        );
       default:
         return (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -93,6 +100,7 @@ export default function ActivityPanel() {
       case 'teams': return 'Teams';
       case 'mock-servers': return 'Mock Servers';
       case 'monitor': return 'Monitor';
+      case 'load-testing': return 'Load Testing';
       case 'flows': return 'Flow Builder';
       default: return 'Collections';
     }
@@ -112,6 +120,8 @@ export default function ActivityPanel() {
         return <MockServerPanel />;
       case 'monitor':
         return <MonitorSidebar />;
+      case 'load-testing':
+        return <LoadTestingSidebar />;
       case 'flows':
         return <FlowSidebar />;
       default:
