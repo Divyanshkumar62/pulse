@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { HttpResponse, Collection, HistoryEntry, Environment, Team, Invitation, TeamRole, RequestBody } from '../types';
+import type { LoadTestConfig } from '../types/loadTesting';
 
 export interface UserSettings {
   email: string;
@@ -245,4 +246,12 @@ export async function saveFlowsToDisk(workspacePath: string, flows: any[]): Prom
 
 export async function loadFlowsFromWorkspace(workspacePath: string): Promise<any[]> {
   return invoke('load_flows_from_workspace', { workspacePath });
+}
+
+export async function startLoadTest(config: LoadTestConfig): Promise<string> {
+  return invoke('start_load_test', { config });
+}
+
+export async function stopLoadTest(): Promise<boolean> {
+  return invoke('stop_load_test');
 }

@@ -912,6 +912,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .manage(http::load_testing::LoadTestManager::default())
         .invoke_handler(tauri::generate_handler![
 
             send_http_request,
@@ -970,6 +971,8 @@ pub fn run() {
             get_running_mock_servers,
             save_workspace_mock_servers,
             load_workspace_mock_servers,
+            http::load_testing::start_load_test,
+            http::load_testing::stop_load_test,
             script_runner::run_script,
             search::fuzzy_search,
             read_conflicted_file,
