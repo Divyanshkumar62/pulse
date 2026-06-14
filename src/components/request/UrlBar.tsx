@@ -4,6 +4,7 @@ import { HttpMethod } from '../../types';
 import { toast } from 'sonner';
 import { FileText, Server } from 'lucide-react';
 import { useMockStore } from '../../stores/useMockStore';
+import MethodSelector, { DEFAULT_METHOD_COLORS } from '../ui/MethodSelector';
 
 interface UrlBarProps {
   onSend: () => void;
@@ -14,78 +15,29 @@ interface UrlBarProps {
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'WS'];
 
-const METHOD_COLORS: Record<string, string> = {
-  GET: 'var(--method-get)',
-  POST: 'var(--method-post)',
-  PUT: 'var(--method-put)',
-  DELETE: 'var(--method-delete)',
-  PATCH: 'var(--method-patch)',
-  HEAD: 'var(--method-head)',
-  OPTIONS: 'var(--method-options)',
-  WS: '#10b981', // emerald green for websockets
-};
-
 export default function UrlBar({ onSend, onCode, onSave, isLoading }: UrlBarProps) {
   const { updateActiveTabRequest, tabs, activeTabId } = useTabStore();
   const { createMockFromRequest } = useMockStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const request = activeTab?.request;
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   if (!request) return null;
 
   const isWebSocket = request.method === 'WS' || request.url?.startsWith('ws://') || request.url?.startsWith('wss://');
-  const currentColor = METHOD_COLORS[request.method] || 'var(--accent-primary)';
 
   return (
     <div className="url-bar-container">
       <div className="url-bar-glass">
         {!isWebSocket && (
-          <div className="method-selector" ref={dropdownRef}>
-            <button
-              className="method-select-premium"
-              style={{ color: currentColor }}
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-            >
-              {request.method}
-            </button>
-            <div className="method-chevron" style={{ color: currentColor }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </div>
-            {dropdownOpen && (
-              <div className="method-dropdown-glass">
-                {METHODS.map(m => (
-                  <button
-                    key={m}
-                    className={`method-dropdown-item ${request.method === m ? 'active' : ''}`}
-                    style={{ '--method-color': METHOD_COLORS[m] } as React.CSSProperties}
-                    onClick={() => {
-                      updateActiveTabRequest({ method: m });
-                      setDropdownOpen(false);
-                    }}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <MethodSelector
+            method={request.method}
+            methods={METHODS}
+            onChange={(m) => updateActiveTabRequest({ method: m })}
+            disabled={isLoading}
+          />
         )}
         
-        {isWebSocket && dropdownOpen === false && request.method === 'WS' === false && (
+        {isWebSocket && request.method !== 'WS' && (
           <div className="ws-indicator">
             <span className="ws-dot"></span>
             WS

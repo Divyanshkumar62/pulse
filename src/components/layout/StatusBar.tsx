@@ -1,8 +1,10 @@
 import { useTabStore } from '../../stores/useTabStore';
+import { useLoadTestStore } from '../../stores/useLoadTestStore';
 import '../../styles/components/status-bar.css';
 
 export default function StatusBar() {
   const { tabs, activeTabId } = useTabStore();
+  const { currentStage, currentRunId, currentSnapshot } = useLoadTestStore();
   const activeTab = tabs.find(t => t.id === activeTabId);
   const response = activeTab?.response;
   
@@ -27,6 +29,13 @@ export default function StatusBar() {
             <span className="summary-pill">HTTP</span>
             <span className="summary-status">{response.status} {response.status_text}</span>
             <span className="summary-item">{response.time_ms}ms</span>
+          </div>
+        )}
+        {(currentStage === 'STARTED' || currentStage === 'RUNNING') && (
+          <div className="status-response-summary">
+            <span className="summary-pill">LOAD</span>
+            <span className="summary-status">{currentRunId?.slice(0, 8)}… {currentStage.toLowerCase()}</span>
+            <span className="summary-item">{Math.round(currentSnapshot?.rps || 0)} rps</span>
           </div>
         )}
         
