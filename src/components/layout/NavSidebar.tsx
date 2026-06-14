@@ -5,7 +5,7 @@ import {
   Users, 
   Clock, 
   Database, 
-  Activity, 
+  MonitorCheck, 
   Gauge, 
   Workflow,
   PanelLeft,
@@ -45,7 +45,7 @@ export default function NavSidebar() {
     { 
       id: 'monitor', 
       label: 'Monitor',
-      icon: <Activity size={20} />
+      icon: <MonitorCheck size={20} />
     },
     {
       id: 'load-testing',

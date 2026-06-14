@@ -15,6 +15,7 @@ use uuid::Uuid;
 pub const MAX_VUS: usize = 5000;
 pub const MAX_DURATION_SECONDS: u64 = 3600;
 pub const DEFAULT_MAX_INFLIGHT: usize = 2000;
+const DEFAULT_REQUEST_TIMEOUT_SECONDS: u64 = 30;
 
 const HEARTBEAT_INTERVAL_MS: u64 = 500;
 const HEARTBEAT_WINDOW_BUCKETS: usize = 10;
@@ -32,6 +33,14 @@ pub enum LoadMode {
     ConstantRPS { target_rps: u32 },
 }
 
+#[derive(Deserialize, Serialize, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Thresholds {
+    pub p95_max_ms: Option<u64>,
+    pub error_rate_max_percent: Option<f64>,
+    pub min_rps: Option<f64>,
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct LoadTestConfig {
@@ -46,6 +55,8 @@ pub struct LoadTestConfig {
     pub max_inflight_requests: Option<usize>,
     pub think_time_ms: Option<u64>,
     pub load_mode: LoadMode,
+    #[serde(default)]
+    pub thresholds: Option<Thresholds>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, PartialEq, Eq)]
@@ -55,6 +66,7 @@ pub enum ErrorCategory {
     DnsFailure,
     ConnectionRefused,
     TlsError,
+    Network,
     HttpError(u16),
     Other,
 }
@@ -86,7 +98,19 @@ pub struct MetricSnapshot {
     pub p95_latency_ms: u64,
     pub p99_latency_ms: u64,
     pub active_vus: usize,
+    pub peak_rps: f64,
+    pub lowest_rps: f64,
+    pub peak_concurrent_requests: usize,
     pub is_running: bool,
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ThresholdResult {
+    pub name: String,
+    pub passed: bool,
+    pub actual: f64,
+    pub expected: f64,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -98,6 +122,7 @@ pub struct FinalSummary {
     pub status_codes: HashMap<u16, u64>,
     pub errors: HashMap<String, u64>,
     pub completed_at_timestamp: u64,
+    pub thresholds: Option<Vec<ThresholdResult>>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
@@ -196,6 +221,9 @@ struct AggregatorState {
     byte_buckets: VecDeque<u64>,
     current_bucket_requests: u64,
     current_bucket_bytes: u64,
+    peak_rps: f64,
+    lowest_rps: Option<f64>,
+    peak_concurrent_requests: usize,
 }
 
 impl AggregatorState {
@@ -214,6 +242,9 @@ impl AggregatorState {
             byte_buckets: VecDeque::with_capacity(HEARTBEAT_WINDOW_BUCKETS),
             current_bucket_requests: 0,
             current_bucket_bytes: 0,
+            peak_rps: 0.0,
+            lowest_rps: None,
+            peak_concurrent_requests: 0,
         })
     }
 
@@ -252,9 +283,29 @@ impl AggregatorState {
         self.byte_buckets.push_back(self.current_bucket_bytes);
         self.current_bucket_requests = 0;
         self.current_bucket_bytes = 0;
+
+        // Update peak/lowest RPS based on current rolling window
+        let bucket_span_secs = (self.request_buckets.len() as f64) * (HEARTBEAT_INTERVAL_MS as f64 / 1000.0);
+        if bucket_span_secs > 0.0 {
+            let current_rps = self.request_buckets.iter().sum::<u64>() as f64 / bucket_span_secs;
+            if current_rps > self.peak_rps {
+                self.peak_rps = current_rps;
+            }
+            if current_rps > 0.0 {
+                match self.lowest_rps {
+                    Some(lowest) if current_rps < lowest => self.lowest_rps = Some(current_rps),
+                    None => self.lowest_rps = Some(current_rps),
+                    _ => {}
+                }
+            }
+        }
     }
 
-    fn snapshot(&self, active_requests: usize, active_vus: usize, is_running: bool) -> MetricSnapshot {
+    fn snapshot(&mut self, active_requests: usize, active_vus: usize, is_running: bool) -> MetricSnapshot {
+        if active_requests > self.peak_concurrent_requests {
+            self.peak_concurrent_requests = active_requests;
+        }
+
         let total_requests = self.completed_requests.saturating_add(self.failed_requests);
         let bucket_span_secs = (self.request_buckets.len() as f64) * (HEARTBEAT_INTERVAL_MS as f64 / 1000.0);
         let rps = if bucket_span_secs > 0.0 {
@@ -307,6 +358,9 @@ impl AggregatorState {
             p95_latency_ms,
             p99_latency_ms,
             active_vus,
+            peak_rps: self.peak_rps,
+            lowest_rps: self.lowest_rps.unwrap_or(0.0),
+            peak_concurrent_requests: self.peak_concurrent_requests,
             is_running,
         }
     }
@@ -543,21 +597,18 @@ async fn execute_request(client: &Client, config: &LoadTestConfig) -> RequestRes
         Ok::<(u16, u64), reqwest::Error>((status_code, response_bytes))
     };
 
-    let result = if let Some(timeout_seconds) = config.request_timeout_seconds {
-        match tokio::time::timeout(Duration::from_secs(timeout_seconds), request_future).await {
-            Ok(inner_result) => inner_result,
-            Err(_) => {
-                return RequestResult {
-                    duration_ms: started_at.elapsed().as_millis() as u64,
-                    response_bytes: 0,
-                    is_success: false,
-                    status_code: None,
-                    error: Some(ErrorCategory::Timeout),
-                };
-            }
+    let timeout_seconds = config.request_timeout_seconds.unwrap_or(DEFAULT_REQUEST_TIMEOUT_SECONDS);
+    let result = match tokio::time::timeout(Duration::from_secs(timeout_seconds), request_future).await {
+        Ok(inner_result) => inner_result,
+        Err(_) => {
+            return RequestResult {
+                duration_ms: started_at.elapsed().as_millis() as u64,
+                response_bytes: 0,
+                is_success: false,
+                status_code: None,
+                error: Some(ErrorCategory::Timeout),
+            };
         }
-    } else {
-        request_future.await
     };
 
     let duration_ms = started_at.elapsed().as_millis() as u64;
@@ -622,6 +673,42 @@ async fn run_aggregator(
 
     aggregator.roll_window();
     let final_snapshot = aggregator.snapshot(0, active_vus.load(Ordering::SeqCst), false);
+    
+    let mut threshold_results = Vec::new();
+    if let Some(thresholds) = &config.thresholds {
+        if let Some(expected) = thresholds.p95_max_ms {
+            let actual = final_snapshot.p95_latency_ms as f64;
+            threshold_results.push(ThresholdResult {
+                name: "p95 Latency (ms)".to_string(),
+                passed: actual <= expected as f64,
+                actual,
+                expected: expected as f64,
+            });
+        }
+        if let Some(expected) = thresholds.error_rate_max_percent {
+            let error_rate = if final_snapshot.total_requests > 0 {
+                (final_snapshot.failed_requests as f64 / final_snapshot.total_requests as f64) * 100.0
+            } else {
+                0.0
+            };
+            threshold_results.push(ThresholdResult {
+                name: "Error Rate (%)".to_string(),
+                passed: error_rate <= expected,
+                actual: error_rate,
+                expected,
+            });
+        }
+        if let Some(expected) = thresholds.min_rps {
+            let actual = final_snapshot.rps;
+            threshold_results.push(ThresholdResult {
+                name: "Minimum RPS".to_string(),
+                passed: actual >= expected,
+                actual,
+                expected,
+            });
+        }
+    }
+
     let final_summary = FinalSummary {
         run_id,
         config,
@@ -629,6 +716,7 @@ async fn run_aggregator(
         status_codes: aggregator.status_codes,
         errors: serialize_error_counts(aggregator.errors),
         completed_at_timestamp: current_timestamp_ms(),
+        thresholds: Some(threshold_results),
     };
 
     let _ = app.emit(SNAPSHOT_EVENT, final_snapshot);
@@ -749,6 +837,10 @@ fn classify_reqwest_error(error: &reqwest::Error) -> ErrorCategory {
         return ErrorCategory::TlsError;
     }
 
+    if error.is_connect() || error.is_request() {
+        return ErrorCategory::Network;
+    }
+
     ErrorCategory::Other
 }
 
@@ -761,12 +853,21 @@ fn serialize_error_counts(errors: HashMap<ErrorCategory, u64>) -> HashMap<String
 
 fn error_category_key(category: &ErrorCategory) -> String {
     match category {
-        ErrorCategory::Timeout => "TIMEOUT".to_string(),
-        ErrorCategory::DnsFailure => "DNS_FAILURE".to_string(),
-        ErrorCategory::ConnectionRefused => "CONNECTION_REFUSED".to_string(),
-        ErrorCategory::TlsError => "TLS_ERROR".to_string(),
-        ErrorCategory::HttpError(status_code) => format!("HTTP_ERROR_{status_code}"),
-        ErrorCategory::Other => "OTHER".to_string(),
+        ErrorCategory::Timeout => "Timeout".to_string(),
+        ErrorCategory::DnsFailure => "DNS".to_string(),
+        ErrorCategory::ConnectionRefused => "Connection Refused".to_string(),
+        ErrorCategory::TlsError => "TLS".to_string(),
+        ErrorCategory::Network => "Network".to_string(),
+        ErrorCategory::HttpError(status_code) => {
+            if (400..500).contains(status_code) {
+                "HTTP 4xx".to_string()
+            } else if (500..600).contains(status_code) {
+                "HTTP 5xx".to_string()
+            } else {
+                format!("HTTP {status_code}")
+            }
+        },
+        ErrorCategory::Other => "Other".to_string(),
     }
 }
 
@@ -858,6 +959,7 @@ mod tests {
             max_inflight_requests: Some(25),
             think_time_ms: Some(50),
             load_mode: LoadMode::ConstantVU,
+            thresholds: None,
         }
     }
 
@@ -926,6 +1028,9 @@ mod tests {
             p95_latency_ms: 10,
             p99_latency_ms: 10,
             active_vus: 1,
+            peak_rps: 2.0,
+            lowest_rps: 2.0,
+            peak_concurrent_requests: 1,
             is_running: true,
         };
 
@@ -990,11 +1095,16 @@ mod tests {
                 p95_latency_ms: 10,
                 p99_latency_ms: 10,
                 active_vus: 1,
+                peak_rps: 1.0,
+                lowest_rps: 1.0,
+                peak_concurrent_requests: 1,
                 is_running: false,
-            },
+                },
+
             status_codes: HashMap::from([(200, 1)]),
-            errors: HashMap::from([("TIMEOUT".to_string(), 1)]),
+            errors: HashMap::from([("Timeout".to_string(), 1)]),
             completed_at_timestamp: 1,
+            thresholds: None,
         };
 
         let json = serde_json::to_value(summary).unwrap();

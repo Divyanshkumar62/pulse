@@ -48,6 +48,7 @@ export function buildLoadTestConfig(draft: LoadTestConfigDraft): LoadTestConfig 
       draft.loadMode.type === 'constantRPS'
         ? { type: 'constantRPS', targetRps: draft.loadMode.targetRps }
         : { type: 'constantVU' },
+    thresholds: draft.thresholds,
   };
 }
 
@@ -65,6 +66,7 @@ export function normalizeLoadTestSummary(
     outcome,
     timeline: [],
     lifecycleEvents: [],
+    thresholds: raw.thresholds,
   };
 }
 
@@ -183,6 +185,57 @@ export async function exportLoadTestSummary(
 
   await writeTextFile(filePath, content);
   return true;
+}
+
+export interface RegressionComparison {
+  metric: string;
+  runA: number;
+  runB: number;
+  delta: number;
+  percentageDelta: number;
+  isRegression: boolean;
+}
+
+export function compareReports(runA: LoadTestSummary, runB: LoadTestSummary): RegressionComparison[] {
+  const errorRateA = runA.metrics.totalRequests > 0 ? (runA.metrics.failedRequests / runA.metrics.totalRequests) * 100 : 0;
+  const errorRateB = runB.metrics.totalRequests > 0 ? (runB.metrics.failedRequests / runB.metrics.totalRequests) * 100 : 0;
+
+  const compare = (metric: string, a: number, b: number, lowerIsBetter: boolean): RegressionComparison => {
+    const delta = a - b;
+    const percentageDelta = b > 0 ? (delta / b) * 100 : (a > 0 ? 100 : 0);
+    const isRegression = lowerIsBetter ? delta > 0 : delta < 0;
+    return { metric, runA: a, runB: b, delta, percentageDelta, isRegression };
+  };
+
+  return [
+    compare('Total Requests', runA.metrics.totalRequests, runB.metrics.totalRequests, false),
+    compare('Error Rate (%)', errorRateA, errorRateB, true),
+    compare('Average Latency (ms)', runA.metrics.avgLatencyMs, runB.metrics.avgLatencyMs, true),
+    compare('P50 Latency (ms)', runA.metrics.p50LatencyMs, runB.metrics.p50LatencyMs, true),
+    compare('P95 Latency (ms)', runA.metrics.p95LatencyMs, runB.metrics.p95LatencyMs, true),
+    compare('P99 Latency (ms)', runA.metrics.p99LatencyMs, runB.metrics.p99LatencyMs, true),
+    compare('Peak RPS', runA.metrics.peakRps, runB.metrics.peakRps, false),
+    compare('Lowest RPS', runA.metrics.lowestRps, runB.metrics.lowestRps, false),
+    compare('Peak Concurrent Reqs', runA.metrics.peakConcurrentRequests, runB.metrics.peakConcurrentRequests, false),
+  ];
+}
+
+export interface SoakTestInsights {
+  peakRps: number;
+  lowestRps: number;
+  peakConcurrentRequests: number;
+  testDurationSeconds: number;
+  averageThroughput: number;
+}
+
+export function generateSoakInsights(summary: LoadTestSummary): SoakTestInsights {
+  return {
+    peakRps: summary.metrics.peakRps,
+    lowestRps: summary.metrics.lowestRps,
+    peakConcurrentRequests: summary.metrics.peakConcurrentRequests,
+    testDurationSeconds: summary.config.durationSeconds,
+    averageThroughput: summary.metrics.rps,
+  };
 }
 
 function normalizeOptionalNumber(value: number | undefined): number | null {

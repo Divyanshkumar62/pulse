@@ -4,7 +4,10 @@ import {
   normalizeCountMap,
   normalizeLoadTestSummary,
   summaryToCsv,
+  compareReports,
+  generateSoakInsights,
 } from '../loadTesting';
+import { LoadTestSummary } from '../../types/loadTesting';
 
 describe('loadTesting service', () => {
   it('builds backend config payload from draft values', () => {
@@ -23,11 +26,15 @@ describe('loadTesting service', () => {
       maxInflightRequests: 100,
       thinkTimeMs: 25,
       loadMode: { type: 'constantRPS', targetRps: 50 },
+      thresholds: {
+        p95MaxMs: 300
+      }
     });
 
     expect(config.headers).toEqual({ Authorization: 'Bearer abc' });
     expect(config.body).toBe('{"hello":"world"}');
     expect(config.loadMode).toEqual({ type: 'constantRPS', targetRps: 50 });
+    expect(config.thresholds).toEqual({ p95MaxMs: 300 });
   });
 
   it('normalizes count maps from object and array payloads', () => {
@@ -73,6 +80,9 @@ describe('loadTesting service', () => {
           p95LatencyMs: 220,
           p99LatencyMs: 300,
           activeVus: 0,
+          peakRps: 30,
+          lowestRps: 5,
+          peakConcurrentRequests: 10,
           isRunning: false,
         },
         statusCodes: { '200': 98, '500': 2 },
@@ -87,5 +97,48 @@ describe('loadTesting service', () => {
     expect(csv).toContain('meta,runId,run-123');
     expect(csv).toContain('statusCodes,200,98');
     expect(csv).toContain('errors,TIMEOUT,2');
+  });
+
+  it('generates soak test insights correctly', () => {
+    const mockSummary = {
+      config: { durationSeconds: 60 },
+      metrics: { 
+        rps: 10, 
+        activeRequests: 5,
+        peakRps: 20,
+        lowestRps: 2,
+        peakConcurrentRequests: 10
+      },
+      timeline: []
+    } as unknown as LoadTestSummary;
+
+    const insights = generateSoakInsights(mockSummary);
+    expect(insights.peakRps).toBe(20);
+    expect(insights.lowestRps).toBe(2);
+    expect(insights.peakConcurrentRequests).toBe(10);
+    expect(insights.testDurationSeconds).toBe(60);
+    expect(insights.averageThroughput).toBe(10);
+  });
+
+  it('compares reports and detects regressions', () => {
+    const runA = {
+      metrics: { totalRequests: 200, failedRequests: 20, avgLatencyMs: 300, p50LatencyMs: 250, p95LatencyMs: 400, p99LatencyMs: 500 }
+    } as unknown as LoadTestSummary;
+    const runB = {
+      metrics: { totalRequests: 100, failedRequests: 2, avgLatencyMs: 100, p50LatencyMs: 80, p95LatencyMs: 150, p99LatencyMs: 200 }
+    } as unknown as LoadTestSummary;
+
+    const comparison = compareReports(runA, runB);
+    const p95Comp = comparison.find(c => c.metric === 'P95 Latency (ms)');
+    expect(p95Comp?.isRegression).toBe(true);
+    expect(p95Comp?.delta).toBe(250);
+
+    const reqComp = comparison.find(c => c.metric === 'Total Requests');
+    expect(reqComp?.isRegression).toBe(false); // Higher is better for total requests
+    expect(reqComp?.delta).toBe(100);
+
+    const errComp = comparison.find(c => c.metric === 'Error Rate (%)');
+    expect(errComp?.isRegression).toBe(true); // runA error rate is 10%, runB is 2%
+    expect(errComp?.delta).toBe(8);
   });
 });

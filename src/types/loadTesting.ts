@@ -13,6 +13,12 @@ export type LoadTestModeDraft =
   | { type: 'constantVU' }
   | { type: 'constantRPS'; targetRps: number };
 
+export interface Thresholds {
+  p95MaxMs?: number | null;
+  errorRateMaxPercent?: number | null;
+  minRps?: number | null;
+}
+
 export interface LoadTestConfigDraft {
   url: string;
   method: LoadTestMethod;
@@ -25,6 +31,7 @@ export interface LoadTestConfigDraft {
   maxInflightRequests?: number;
   thinkTimeMs?: number;
   loadMode: LoadTestModeDraft;
+  thresholds?: Thresholds;
 }
 
 export type LoadTestMode =
@@ -43,6 +50,7 @@ export interface LoadTestConfig {
   maxInflightRequests?: number | null;
   thinkTimeMs?: number | null;
   loadMode: LoadTestMode;
+  thresholds?: Thresholds;
 }
 
 export interface MetricSnapshot {
@@ -61,6 +69,9 @@ export interface MetricSnapshot {
   p95LatencyMs: number;
   p99LatencyMs: number;
   activeVus: number;
+  peakRps: number;
+  lowestRps: number;
+  peakConcurrentRequests: number;
   isRunning: boolean;
 }
 
@@ -69,6 +80,13 @@ export interface LoadTestLifecycleEvent {
   stage: LoadTestLifecycleStage;
   message?: string | null;
   timestamp: number;
+}
+
+export interface ThresholdResult {
+  name: string;
+  passed: boolean;
+  actual: number;
+  expected: number;
 }
 
 export interface LoadTestSummary {
@@ -81,6 +99,7 @@ export interface LoadTestSummary {
   outcome: Extract<LoadTestLifecycleStage, 'COMPLETED' | 'CANCELLED' | 'FAILED'>;
   timeline: LoadTestTimelinePoint[];
   lifecycleEvents: LoadTestLifecycleEvent[];
+  thresholds?: ThresholdResult[] | null;
 }
 
 export interface LoadTestSummaryRaw {
@@ -90,6 +109,7 @@ export interface LoadTestSummaryRaw {
   statusCodes?: unknown;
   errors?: unknown;
   completedAtTimestamp: number;
+  thresholds?: ThresholdResult[] | null;
 }
 
 export interface LoadTestTimelinePoint {

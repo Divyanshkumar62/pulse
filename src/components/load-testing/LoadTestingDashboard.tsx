@@ -1,9 +1,10 @@
-import { BarChart3, CircleOff, Download, Gauge, Layers3, Radar, Timer, Zap, History, LayoutPanelLeft, Plus } from 'lucide-react';
+import { BarChart3, CircleOff, Download, Gauge, Layers3, Radar, Timer, Zap, History, LayoutPanelLeft, Plus, CheckCircle2, XCircle, ArrowRightLeft, TrendingUp, TrendingDown, Activity, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { useState } from 'react';
 import EmptyState from '../ui/EmptyState';
-import { formatLifecycleLabel } from '../../services/loadTesting';
+import { formatLifecycleLabel, generateSoakInsights, compareReports } from '../../services/loadTesting';
 import { stopLoadTest } from '../../hooks/useTauri';
 import { useLoadTestStore } from '../../stores/useLoadTestStore';
 import '../../styles/components/load-testing.css';
@@ -24,6 +25,9 @@ export default function LoadTestingDashboard() {
     draftConfig,
   } = useLoadTestStore();
 
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareTargetId, setCompareTargetId] = useState<string | null>(null);
+
   const isLive = currentStage === 'STARTED' || currentStage === 'RUNNING';
   const displayedReport =
     (selectedReportRunId && reports.find((report) => report.runId === selectedReportRunId)) ||
@@ -34,6 +38,11 @@ export default function LoadTestingDashboard() {
   const displayedTimeline = isLive ? liveTimeline : displayedReport?.timeline || [];
   const displayedEvents = isLive ? liveLifecycleEvents : displayedReport?.lifecycleEvents || [];
   const displayedStage = isLive ? currentStage : displayedReport?.outcome || 'IDLE';
+  const displayedThresholds = displayedReport?.thresholds || null;
+  const soakInsights = displayedReport ? generateSoakInsights(displayedReport) : null;
+  
+  const compareTargetReport = reports.find(r => r.runId === compareTargetId);
+  const comparisonResults = (displayedReport && compareTargetReport) ? compareReports(compareTargetReport, displayedReport) : null;
   
   // Use config from report if available, otherwise from draft
   const method = displayedReport?.config.method || draftConfig.method;
@@ -78,8 +87,14 @@ export default function LoadTestingDashboard() {
       
       const defaultPath = `pulse-loadtest-${displayedReport.config.method}-${hostname}-${timestamp}.${format}`;
 
+      const exportData = {
+        ...displayedReport,
+        insights: soakInsights,
+        comparison: comparisonResults
+      };
+
       if (format === 'json') {
-        content = JSON.stringify(displayedReport, null, 2);
+        content = JSON.stringify(exportData, null, 2);
       } else {
         // Simple CSV format
         const rows = [
@@ -92,14 +107,28 @@ export default function LoadTestingDashboard() {
           ['Duration', `${displayedReport.config.durationSeconds}s`],
           [],
           ['Metric', 'Value'],
-          ['Total Requests', displayedReport.metrics.completedRequests + displayedReport.metrics.failedRequests],
-          ['Completed', displayedReport.metrics.completedRequests],
-          ['Failed', displayedReport.metrics.failedRequests],
-          ['Avg RPS', displayedReport.metrics.rps.toFixed(2)],
-          ['Avg Latency (ms)', displayedReport.metrics.avgLatencyMs.toFixed(2)],
-          ['P95 Latency (ms)', displayedReport.metrics.p95LatencyMs.toFixed(2)],
-          ['Max Latency (ms)', displayedReport.metrics.maxLatencyMs.toFixed(2)],
+          ['Total Requests', (displayedReport.metrics.completedRequests ?? 0) + (displayedReport.metrics.failedRequests ?? 0)],
+          ['Completed', displayedReport.metrics.completedRequests ?? 0],
+          ['Failed', displayedReport.metrics.failedRequests ?? 0],
+          ['Avg RPS', (displayedReport.metrics.rps ?? 0).toFixed(2)],
+          ['Peak RPS', soakInsights ? (soakInsights.peakRps ?? 0).toFixed(2) : 'N/A'],
+          ['Avg Latency (ms)', (displayedReport.metrics.avgLatencyMs ?? 0).toFixed(2)],
+          ['P95 Latency (ms)', (displayedReport.metrics.p95LatencyMs ?? 0).toFixed(2)],
+          ['Max Latency (ms)', (displayedReport.metrics.maxLatencyMs ?? 0).toFixed(2)],
         ];
+
+        if (displayedThresholds && displayedThresholds.length > 0) {
+          rows.push([]);
+          rows.push(['Threshold', 'Expected', 'Actual', 'Passed']);
+          displayedThresholds.forEach(t => rows.push([t.name, t.expected, (t.actual ?? 0).toFixed(2), t.passed ? 'YES' : 'NO']));
+        }
+
+        if (comparisonResults) {
+          rows.push([]);
+          rows.push(['Regression Comparison', 'Baseline', 'Current', 'Delta %', 'Regression?']);
+          comparisonResults.forEach(c => rows.push([c.metric, (c.runB ?? 0).toFixed(2), (c.runA ?? 0).toFixed(2), (c.percentageDelta ?? 0).toFixed(2), c.isRegression ? 'YES' : 'NO']));
+        }
+
         content = rows.map(row => row.join(',')).join('\n');
       }
 
@@ -229,7 +258,7 @@ export default function LoadTestingDashboard() {
           subtitle="Requests per second (500ms snapshots)"
           points={displayedTimeline}
           accessor={(point) => point.rps}
-          formatValue={(value) => `${value.toFixed(0)} rps`}
+          formatValue={(value) => `${(value ?? 0).toFixed(0)} rps`}
           stroke="var(--accent-primary)"
           fill="rgba(0, 112, 243, 0.14)"
         />
@@ -238,13 +267,136 @@ export default function LoadTestingDashboard() {
           subtitle="P95 response time (ms)"
           points={displayedTimeline}
           accessor={(point) => point.p95LatencyMs}
-          formatValue={(value) => `${value.toFixed(0)} ms`}
+          formatValue={(value) => `${(value ?? 0).toFixed(0)} ms`}
           stroke="#f59e0b"
           fill="rgba(245, 158, 11, 0.14)"
         />
       </div>
 
-      <div className="load-test-summary-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+      {/* Phase 2: Performance Validation & Insights */}
+      {displayedReport && (
+          <div className="load-test-summary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '24px' }}>
+              <div className="load-test-card">
+                  <div className="load-test-card-header" style={{ marginBottom: '16px' }}>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Shield size={16} className="text-accent" />
+                          Performance Validation
+                      </h3>
+                  </div>
+                  {displayedThresholds && displayedThresholds.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {displayedThresholds.map((t, idx) => (
+                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', borderLeft: `3px solid ${t.passed ? '#10b981' : '#ef4444'}` }}>
+                                  {t.passed ? <CheckCircle2 size={16} color="#10b981" /> : <XCircle size={16} color="#ef4444" />}
+                                  <div style={{ flex: 1 }}>
+                                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{t.name}</div>
+                                      <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                                          Actual: {(t.actual ?? 0).toFixed(2)} | Expected: {t.name.includes('Rate') || t.name.includes('Latency') ? '<=' : '>='} {t.expected}
+                                      </div>
+                                  </div>
+                                  <div style={{ fontSize: '11px', fontWeight: 800, color: t.passed ? '#10b981' : '#ef4444' }}>
+                                      {t.passed ? 'PASS' : 'FAIL'}
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                      <div className="load-test-placeholder">No thresholds configured for this run.</div>
+                  )}
+              </div>
+
+              <div className="load-test-card">
+                  <div className="load-test-card-header" style={{ marginBottom: '16px' }}>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Activity size={16} className="text-accent" />
+                          Soak Test Insights
+                      </h3>
+                  </div>
+                  {soakInsights ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Peak Throughput</span>
+                              <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{(soakInsights.peakRps ?? 0).toFixed(0)} RPS</strong>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Lowest Throughput</span>
+                              <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{(soakInsights.lowestRps ?? 0).toFixed(0)} RPS</strong>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Peak Concurrent Reqs</span>
+                              <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{soakInsights.peakConcurrentRequests ?? 0}</strong>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Test Duration</span>
+                              <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{soakInsights.testDurationSeconds ?? 0}s</strong>
+                          </div>
+                      </div>
+                  ) : (
+                      <div className="load-test-placeholder">Insights unavailable for active runs.</div>
+                  )}
+              </div>
+          </div>
+      )}
+
+      {/* Phase 2: Report Comparison Mode */}
+      {!isLive && displayedReport && (
+          <div className="load-test-card" style={{ marginTop: '24px' }}>
+              <div className="load-test-card-header" style={{ marginBottom: '16px' }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <ArrowRightLeft size={16} className="text-accent" />
+                      Report Comparison
+                  </h3>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Compare with:</span>
+                      <select 
+                          className="text-input" 
+                          style={{ padding: '4px 8px', fontSize: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '4px', color: 'var(--text-primary)' }}
+                          value={compareTargetId || ''}
+                          onChange={(e) => setCompareTargetId(e.target.value || null)}
+                      >
+                          <option value="">Select a run...</option>
+                          {reports.filter(r => r.runId !== displayedReport.runId).map(r => (
+                              <option key={r.runId} value={r.runId}>
+                                  {new Date(r.completedAtTimestamp).toLocaleString()} ({r.runId.slice(0,8)})
+                              </option>
+                          ))}
+                      </select>
+                  </div>
+              </div>
+              
+              {compareTargetReport && comparisonResults ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                          <div>METRIC</div>
+                          <div>BASELINE (Run B)</div>
+                          <div>CURRENT (Run A)</div>
+                          <div>DELTA</div>
+                      </div>
+                      {comparisonResults.map((res, idx) => (
+                          <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '12px', borderBottom: '1px solid var(--border-subtle)', fontSize: '12px', alignItems: 'center' }}>
+                              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{res.metric}</div>
+                              <div style={{ color: 'var(--text-secondary)' }}>{res.runB.toFixed(1)}</div>
+                              <div style={{ color: 'var(--text-secondary)' }}>{res.runA.toFixed(1)}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: res.isRegression ? '#ef4444' : (res.percentageDelta === 0 ? 'var(--text-tertiary)' : '#10b981'), fontWeight: 600 }}>
+                                  {res.isRegression ? <TrendingUp size={14} /> : (res.percentageDelta !== 0 && <TrendingDown size={14} />)}
+                                  {res.delta > 0 ? '+' : ''}{res.delta.toFixed(1)} ({res.percentageDelta.toFixed(1)}%)
+                              </div>
+                          </div>
+                      ))}
+                      {comparisonResults.some(r => r.isRegression) && (
+                          <div style={{ padding: '12px', marginTop: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '6px', fontSize: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <Shield size={14} />
+                              <strong>Warning:</strong> Performance regressions detected compared to baseline.
+                          </div>
+                      )}
+                  </div>
+              ) : (
+                  <div className="load-test-placeholder">Select a historical run from the dropdown to compare performance.</div>
+              )}
+          </div>
+      )}
+
+      <div className="load-test-summary-grid" style={{ gridTemplateColumns: '1fr 1fr', marginTop: '24px' }}>
         <div className="load-test-card" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="load-test-card-header" style={{ marginBottom: '16px' }}>
             <div>

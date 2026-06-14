@@ -240,6 +240,71 @@ export default function LoadTestingBuilder() {
                 </div>
             </div>
 
+            <div className="load-test-section" style={{ marginTop: '24px' }}>
+                <div className="load-test-card-header" style={{ marginBottom: '16px' }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Shield size={16} className="text-accent" />
+                    Performance Thresholds (Optional)
+                  </h3>
+                </div>
+                <div className="load-test-builder-controls">
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                            <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>Max P95 Latency (ms)</label>
+                            <input
+                                type="number"
+                                className="text-input"
+                                placeholder="e.g. 300"
+                                value={draftConfig.thresholds?.p95MaxMs || ''}
+                                disabled={isBusy}
+                                onChange={(e) => updateDraftConfig({ 
+                                    thresholds: { 
+                                        ...draftConfig.thresholds, 
+                                        p95MaxMs: e.target.value ? Number(e.target.value) : null 
+                                    } 
+                                })}
+                                style={{ width: '100%', padding: '8px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>Max Error Rate (%)</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                className="text-input"
+                                placeholder="e.g. 1.0"
+                                value={draftConfig.thresholds?.errorRateMaxPercent || ''}
+                                disabled={isBusy}
+                                onChange={(e) => updateDraftConfig({ 
+                                    thresholds: { 
+                                        ...draftConfig.thresholds, 
+                                        errorRateMaxPercent: e.target.value ? Number(e.target.value) : null 
+                                    } 
+                                })}
+                                style={{ width: '100%', padding: '8px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>Min Throughput (RPS)</label>
+                            <input
+                                type="number"
+                                className="text-input"
+                                placeholder="e.g. 500"
+                                value={draftConfig.thresholds?.minRps || ''}
+                                disabled={isBusy}
+                                onChange={(e) => updateDraftConfig({ 
+                                    thresholds: { 
+                                        ...draftConfig.thresholds, 
+                                        minRps: e.target.value ? Number(e.target.value) : null 
+                                    } 
+                                })}
+                                style={{ width: '100%', padding: '8px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div className="load-test-safety-limits">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', marginBottom: '8px' }}>
                     <Shield size={14} />
