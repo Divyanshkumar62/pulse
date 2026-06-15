@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from '@tauri-apps/api/app';
 import { ArrowDownToLine, RefreshCw, X } from 'lucide-react';
@@ -12,6 +13,10 @@ export function UpdateModal({ update, onClose }: UpdateModalProps) {
   const [isInstalling, setIsInstalling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentVersion, setCurrentVersion] = useState<string>('Loading...');
+
+  const [hoveredClose, setHoveredClose] = useState(false);
+  const [hoveredSub, setHoveredSub] = useState(false);
+  const [hoveredMain, setHoveredMain] = useState(false);
 
   useEffect(() => {
     getVersion().then(setCurrentVersion).catch(() => setCurrentVersion('Unknown'));
@@ -33,136 +38,296 @@ export function UpdateModal({ update, onClose }: UpdateModalProps) {
     }
   };
 
-  return (
-    <>
-      <style>{`
-        .pulse-updater-overlay {
-          position: fixed; inset: 0; z-index: 99999;
-          display: flex; align-items: center; justify-content: center;
-          background-color: rgba(9, 9, 11, 0.85);
-          backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-          animation: pulseFadeIn 0.2s ease-out forwards;
-        }
-        .pulse-updater-card {
-          width: 90%; max-width: 440px;
-          background: linear-gradient(145deg, rgba(30,32,40,0.98), rgba(20,21,26,1));
-          border: 1px solid rgba(59, 130, 246, 0.3);
-          border-top: 1px solid rgba(59, 130, 246, 0.5);
-          box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7), 0 0 40px -10px rgba(59,130,246,0.2);
-          border-radius: 16px; overflow: hidden;
-          display: flex; flex-direction: column; font-family: sans-serif;
-          animation: pulseScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes pulseFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes pulseScaleUp { from { opacity: 0; transform: scale(0.96) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        .pulse-updater-header { display: flex; justify-content: space-between; padding: 20px 24px 0; }
-        .pulse-updater-title { font-size: 13px; font-weight: 700; color: #60A5FA; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
-        .pulse-updater-close { background: none; border: none; color: #6B7280; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
-        .pulse-updater-close:hover { background: rgba(255,255,255,0.1); color: #FFF; }
-        .pulse-updater-body { padding: 16px 24px 24px; display: flex; flex-direction: column; align-items: center; }
-        .pulse-updater-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: #60A5FA; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
-        .pulse-updater-headline { font-size: 22px; font-weight: 600; color: #FFFFFF; margin: 0 0 24px; text-align: center; }
-        .pulse-updater-badge { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; box-sizing: border-box; }
-        .pulse-updater-row { display: flex; justify-content: space-between; font-size: 13px; color: #9CA3AF; margin-bottom: 8px; }
-        .pulse-updater-row:last-child { margin-bottom: 0; }
-        .pulse-updater-row span:last-child { color: #E5E7EB; font-family: monospace; }
-        .pulse-updater-row.new span:last-child { color: #60A5FA; font-weight: 600; }
-        .pulse-updater-notes-box { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; font-size: 13px; color: #D1D5DB; max-height: 140px; overflow-y: auto; margin-bottom: 24px; box-sizing: border-box; text-align: left; }
-        .pulse-updater-notes-title { font-size: 11px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; margin: 0 0 8px 0; }
-        .pulse-updater-desc { font-size: 14px; color: #9CA3AF; text-align: center; line-height: 1.5; margin: 0 0 24px; }
-        .pulse-updater-actions { display: flex; width: 100%; gap: 12px; }
-        .pulse-updater-btn { flex: 1; height: 44px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; border: none; transition: 0.2s; }
-        .pulse-updater-btn-sub { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #E5E7EB; }
-        .pulse-updater-btn-sub:hover { background: rgba(255,255,255,0.1); color: #FFF; }
-        .pulse-updater-btn-main { background: #2563EB; border: 1px solid #3B82F6; color: #FFF; box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
-        .pulse-updater-btn-main:hover { background: #3B82F6; }
-        .pulse-updater-error { width: 100%; padding: 12px; background: rgba(231, 76, 60, 0.15); border: 1px solid rgba(231, 76, 60, 0.2); border-radius: 8px; color: #f87171; font-size: 12px; line-height: 1.4; margin-bottom: 16px; word-break: break-all; box-sizing: border-box; }
-      `}</style>
-      <div className="pulse-updater-overlay" onClick={(e) => {
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 99999,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(9, 9, 11, 0.85)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+  };
+
+  const cardStyle: React.CSSProperties = {
+    width: '90%',
+    maxWidth: '440px',
+    background: 'linear-gradient(145deg, rgba(30,32,40,0.98), rgba(20,21,26,1))',
+    border: '1px solid rgba(59, 130, 246, 0.3)',
+    borderTop: '1px solid rgba(59, 130, 246, 0.5)',
+    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7), 0 0 40px -10px rgba(59,130,246,0.2)',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  };
+
+  const headerStyle: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '20px 24px 0',
+  };
+
+  const titleStyle: React.CSSProperties = {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#60A5FA',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    margin: 0,
+  };
+
+  const closeStyle: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    color: hoveredClose ? '#FFF' : '#6B7280',
+    backgroundColor: hoveredClose ? 'rgba(255,255,255,0.1)' : 'transparent',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '6px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: '0.2s',
+  };
+
+  const bodyStyle: React.CSSProperties = {
+    padding: '16px 24px 24px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  };
+
+  const iconStyle: React.CSSProperties = {
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    backgroundColor: 'rgba(59,130,246,0.1)',
+    border: '1px solid rgba(59,130,246,0.3)',
+    color: '#60A5FA',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '20px',
+  };
+
+  const headlineStyle: React.CSSProperties = {
+    fontSize: '22px',
+    fontWeight: 600,
+    color: '#FFFFFF',
+    margin: '0 0 24px',
+    textAlign: 'center',
+  };
+
+  const badgeStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'rgba(0,0,0,0.3)',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderRadius: '10px',
+    padding: '12px 16px',
+    marginBottom: '20px',
+    boxSizing: 'border-box',
+  };
+
+  const rowStyle: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '13px',
+    color: '#9CA3AF',
+    marginBottom: '8px',
+  };
+
+  const lastRowStyle: React.CSSProperties = {
+    ...rowStyle,
+    marginBottom: 0,
+  };
+
+  const valStyle: React.CSSProperties = {
+    color: '#E5E7EB',
+    fontFamily: 'monospace',
+  };
+
+  const valNewStyle: React.CSSProperties = {
+    color: '#60A5FA',
+    fontFamily: 'monospace',
+    fontWeight: 600,
+  };
+
+  const notesBoxStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'rgba(0,0,0,0.4)',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderRadius: '8px',
+    padding: '12px',
+    fontSize: '13px',
+    color: '#D1D5DB',
+    maxHeight: '140px',
+    overflowY: 'auto',
+    marginBottom: '24px',
+    boxSizing: 'border-box',
+    textAlign: 'left',
+  };
+
+  const notesTitleStyle: React.CSSProperties = {
+    fontSize: '11px',
+    fontWeight: 700,
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    margin: '0 0 8px 0',
+  };
+
+  const descStyle: React.CSSProperties = {
+    fontSize: '14px',
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 1.5,
+    margin: '0 0 24px',
+  };
+
+  const errorStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px',
+    background: 'rgba(231, 76, 60, 0.15)',
+    border: '1px solid rgba(231, 76, 60, 0.2)',
+    borderRadius: '8px',
+    color: '#f87171',
+    fontSize: '12px',
+    lineHeight: 1.4,
+    marginBottom: '16px',
+    wordBreak: 'break-all',
+    boxSizing: 'border-box',
+  };
+
+  const actionsStyle: React.CSSProperties = {
+    display: 'flex',
+    width: '100%',
+    gap: '12px',
+  };
+
+  const btnBaseStyle: React.CSSProperties = {
+    flex: 1,
+    height: '44px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: 'none',
+    transition: '0.2s',
+  };
+
+  const btnSubStyle: React.CSSProperties = {
+    ...btnBaseStyle,
+    background: hoveredSub ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: hoveredSub ? '#FFF' : '#E5E7EB',
+  };
+
+  const btnMainStyle: React.CSSProperties = {
+    ...btnBaseStyle,
+    background: hoveredMain ? '#3B82F6' : '#2563EB',
+    border: '1px solid #3B82F6',
+    color: '#FFF',
+    boxShadow: '0 4px 14px rgba(37,99,235,0.3)',
+  };
+
+  return createPortal(
+    <div 
+      style={overlayStyle} 
+      onClick={(e) => {
         if (e.target === e.currentTarget && !isInstalling) {
           onClose();
         }
-      }}>
-        <div className="pulse-updater-card">
-          <div className="pulse-updater-header">
-            <h2 className="pulse-updater-title">Update Available</h2>
-            <button 
-              onClick={onClose}
-              disabled={isInstalling}
-              className="pulse-updater-close"
-              aria-label="Close dialog"
-            >
-              <X size={18} />
-            </button>
+      }}
+    >
+      <div style={cardStyle} onClick={(e) => e.stopPropagation()}>
+        <div style={headerStyle}>
+          <h2 style={titleStyle}>Update Available</h2>
+          <button 
+            onClick={onClose}
+            disabled={isInstalling}
+            style={closeStyle}
+            onMouseEnter={() => setHoveredClose(true)}
+            onMouseLeave={() => setHoveredClose(false)}
+            aria-label="Close dialog"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        
+        <div style={bodyStyle}>
+          <div style={iconStyle}>
+            <ArrowDownToLine size={28} />
           </div>
           
-          <div className="pulse-updater-body">
-            <div className="pulse-updater-icon">
-              <ArrowDownToLine size={28} />
+          <h3 style={headlineStyle}>
+            Version {update?.version || 'Unknown'} is ready
+          </h3>
+          
+          <div style={badgeStyle}>
+            <div style={rowStyle}>
+              <span>Current Version</span>
+              <span style={valStyle}>{currentVersion}</span>
             </div>
-            
-            <h3 className="pulse-updater-headline">
-              Version {update?.version || 'Unknown'} is ready
-            </h3>
-            
-            <div className="pulse-updater-badge">
-              <div className="pulse-updater-row">
-                <span>Current Version</span>
-                <span>{currentVersion}</span>
-              </div>
-              <div className="pulse-updater-row new">
-                <span>Available Version</span>
-                <span>{update?.version || 'Unknown'}</span>
+            <div style={lastRowStyle}>
+              <span>Available Version</span>
+              <span style={valNewStyle}>{update?.version || 'Unknown'}</span>
+            </div>
+          </div>
+          
+          {(update?.body || update?.notes) && (
+            <div style={notesBoxStyle}>
+              <h4 style={notesTitleStyle}>What's New</h4>
+              <div style={{ whiteSpace: 'pre-wrap' }}>
+                {update?.body || update?.notes}
               </div>
             </div>
-            
-            {(update?.body || update?.notes) && (
-              <div className="pulse-updater-notes-box">
-                <h4 className="pulse-updater-notes-title">What's New</h4>
-                <div style={{ whiteSpace: 'pre-wrap' }}>
-                  {update?.body || update?.notes}
-                </div>
-              </div>
-            )}
+          )}
 
-            <p className="pulse-updater-desc">
-              A new version of Pulse is available. Would you like to install it now? The application will restart automatically after the installation completes.
-            </p>
+          <p style={descStyle}>
+            A new version of Pulse is available. Would you like to install it now? The application will restart automatically after the installation completes.
+          </p>
 
-            {error && (
-              <div className="pulse-updater-error">
-                {error}
-              </div>
-            )}
-
-            <div className="pulse-updater-actions">
-              <button
-                onClick={onClose}
-                disabled={isInstalling}
-                className="pulse-updater-btn pulse-updater-btn-sub"
-              >
-                Later
-              </button>
-              <button
-                onClick={handleInstall}
-                disabled={isInstalling}
-                className="pulse-updater-btn pulse-updater-btn-main"
-              >
-                {isInstalling ? (
-                  <>
-                    <RefreshCw className="animate-spin" style={{ width: '14px', height: '14px', animation: 'spin 1.5s linear infinite' }} />
-                    Installing...
-                  </>
-                ) : (
-                  'Install Update'
-                )}
-              </button>
+          {error && (
+            <div style={errorStyle}>
+              {error}
             </div>
+          )}
+
+          <div style={actionsStyle}>
+            <button
+              onClick={onClose}
+              disabled={isInstalling}
+              style={btnSubStyle}
+              onMouseEnter={() => setHoveredSub(true)}
+              onMouseLeave={() => setHoveredSub(false)}
+            >
+              Later
+            </button>
+            <button
+              onClick={handleInstall}
+              disabled={isInstalling}
+              style={btnMainStyle}
+              onMouseEnter={() => setHoveredMain(true)}
+              onMouseLeave={() => setHoveredMain(false)}
+            >
+              {isInstalling ? (
+                <>
+                  <RefreshCw style={{ width: '14px', height: '14px', animation: 'spin 1.5s linear infinite', marginRight: '8px' }} />
+                  Installing...
+                </>
+              ) : (
+                'Install Update'
+              )}
+            </button>
           </div>
         </div>
       </div>
-    </>
+    </div>,
+    document.body
   );
 }
-
-
