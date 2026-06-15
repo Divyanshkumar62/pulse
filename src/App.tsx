@@ -33,7 +33,7 @@ export default function App() {
   const initMockStore = useMockStore(state => state.initialize);
   const initTabStore = useTabStore(state => state.initialize);
   
-  const { updateAvailable, setUpdateAvailable } = useUpdater();
+  const { updateAvailable, showUpdateModal, setShowUpdateModal } = useUpdater();
   
   usePresence();
 
@@ -122,12 +122,11 @@ export default function App() {
             <TabContent />
           </div>
         )}
-        {updateAvailable && (
+        {updateAvailable && showUpdateModal && (
           <UpdateModal 
             update={updateAvailable} 
             onClose={() => {
-              // Suppression logic removed temporarily
-              setUpdateAvailable(null);
+              setShowUpdateModal(false);
             }} 
           />
         )}

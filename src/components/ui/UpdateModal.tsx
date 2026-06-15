@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { getVersion } from '@tauri-apps/api/app';
 import { ArrowDownToLine, RefreshCw, X } from 'lucide-react';
+import { DownloadEvent } from '@tauri-apps/plugin-updater';
 
 interface UpdateModalProps {
   update: any;
@@ -18,20 +19,93 @@ export function UpdateModal({ update, onClose }: UpdateModalProps) {
   const [hoveredSub, setHoveredSub] = useState(false);
   const [hoveredMain, setHoveredMain] = useState(false);
 
+  const modalRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     getVersion().then(setCurrentVersion).catch(() => setCurrentVersion('Unknown'));
+  }, []);
+
+  // Escape key listener to close modal if not installing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isInstalling) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isInstalling, onClose]);
+
+  // Focus trap implementation
+  useEffect(() => {
+    if (!modalRef.current) return;
+
+    const focusableElements = modalRef.current.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0] as HTMLElement;
+    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+    // Focus the "Install Update" button on mount for best UX
+    const installBtn = Array.from(focusableElements).find(
+      el => el.textContent?.trim() === 'Install Update'
+    ) as HTMLElement;
+
+    if (installBtn) {
+      installBtn.focus();
+    } else if (firstElement) {
+      firstElement.focus();
+    }
+
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleTabKey);
+    return () => window.removeEventListener('keydown', handleTabKey);
   }, []);
 
   const handleInstall = async () => {
     try {
       setIsInstalling(true);
       setError(null);
-      console.log('[Pulse] Initiating update download and installation via downloadAndInstall()...');
-      await update.downloadAndInstall();
-      console.log('[Pulse] downloadAndInstall() completed successfully. Initiating relaunch()...');
+
+      const currentVer = currentVersion;
+      const availableVer = update?.version || 'Unknown';
+      const platforms = update?.rawJson?.platforms as Record<string, any> | undefined;
+      const targetKey = Object.keys(platforms || {}).find(key => key.includes('windows')) || 'unknown-windows';
+      const downloadUrl = platforms?.[targetKey]?.url || 'unknown-url';
+
+      console.log('[Updater Log] Install Start');
+      console.log(`[Updater Log] Details: Current Version = ${currentVer}, Available Version = ${availableVer}, Target = ${targetKey}, URL = ${downloadUrl}`);
+      console.log('[Updater Log] Expected installer path: %TEMP%\\tauri\\updater.exe');
+
+      await update.downloadAndInstall((progress: DownloadEvent) => {
+        if (progress.event === 'Started') {
+          console.log(`[Updater Log] Download started. Content length: ${progress.data.contentLength ?? 'unknown'}`);
+        } else if (progress.event === 'Progress') {
+          console.log(`[Updater Log] Download progress: chunk length = ${progress.data.chunkLength}`);
+        } else if (progress.event === 'Finished') {
+          console.log('[Updater Log] Download finished.');
+        }
+      });
+      
+      console.log('[Updater Log] Install Success - relaunching application');
       await relaunch();
     } catch (err) {
-      console.error('[Pulse] Failed to install update:', err);
+      console.error('[Updater Log] Install Failure:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
       setError(`Failed to install update: ${errMsg}`);
       setIsInstalling(false);
@@ -41,7 +115,7 @@ export function UpdateModal({ update, onClose }: UpdateModalProps) {
   const overlayStyle: React.CSSProperties = {
     position: 'fixed',
     inset: 0,
-    zIndex: 99999,
+    zIndex: 2147483647,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -244,7 +318,7 @@ export function UpdateModal({ update, onClose }: UpdateModalProps) {
         }
       }}
     >
-      <div style={cardStyle} onClick={(e) => e.stopPropagation()}>
+      <div ref={modalRef} style={cardStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
           <h2 style={titleStyle}>Update Available</h2>
           <button 
@@ -279,14 +353,12 @@ export function UpdateModal({ update, onClose }: UpdateModalProps) {
             </div>
           </div>
           
-          {(update?.body || update?.notes) && (
-            <div style={notesBoxStyle}>
-              <h4 style={notesTitleStyle}>What's New</h4>
-              <div style={{ whiteSpace: 'pre-wrap' }}>
-                {update?.body || update?.notes}
-              </div>
+          <div style={notesBoxStyle}>
+            <h4 style={notesTitleStyle}>What's New</h4>
+            <div style={{ whiteSpace: 'pre-wrap' }}>
+              {update?.body || update?.notes || "No release notes provided for this version."}
             </div>
-          )}
+          </div>
 
           <p style={descStyle}>
             A new version of Pulse is available. Would you like to install it now? The application will restart automatically after the installation completes.

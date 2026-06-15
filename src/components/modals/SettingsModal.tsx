@@ -13,7 +13,7 @@ interface SettingsModalProps {
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { settings, updateSettings } = useSettingsStore();
   const [appVersion, setAppVersion] = useState<string>('Loading...');
-  const { updateAvailable, checkForUpdates } = useUpdater();
+  const { updateAvailable, checkForUpdates, setShowUpdateModal } = useUpdater();
   const [isChecking, setIsChecking] = useState(false);
   const [checkMessage, setCheckMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -279,13 +279,17 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <button
                   className={updateAvailable ? "btn-primary" : "btn-secondary"}
                   onClick={async () => {
-                    setIsChecking(true);
-                    setCheckMessage(null);
-                    await checkForUpdates();
-                    setIsChecking(false);
-                    if (!updateAvailable) {
-                      setCheckMessage('You are on the latest version.');
-                      setTimeout(() => setCheckMessage(null), 3000);
+                    if (updateAvailable) {
+                      setShowUpdateModal(true);
+                    } else {
+                      setIsChecking(true);
+                      setCheckMessage(null);
+                      await checkForUpdates();
+                      setIsChecking(false);
+                      if (!updateAvailable) {
+                        setCheckMessage('You are on the latest version.');
+                        setTimeout(() => setCheckMessage(null), 3000);
+                      }
                     }
                   }}
                   disabled={isChecking}
@@ -294,6 +298,24 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   {isChecking ? 'Checking...' : updateAvailable ? 'Install Update' : 'Check for Updates'}
                 </button>
               </div>
+              {updateAvailable && (updateAvailable.body || (updateAvailable.rawJson?.notes as string | undefined)) && (
+                <div style={{
+                  background: 'rgba(0,0,0,0.2)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  maxHeight: '120px',
+                  overflowY: 'auto',
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                  whiteSpace: 'pre-wrap',
+                  textAlign: 'left',
+                  boxSizing: 'border-box'
+                }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Release Notes:</div>
+                  {updateAvailable.body || (updateAvailable.rawJson?.notes as string | undefined)}
+                </div>
+              )}
               {checkMessage && !updateAvailable && (
                 <div style={{ fontSize: '12px', color: 'var(--accent-primary)', marginTop: '4px' }}>
                   {checkMessage}
