@@ -18,9 +18,22 @@ export const useUpdaterStore = create<UpdaterState>((set, get) => ({
       if (forceMock || (import.meta as any).env?.VITE_FORCE_UPDATE_MODAL === 'true') {
         set({
           updateAvailable: {
-            version: '1.0.99',
+            version: '1.1.0',
             date: new Date().toISOString(),
-            body: 'This is a mock update for testing the updater UI.\n\n* Added feature X\n* Fixed bug Y',
+            body: `Pulse v1.1.0 Release Notes — HTTP Load Testing Engine
+
+[New Feature: Enterprise Load Testing Engine]
+• High-Performance Concurrency: Built a native, multi-threaded load engine using Rust and Tokio tasks to simulate up to 500 Virtual Users seamlessly.
+• Architectural Protection: Implemented Tokio Semaphore in-flight bounding and bounded MPSC backpressure channels to protect local system resources from OOM crashes.
+• Microsecond Precision Telemetry: Integrated high-performance 'hdrhistogram' metric bucketing for constant-memory O(1) tracking of P50, P90, P95, and P99 latency percentiles.
+• Dual-State Canvas UI: Completely re-architected the main workspace into a dedicated full-width visual suite featuring interactive configuration Builders and real-time SVG throughput/latency Dashboards.
+• RAM Optimization: Introduced a stride-based timeline downsampling algorithm that intelligently compresses thousands of snapshots into sleek, lightweight trend lines.
+• Report Export System: Integrated native Tauri OS dialogs allowing seamless disk persistence for test summaries in both JSON and CSV formats.
+
+[Performance & Bug Fixes]
+• Fixed a Tauri IPC serialization bug involving HashMap error classifications.
+• Restructured the application shell to left-justify main dashboard elements for superior readability.
+• Streamlined sidebar run histories into high-glanceability cards featuring method truncations and success status iconography.`,
             downloadAndInstall: async () => {
               console.log('[Mock] Downloading and installing...');
               await new Promise(resolve => setTimeout(resolve, 2000));

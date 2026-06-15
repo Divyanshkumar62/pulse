@@ -3830,7 +3830,7 @@ dependencies = [
 
 [[package]]
 name = "pulse"
-version = "1.0.15"
+version = "1.1.0"
 dependencies = [
  "async-recursion",
  "base64 0.22.1",
