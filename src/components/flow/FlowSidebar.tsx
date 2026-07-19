@@ -294,7 +294,7 @@ export default function FlowSidebar() {
                                   />
                                 ))
                               }
-                              {flow.pinned && <Pin size={10} style={{ opacity: 0.6, color: '#f59e0b' }} />}
+                              {flow.pinned && <Pin size={10} style={{ color: '#ef4444', fill: '#ef4444' }} />}
                             </>
                           )}
                         </div>

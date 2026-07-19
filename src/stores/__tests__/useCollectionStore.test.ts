@@ -129,6 +129,29 @@ describe('useCollectionStore', () => {
       const col = useCollectionStore.getState().collections[0];
       expect(col.requests.length).toBe(0);
     });
+
+    it('should duplicate a request from root', async () => {
+      await useCollectionStore.getState().addRequest('col-1', null, mockRequest);
+      useCollectionStore.getState().duplicateRequest('col-1', 'req-1');
+
+      const col = useCollectionStore.getState().collections[0];
+      expect(col.requests.length).toBe(2);
+      expect(col.requests[0].id).toBe('req-1');
+      expect(col.requests[1].name).toBe('Get User (Copy)');
+      expect(col.requests[1].id).not.toBe('req-1');
+    });
+
+    it('should duplicate a request inside a folder', async () => {
+      await useCollectionStore.getState().addFolder('col-1', null, mockFolder);
+      await useCollectionStore.getState().addRequest('col-1', 'fld-1', mockRequest);
+      useCollectionStore.getState().duplicateRequest('col-1', 'req-1');
+
+      const col = useCollectionStore.getState().collections[0];
+      expect(col.folders[0].requests.length).toBe(2);
+      expect(col.folders[0].requests[0].id).toBe('req-1');
+      expect(col.folders[0].requests[1].name).toBe('Get User (Copy)');
+      expect(col.folders[0].requests[1].id).not.toBe('req-1');
+    });
   });
 
   describe('Move Operations', () => {

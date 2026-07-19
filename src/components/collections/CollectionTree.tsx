@@ -182,18 +182,18 @@ export default function CollectionTree() {
 
       collection.requests.forEach(req => {
         if (req.name.toLowerCase().includes(lowerQuery)) {
-          results.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: 1, collectionId: collection.id });
+          results.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: { ...req, collectionId: collection.id }, level: 1, collectionId: collection.id });
         }
       });
 
       const searchInFolders = (folders: any[], level: number, collectionId: string) => {
         folders.forEach(folder => {
           if (folder.name.toLowerCase().includes(lowerQuery)) {
-            results.push({ type: 'folder', id: folder.id, name: folder.name, data: folder, level, collectionId });
+            results.push({ type: 'folder', id: folder.id, name: folder.name, data: { ...folder, collectionId }, level, collectionId });
           }
           folder.requests.forEach((req: any) => {
             if (req.name.toLowerCase().includes(lowerQuery)) {
-              results.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: level + 1, collectionId });
+              results.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: { ...req, collectionId }, level: level + 1, collectionId });
             }
           });
           if (folder.folders) {
@@ -684,11 +684,11 @@ export default function CollectionTree() {
               <FolderIcon size={14} strokeWidth={2} style={{ opacity: 0.6, color: 'var(--text-secondary)', fill: 'transparent', marginLeft: '2px' }} />
             )}
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+            {item.data.pinned && <Pin size={10} style={{ marginRight: '8px', color: '#ef4444', fill: '#ef4444' }} />}
             <div className="tree-item-actions">
               {presence.filter(p => p.item_id === item.id && p.email !== settings?.email).map(p => (
                   <Avatar key={p.email} src={getGravatarUrl(p.email, 32)} alt={p.email} title={`${p.email} is viewing this`} style={{ width: '16px', height: '16px', borderRadius: '50%', marginLeft: '4px', border: '1px solid var(--accent-primary)', boxShadow: '0 0 8px var(--accent-subtle)' }} />
               ))}
-              {item.data.pinned && <Pin size={10} style={{ opacity: 0.6, marginRight: '4px', color: '#f59e0b' }} />}
               <button className="tree-action-btn" onClick={(e) => { e.stopPropagation(); handleContextMenu(e, item.type, idx, item.data); }}>
                   <MoreVertical size={14} />
               </button>
@@ -716,11 +716,11 @@ export default function CollectionTree() {
               {item.method}
             </span>
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+            {item.data.pinned && <Pin size={10} style={{ marginRight: '8px', color: '#ef4444', fill: '#ef4444' }} />}
             <div className="tree-item-actions">
               {presence.filter(p => p.item_id === item.id && p.email !== settings?.email).map(p => (
                   <Avatar key={p.email} src={getGravatarUrl(p.email, 32)} alt={p.email} title={`${p.email} is viewing this`} style={{ width: '16px', height: '16px', borderRadius: '50%', marginLeft: '4px', border: '1px solid var(--accent-primary)', boxShadow: '0 0 8px var(--accent-subtle)' }} />
               ))}
-              {item.data.pinned && <Pin size={10} style={{ opacity: 0.6, marginRight: '4px', color: '#f59e0b' }} />}
               <button className="tree-action-btn" onClick={(e) => { e.stopPropagation(); handleContextMenu(e, item.type, idx, item.data); }}>
                   <MoreVertical size={14} />
               </button>
@@ -752,7 +752,7 @@ export default function CollectionTree() {
             return a.name.localeCompare(b.name);
         });
         sortedRequests.forEach(req => {
-          items.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: 1, collectionId: collection.id });
+          items.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: { ...req, collectionId: collection.id }, level: 1, collectionId: collection.id });
         });
         const pushFolders = (folders: any[], level: number, collectionId: string) => {
           const sortedFolders = [...folders].sort((a, b) => {
@@ -772,7 +772,7 @@ export default function CollectionTree() {
                     return a.name.localeCompare(b.name);
                 });
                 sortedSubRequests.forEach((req: any) => {
-                    items.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: req, level: level + 1, collectionId });
+                    items.push({ type: 'request', id: req.id, name: req.name, method: req.method, data: { ...req, collectionId }, level: level + 1, collectionId });
                 });
                 if (folder.folders) pushFolders(folder.folders, level + 1, collectionId);
             }
