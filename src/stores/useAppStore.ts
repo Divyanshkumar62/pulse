@@ -18,6 +18,7 @@ interface AppStore {
   selectedEnvironmentId: string | null;
   isAddEnvironmentModalOpen: boolean;
   isImportModalOpen: boolean;
+  importModalInitialMode: 'file' | 'curl';
   isCommitModalOpen: boolean;
   isGlobalVariablesModalOpen: boolean;
   isCreateFlowModalOpen: boolean;
@@ -37,7 +38,7 @@ interface AppStore {
   setSelectedMonitorId: (id: string | null) => void;
   setSelectedEnvironmentId: (id: string | null) => void;
   setAddEnvironmentModalOpen: (open: boolean) => void;
-  setImportModalOpen: (open: boolean) => void;
+  setImportModalOpen: (open: boolean, initialMode?: 'file' | 'curl') => void;
   setGlobalVariablesModalOpen: (open: boolean) => void;
   setCommitModalOpen: (open: boolean, status?: GitStatus | null, path?: string, refresh?: () => void) => void;
   setCreateFlowModalOpen: (open: boolean) => void;
@@ -57,6 +58,7 @@ export const useAppStore = create<AppStore>((set) => ({
   selectedEnvironmentId: null,
   isAddEnvironmentModalOpen: false,
   isImportModalOpen: false,
+  importModalInitialMode: 'curl',
   isCommitModalOpen: false,
   isGlobalVariablesModalOpen: false,
   isCreateFlowModalOpen: false,
@@ -76,7 +78,7 @@ export const useAppStore = create<AppStore>((set) => ({
   setSelectedMonitorId: (id) => set({ selectedMonitorId: id }),
   setSelectedEnvironmentId: (id) => set({ selectedEnvironmentId: id }),
   setAddEnvironmentModalOpen: (open) => set({ isAddEnvironmentModalOpen: open }),
-  setImportModalOpen: (open) => set({ isImportModalOpen: open }),
+  setImportModalOpen: (open, initialMode = 'curl') => set({ isImportModalOpen: open, importModalInitialMode: initialMode }),
   setGlobalVariablesModalOpen: (open) => set({ isGlobalVariablesModalOpen: open }),
   setCommitModalOpen: (open, status, path, refresh) => set({
     isCommitModalOpen: open,

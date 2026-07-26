@@ -12,16 +12,17 @@ import { createPortal } from 'react-dom';
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMode?: 'file' | 'curl';
 }
 
 type ImportMode = 'file' | 'curl' | 'edit';
 
-export default function ImportModal({ isOpen, onClose }: ImportModalProps) {
+export default function ImportModal({ isOpen, onClose, initialMode = 'curl' }: ImportModalProps) {
   const { addCollection, addRequest } = useCollectionStore();
   const { activeWorkspaceId } = useWorkspaceStore();
   const collections = useCollectionStore(state => state.collections);
   
-  const [mode, setMode] = useState<ImportMode>('file');
+  const [mode, setMode] = useState<ImportMode>(initialMode);
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [curlInput, setCurlInput] = useState('');
@@ -32,15 +33,16 @@ export default function ImportModal({ isOpen, onClose }: ImportModalProps) {
 
   useEffect(() => {
     if (!isOpen) {
-      setMode('file');
       setCurlInput('');
       setEditRequest(null);
       setEditName('');
       setSelectedCollection('');
       setSelectedFolder('');
       setIsProcessing(false);
+    } else {
+      setMode(initialMode);
     }
-  }, [isOpen]);
+  }, [isOpen, initialMode]);
 
   if (!isOpen) return null;
 
@@ -154,7 +156,7 @@ export default function ImportModal({ isOpen, onClose }: ImportModalProps) {
           transition: 'all 0.2s'
         }}
       >
-        File Import
+        Import by File
       </button>
       <button
         onClick={() => setMode('curl')}
@@ -171,7 +173,7 @@ export default function ImportModal({ isOpen, onClose }: ImportModalProps) {
           transition: 'all 0.2s'
         }}
       >
-        cURL Import
+        Import by Direct Import cURL
       </button>
     </div>
   );

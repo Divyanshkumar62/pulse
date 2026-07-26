@@ -9,7 +9,7 @@ import ContextMenu, { ContextMenuItem } from '../ui/ContextMenu';
 import ConfirmModal from '../ui/ConfirmModal';
 import EmptyState from '../ui/EmptyState';
 import { Avatar } from '../ui/Avatar';
-import { MoreVertical, Pin, FolderOpen, Eye, Folder as FolderIcon, ChevronRight, GripVertical } from 'lucide-react';
+import { MoreVertical, Pin, FolderOpen, Eye, Folder as FolderIcon, ChevronRight, GripVertical, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { getGravatarUrl } from '../../utils/gravatar';
@@ -108,8 +108,6 @@ export default function CollectionTree() {
   const [newCollectionName, setNewCollectionName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<TreeItem[]>([]);
-  const [showMenuDropdown, setShowMenuDropdown] = useState(false);
-  
   const [creatingInline, setCreatingInline] = useState<{ parentId: string; parentType: 'collection' | 'folder'; itemType: 'request' | 'folder' } | null>(null);
   const [creatingName, setCreatingName] = useState('');
 
@@ -139,7 +137,6 @@ export default function CollectionTree() {
   
   const editInputRef = useRef<HTMLInputElement>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
-  const menuDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (editingKey && editInputRef.current) {
@@ -153,18 +150,6 @@ export default function CollectionTree() {
       createInputRef.current.focus();
     }
   }, [creatingInline]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (showMenuDropdown && menuDropdownRef.current && !menuDropdownRef.current.contains(e.target as Node)) {
-        setShowMenuDropdown(false);
-      }
-    };
-    if (showMenuDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showMenuDropdown]);
 
   const performSearch = useCallback((query: string) => {
     if (!query.trim()) {
@@ -789,14 +774,44 @@ export default function CollectionTree() {
       <div className="tree-header" style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Collections</h3>
-            <div style={{ position: 'relative' }}>
-                <button onClick={() => setShowMenuDropdown(!showMenuDropdown)} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '4px 8px', fontSize: '12px' }}>+ New</button>
-                {showMenuDropdown && (
-                    <div ref={menuDropdownRef} style={{ position: 'absolute', top: '100%', right: 0, marginTop: '4px', background: 'var(--bg-deep)', border: '1px solid var(--border-default)', borderRadius: '8px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 100, minWidth: '150px', overflow: 'hidden' }}>
-                        <button onClick={() => { setIsCreatingCollection(true); setShowMenuDropdown(false); }} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '12px' }} className="dropdown-item-hover">New Collection</button>
-                        <button onClick={() => { setImportModalOpen(true); setShowMenuDropdown(false); }} style={{ width: '100%', padding: '10px 12px', textAlign: 'left', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '12px' }} className="dropdown-item-hover">Import</button>
-                    </div>
-                )}
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <button 
+                  onClick={() => setIsCreatingCollection(true)} 
+                  title="New Collection"
+                  style={{ 
+                    background: 'var(--bg-elevated)', 
+                    border: '1px solid var(--border-subtle)', 
+                    borderRadius: '6px', 
+                    padding: '4px 8px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                    transition: 'all 0.2s'
+                  }}
+                  className="tree-action-btn-styled"
+                >
+                  <Plus size={14} />
+                </button>
+                <button 
+                  onClick={() => setImportModalOpen(true, 'curl')} 
+                  title="Import from cURL"
+                  style={{ 
+                    background: 'var(--bg-elevated)', 
+                    border: '1px solid var(--border-subtle)', 
+                    borderRadius: '6px', 
+                    padding: '4px 8px', 
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                    transition: 'all 0.2s'
+                  }}
+                  className="tree-action-btn-styled"
+                >
+                  cURL
+                </button>
             </div>
         </div>
         <div style={{ position: 'relative' }}>
@@ -861,6 +876,7 @@ export default function CollectionTree() {
         .tree-action-btn:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); }
         .tree-item-hover:hover { background: rgba(255,255,255,0.03); }
         .dropdown-item-hover:hover { background: var(--accent-subtle) !important; }
+        .tree-action-btn-styled:hover { background: var(--bg-hover) !important; border-color: var(--accent-primary) !important; }
       `}</style>
     </div>
   );

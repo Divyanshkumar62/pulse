@@ -26,7 +26,7 @@ export default function AppShell({ children }: AppShellProps) {
   const { 
     isSettingsOpen, setSettingsOpen, 
     sidebarVisible, 
-    isImportModalOpen, setImportModalOpen, 
+    isImportModalOpen, setImportModalOpen, importModalInitialMode,
     isProfileOpen, setProfileOpen, 
     isCommitModalOpen, setCommitModalOpen: setCommitModalOpenFn, 
     isGlobalVariablesModalOpen, setGlobalVariablesModalOpen,
@@ -56,7 +56,7 @@ export default function AppShell({ children }: AppShellProps) {
       <LoadTestingEngine />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
       <AddEnvironmentModal />
-      <ImportModal isOpen={isImportModalOpen} onClose={() => setImportModalOpen(false)} />
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setImportModalOpen(false)} initialMode={importModalInitialMode} />
       <UserProfileModal isOpen={isProfileOpen} onClose={() => setProfileOpen(false)} />
       <GlobalVariablesModal isOpen={isGlobalVariablesModalOpen} onClose={() => setGlobalVariablesModalOpen(false)} />
       <CommitModal
