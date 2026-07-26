@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useTabStore } from '../../stores/useTabStore';
 import { generateDocumentation } from '../../services/docGenerator';
-import { FileText, Copy, Check } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CollectionDocsProps {
@@ -12,7 +12,6 @@ interface CollectionDocsProps {
 
 export default function CollectionDocs({ collection, onClose }: CollectionDocsProps = {}) {
   const { tabs, activeTabId } = useTabStore();
-  const [copied, setCopied] = React.useState(false);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
   const request = activeTab?.request;
@@ -63,11 +62,20 @@ export default function CollectionDocs({ collection, onClose }: CollectionDocsPr
     return generateDocumentation(request, response);
   }, [collection, request, response]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(markdown);
-    setCopied(true);
-    toast.success('Documentation copied to clipboard');
-    setTimeout(() => setCopied(false), 2000);
+  const handleDownload = () => {
+    if (!markdown) return;
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const rawName = collection ? collection.name : (request?.name || 'request');
+    const fileName = `${rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-docs.md`;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Documentation downloaded successfully');
   };
 
   if (!collection && !request) {
@@ -103,7 +111,7 @@ export default function CollectionDocs({ collection, onClose }: CollectionDocsPr
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button 
-            onClick={handleCopy}
+            onClick={handleDownload}
             style={{
               background: 'var(--bg-elevated)',
               border: '1px solid var(--border-subtle)',
@@ -115,10 +123,10 @@ export default function CollectionDocs({ collection, onClose }: CollectionDocsPr
               cursor: 'pointer',
               transition: 'all 0.2s'
             }}
-            className="copy-docs-btn"
+            className="download-docs-btn"
           >
-            {copied ? <Check size={14} color="#22c55e" /> : <Copy size={14} color="var(--text-secondary)" />}
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>{copied ? 'Copied' : 'Copy MD'}</span>
+            <Download size={14} color="var(--text-secondary)" />
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>Download File</span>
           </button>
           {onClose && (
             <button 
@@ -188,11 +196,11 @@ export default function CollectionDocs({ collection, onClose }: CollectionDocsPr
       </div>
 
       <style>{`
-        .copy-docs-btn:hover {
+        .download-docs-btn:hover {
           border-color: var(--accent-primary);
           background: var(--accent-subtle);
         }
-        .copy-docs-btn:hover span {
+        .download-docs-btn:hover span {
           color: var(--accent-primary) !important;
         }
       `}</style>

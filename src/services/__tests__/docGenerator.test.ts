@@ -35,44 +35,23 @@ describe('Document Generator Service', () => {
     expect(md).toContain('Fetches user details by ID.');
   });
 
-  it('should include request details', () => {
+  it('should include cURL request code snippet', () => {
     const md = generateDocumentation(mockRequest);
-    expect(md).toContain('**Method**: `GET`');
-    expect(md).toContain('**URL**: `https://api.example.com/users/123`');
+    expect(md).toContain('### cURL Request');
+    expect(md).toContain('```bash\ncurl -X GET "https://api.example.com/users/123"');
   });
 
-  it('should include enabled headers in a markdown table', () => {
-    const md = generateDocumentation(mockRequest);
-    expect(md).toContain('### Headers');
-    expect(md).toContain('| `Authorization` | `Bearer token` | User token |');
-    expect(md).not.toContain('X-Hidden'); // Disabled header
-  });
-
-  it('should format JSON body blocks correctly', () => {
-    const reqWithBody: Request = {
-      ...mockRequest,
-      method: 'POST',
-      body: { type: 'json', content: '{\n  "key": "value"\n}' }
-    };
-    const md = generateDocumentation(reqWithBody);
-    expect(md).toContain('### Body (`json`)');
-    expect(md).toContain('```json\n{\n  "key": "value"\n}\n```');
-  });
-
-  it('should infer and append response schema if response is provided', () => {
+  it('should include response status, time and body if response is provided', () => {
     const md = generateDocumentation(mockRequest, mockResponse);
-    expect(md).toContain('### Response Schema');
-    expect(md).toContain('"id": number');
-    expect(md).toContain('"name": string');
-    expect(md).toContain('[ string ]'); // Array inference
+    expect(md).toContain('### Response');
+    expect(md).toContain('**Status**: `200 OK`');
+    expect(md).toContain('**Time**: `45 ms`');
+    expect(md).toContain('```json');
+    expect(md).toContain('"name": "John Doe"');
   });
 
-  it('should include code snippets at the bottom', () => {
+  it('should handle fallback when no response is provided', () => {
     const md = generateDocumentation(mockRequest);
-    expect(md).toContain('### Code Snippets');
-    expect(md).toContain('#### cURL');
-    expect(md).toContain('#### JavaScript (Fetch)');
-    expect(md).toContain('#### Python (Requests)');
-    expect(md).toContain('#### Go (Native)');
+    expect(md).toContain('### Response\n*No response recorded. Send the request to view the response.*');
   });
 });
