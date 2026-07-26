@@ -82,7 +82,16 @@ export class CurlParser {
       if (token === '-d' || token === '--data' || token === '--data-raw') {
         const bodyContent = tokens[i + 1];
         if (bodyContent) {
-          result.body = { type: 'raw', content: bodyContent };
+          let parsedBody = bodyContent;
+          let bodyType: 'raw' | 'json' = 'raw';
+          try {
+            const parsed = JSON.parse(bodyContent);
+            parsedBody = JSON.stringify(parsed, null, 2);
+            bodyType = 'json';
+          } catch (e) {
+            // Not valid JSON, keep as raw
+          }
+          result.body = { type: bodyType, content: parsedBody };
           if (!explicitMethod && !forceGet) result.method = 'POST'; // Default to POST if data is present and not forced otherwise
         }
         i += 2;

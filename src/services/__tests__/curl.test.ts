@@ -35,8 +35,8 @@ describe('CurlParser', () => {
     const request = CurlParser.parse(curl);
 
     expect(request.method).toBe('POST'); // Should default to POST when data is provided
-    expect(request.body.type).toBe('raw');
-    expect(request.body.content).toBe('{"name":"John"}');
+    expect(request.body.type).toBe('json');
+    expect(request.body.content).toBe(JSON.stringify({"name":"John"}, null, 2));
   });
 
   it('should parse multiline cURL commands with escaped line endings', () => {
@@ -51,8 +51,8 @@ describe('CurlParser', () => {
     expect(request.url).toBe('https://api.example.com/graphql');
     expect(request.headers.length).toBe(1);
     expect(request.headers[0]).toEqual({ key: 'Content-Type', value: 'application/json', enabled: true });
-    expect(request.body.type).toBe('raw');
-    expect(request.body.content).toBe('{"query":"query { users { id } }"}');
+    expect(request.body.type).toBe('json');
+    expect(request.body.content).toBe(JSON.stringify({"query":"query { users { id } }"}, null, 2));
   });
 
   it('should respect -G / --get to force GET method even with data', () => {
