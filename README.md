@@ -55,6 +55,25 @@ npm run tauri build
 
 ---
 
+## 🍎 macOS Installation
+
+When you download Pulse directly from GitHub Releases (outside the Mac App Store), macOS may block it from opening due to **Gatekeeper** — it attaches an invisible quarantine attribute to the file.
+
+### Fix: Clear the Quarantine Attribute
+
+1. **Move** `Pulse.app` into your `Applications` folder (if it isn't there already).
+2. **Open** the Terminal app.
+3. **Run** this command:
+   ```bash
+   xattr -cr /Applications/Pulse.app
+   ```
+4. **Hit Enter** — it won't print anything. It will just drop to a new line.
+5. **Double-click** Pulse — it will open perfectly.
+
+> **How it works:** The `xattr -cr` command recursively clears extended file attributes — specifically the `com.apple.quarantine` flag — telling Gatekeeper to trust the application.
+
+---
+
 ## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
