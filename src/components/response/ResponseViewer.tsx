@@ -48,7 +48,7 @@ export default function ResponseViewer() {
   }, [request, response, history]);
 
   const tabsConfig: { id: ResponseTab; label: string }[] = [
-    { id: 'body', label: 'Json' },
+    { id: 'body', label: 'Body' },
     { id: 'preview', label: 'Preview' },
     { id: 'headers', label: 'Headers' },
     { id: 'diff', label: 'Diff' },
