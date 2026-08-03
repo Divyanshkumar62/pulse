@@ -148,8 +148,9 @@ export default function ResponseBody({ content, contentType }: { content: string
         ".cm-gutters": { backgroundColor: "#0b0f16 !important", border: "none", color: "var(--text-tertiary)" },
         ".cm-activeLineGutter": { backgroundColor: "#0b0f16" },
         ".cm-activeLine": { backgroundColor: "#0b0f16" },
-        ".cm-foldGutter .cm-gutterElement": { cursor: "pointer", color: "var(--text-tertiary)" },
-        ".cm-foldGutter .cm-gutterElement:hover": { color: "var(--accent-primary)" },
+        ".cm-foldGutter": { width: "16px !important" },
+        ".cm-foldGutter .cm-gutterElement": { cursor: "pointer", color: "#94a3b8 !important", fontSize: "14px !important", fontWeight: "700 !important", width: "16px !important", transition: "transform 0.15s, color 0.15s" },
+        ".cm-foldGutter .cm-gutterElement:hover": { color: "#3b82f6 !important" },
         ".cm-searchMatch": { backgroundColor: "rgba(59, 130, 246, 0.3) !important", outline: "1px solid rgba(59, 130, 246, 0.6)", borderRadius: "2px" },
         ".cm-searchMatch-selected": { backgroundColor: "#2563eb !important", color: "#ffffff !important", borderRadius: "2px", boxShadow: "0 0 8px rgba(37, 99, 235, 0.6)" }
       })

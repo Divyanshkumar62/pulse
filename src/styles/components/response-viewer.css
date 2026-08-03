@@ -210,3 +210,24 @@
 .empty-response p {
   font-size: 13px;
 }
+
+/* CodeMirror Fold Carets Styling */
+.cm-foldGutter {
+  width: 16px !important;
+}
+
+.cm-foldGutter .cm-gutterElement {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  color: #94a3b8 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.15s ease, color 0.15s ease !important;
+}
+
+.cm-foldGutter .cm-gutterElement:hover {
+  color: #3b82f6 !important;
+  transform: scale(1.25);
+}
