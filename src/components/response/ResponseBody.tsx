@@ -8,6 +8,8 @@ import { search, highlightSelectionMatches, setSearchQuery, SearchQuery, findNex
 import { oneDark } from '@codemirror/theme-one-dark';
 import { WrapText, Search, ChevronUp, ChevronDown, X, Filter, Download, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 
 function filterJsonObject(obj: any, query: string): any {
   if (!query.trim()) return obj;
@@ -197,19 +199,38 @@ export default function ResponseBody({ content, contentType }: { content: string
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownload = () => {
+  const handleSave = async () => {
     const isJson = contentType.includes('json');
     const ext = isJson ? 'json' : 'txt';
-    const blob = new Blob([displayContent], { type: isJson ? 'application/json' : 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `response-${Date.now()}.${ext}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.success('Downloaded response file');
+    const defaultFileName = `response-${Date.now()}.${ext}`;
+
+    try {
+      const filePath = await save({
+        filters: [{
+          name: isJson ? 'JSON' : 'Text',
+          extensions: [ext]
+        }],
+        defaultPath: defaultFileName
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, displayContent);
+        toast.success(`Saved response to ${filePath}`);
+        return;
+      }
+    } catch (e) {
+      // Fallback to web blob download
+      const blob = new Blob([displayContent], { type: isJson ? 'application/json' : 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = defaultFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Downloaded response file');
+    }
   };
 
   const isJson = contentType.includes('json');
@@ -383,8 +404,8 @@ export default function ResponseBody({ content, contentType }: { content: string
           </button>
 
           <button
-            onClick={handleDownload}
-            title="Download response file"
+            onClick={handleSave}
+            title="Save response to file"
             style={{
               background: 'transparent',
               border: '1px solid var(--border-subtle)',
