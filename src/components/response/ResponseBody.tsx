@@ -119,6 +119,9 @@ export default function ResponseBody({ content, contentType }: { content: string
       viewRef.current.dispatch({
         effects: setSearchQuery.of(new SearchQuery({ search: searchQueryText, caseSensitive: false }))
       });
+      if (searchQueryText.trim()) {
+        findNext(viewRef.current);
+      }
     }
   }, [searchQueryText]);
 
@@ -147,8 +150,8 @@ export default function ResponseBody({ content, contentType }: { content: string
         ".cm-activeLine": { backgroundColor: "#0b0f16" },
         ".cm-foldGutter .cm-gutterElement": { cursor: "pointer", color: "var(--text-tertiary)" },
         ".cm-foldGutter .cm-gutterElement:hover": { color: "var(--accent-primary)" },
-        ".cm-searchMatch": { backgroundColor: "rgba(234, 179, 8, 0.3) !important", outline: "1px solid rgba(234, 179, 8, 0.6)" },
-        ".cm-searchMatch-selected": { backgroundColor: "rgba(249, 115, 22, 0.5) !important" }
+        ".cm-searchMatch": { backgroundColor: "rgba(59, 130, 246, 0.3) !important", outline: "1px solid rgba(59, 130, 246, 0.6)", borderRadius: "2px" },
+        ".cm-searchMatch-selected": { backgroundColor: "#2563eb !important", color: "#ffffff !important", borderRadius: "2px", boxShadow: "0 0 8px rgba(37, 99, 235, 0.6)" }
       })
     ];
 
@@ -168,10 +171,11 @@ export default function ResponseBody({ content, contentType }: { content: string
     
     viewRef.current = view;
 
-    if (searchQueryText) {
+    if (searchQueryText.trim()) {
       view.dispatch({
         effects: setSearchQuery.of(new SearchQuery({ search: searchQueryText, caseSensitive: false }))
       });
+      findNext(view);
     }
 
     return () => {
@@ -313,6 +317,16 @@ export default function ResponseBody({ content, contentType }: { content: string
                 type="text"
                 value={searchQueryText}
                 onChange={(e) => setSearchQueryText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                      handlePrevMatch();
+                    } else {
+                      handleNextMatch();
+                    }
+                  }
+                }}
                 placeholder="Search..."
                 style={{
                   background: 'transparent',
