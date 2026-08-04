@@ -209,6 +209,7 @@ export interface MockRoute {
   statusCode: number;
   responseBody: string;
   headers: KeyValuePair[];
+  delayMs?: number;
 }
 
 export interface MockServer {
@@ -217,4 +218,23 @@ export interface MockServer {
   port: number;
   routes: MockRoute[];
   status: 'active' | 'inactive';
+  publicUrl?: string;
+  isTunneling?: boolean;
+  tunnelStatus?: string;
+}
+
+export interface StreamFrame {
+  id: string;
+  connectionId: string;
+  protocol: 'WS' | 'SSE' | 'gRPC';
+  direction: 'IN' | 'OUT';
+  timestamp: string;
+  sizeBytes: number;
+  payloadData: string;
+}
+
+export interface StreamStatus {
+  connectionId: string;
+  status: 'connecting' | 'connected' | 'disconnected' | 'error';
+  message?: string;
 }

@@ -18,6 +18,7 @@ import { useTabStore } from './stores/useTabStore';
 import { ReactFlowProvider } from '@xyflow/react';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import MockServerEditor from './components/mock/MockServerEditor';
+import RegressionMatrix from './components/regression/RegressionMatrix';
 import { usePresence } from './hooks/usePresence';
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { UpdateModal } from './components/ui/UpdateModal';
@@ -83,6 +84,7 @@ export default function App() {
   const showFlowBuilder = sidebarTab === 'flows';
   const showMockServerEditor = sidebarTab === 'mock-servers' && activeMockServerId;
   const showTeamDashboard = sidebarTab === 'teams';
+  const showRegressionMatrix = sidebarTab === 'regression';
 
   return (
     <ErrorBoundary>
@@ -101,6 +103,8 @@ export default function App() {
           </ReactFlowProvider>
         ) : showMockServerEditor ? (
           <MockServerEditor />
+        ) : showRegressionMatrix ? (
+          <RegressionMatrix />
         ) : showTeamDashboard ? (
           <TeamPanel
             teams={teams}

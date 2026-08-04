@@ -48,6 +48,32 @@ export class VariableResolver {
   }
 
   /**
+   * Returns details for a variable (value and source scope: Environment, Collection, Global, or Unresolved)
+   */
+  static getVariableDetails(
+    varName: string,
+    collectionVariables: Variable[] = [],
+    environmentVariables: Variable[] = [],
+    globalVariables: Variable[] = []
+  ): { value: string | null; scope: 'Environment' | 'Collection' | 'Global' | 'Unresolved' } {
+    const key = varName.trim();
+
+    // 1. Environment (Highest priority)
+    const envVar = (environmentVariables as Variable[]).find(v => v.enabled !== false && v.key === key);
+    if (envVar) return { value: envVar.value, scope: 'Environment' };
+
+    // 2. Collection
+    const colVar = collectionVariables.find(v => v.enabled !== false && v.key === key);
+    if (colVar) return { value: colVar.value, scope: 'Collection' };
+
+    // 3. Global
+    const globVar = globalVariables.find(v => v.enabled !== false && v.key === key);
+    if (globVar) return { value: globVar.value, scope: 'Global' };
+
+    return { value: null, scope: 'Unresolved' };
+  }
+
+  /**
    * Deep resolve an object (useful for headers, form-data, etc.)
    */
   static resolveObject<T extends Record<string, any>>(

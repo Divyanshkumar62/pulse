@@ -8,6 +8,7 @@ import {
   MonitorCheck, 
   Gauge, 
   Workflow,
+  ArrowRightLeft,
   PanelLeft,
   Settings
 } from 'lucide-react';
@@ -56,6 +57,11 @@ export default function NavSidebar() {
       id: 'flows', 
       label: 'Flows',
       icon: <Workflow size={20} />
+    },
+    {
+      id: 'regression',
+      label: 'Regression',
+      icon: <ArrowRightLeft size={20} />
     }
   ] as const;
 

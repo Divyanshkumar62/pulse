@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { Request, HttpResponse, WebSocketMessage, WebSocketStatus, Collection } from '../types';
+import { Request, HttpResponse, WebSocketMessage, WebSocketStatus, Collection, StreamFrame } from '../types';
 import { LogEntry, TestResult } from '../types/sandbox';
 
 export type TabType = 'request' | 'runner' | 'docs';
@@ -18,6 +18,8 @@ export interface Tab {
   isLoading?: boolean;
   wsMessages?: WebSocketMessage[];
   wsStatus?: WebSocketStatus;
+  streamFrames?: StreamFrame[];
+  streamStatus?: 'connecting' | 'connected' | 'disconnected' | 'error';
   isPinned?: boolean;
 }
 
@@ -44,6 +46,9 @@ interface TabStore {
   addWsMessage: (tabId: string, message: WebSocketMessage) => void;
   setWsStatus: (tabId: string, status: WebSocketStatus) => void;
   clearWsMessages: (tabId: string) => void;
+  addStreamFrame: (tabId: string, frame: StreamFrame) => void;
+  setStreamStatus: (tabId: string, status: 'connecting' | 'connected' | 'disconnected' | 'error') => void;
+  clearStreamFrames: (tabId: string) => void;
   persistSession: () => void;
 }
 
@@ -302,6 +307,35 @@ export const useTabStore = create<TabStore>()(
     set({
       tabs: tabs.map(t => 
         t.id === tabId ? { ...t, wsMessages: [] } : t
+      )
+    });
+  },
+
+  addStreamFrame: (tabId, frame) => {
+    const { tabs } = get();
+    set({
+      tabs: tabs.map(t => 
+        t.id === tabId 
+          ? { ...t, streamFrames: [...(t.streamFrames || []), frame] } 
+          : t
+      )
+    });
+  },
+
+  setStreamStatus: (tabId, status) => {
+    const { tabs } = get();
+    set({
+      tabs: tabs.map(t => 
+        t.id === tabId ? { ...t, streamStatus: status } : t
+      )
+    });
+  },
+
+  clearStreamFrames: (tabId) => {
+    const { tabs } = get();
+    set({
+      tabs: tabs.map(t => 
+        t.id === tabId ? { ...t, streamFrames: [] } : t
       )
     });
   }

@@ -11,7 +11,8 @@ export default function MockServerEditor() {
     activeMockServerId, 
     updateMockServer, 
     startMockServer, 
-    stopMockServer 
+    stopMockServer,
+    toggleTunnel
   } = useMockStore();
 
   const activeServer = mockServers.find(s => s.id === activeMockServerId);
@@ -190,7 +191,39 @@ export default function MockServerEditor() {
           </div>
         </div>
 
-        <div className="mock-header-right">
+        <div className="mock-header-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Public Webhook Tunnel Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#1e293b', padding: '6px 12px', borderRadius: '6px', border: '1px solid #334155' }}>
+            <Globe size={14} style={{ color: activeServer.isTunneling ? '#22c55e' : '#94a3b8' }} />
+            <span style={{ fontSize: '11px', color: '#f8fafc', fontWeight: 500 }}>Public Webhook Tunnel</span>
+            <label style={{ position: 'relative', display: 'inline-block', width: '34px', height: '18px', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={!!activeServer.isTunneling} 
+                onChange={() => toggleTunnel(activeServer.id)}
+                style={{ opacity: 0, width: 0, height: 0 }}
+              />
+              <span style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: activeServer.isTunneling ? '#22c55e' : '#475569',
+                borderRadius: '18px',
+                transition: '0.2s'
+              }}>
+                <span style={{
+                  position: 'absolute',
+                  height: '14px',
+                  width: '14px',
+                  left: activeServer.isTunneling ? '17px' : '2px',
+                  bottom: '2px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  transition: '0.2s'
+                }} />
+              </span>
+            </label>
+          </div>
+
           <button 
             onClick={handleToggleStatus} 
             className={`btn-action-premium ${activeServer.status === 'active' ? 'stop' : 'start'}`}
@@ -209,6 +242,27 @@ export default function MockServerEditor() {
           </button>
         </div>
       </div>
+
+      {/* Public URL Banner when active */}
+      {activeServer.isTunneling && activeServer.publicUrl && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(34, 197, 94, 0.1)', borderBottom: '1px solid rgba(34, 197, 94, 0.3)', padding: '8px 16px', fontSize: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#22c55e', fontWeight: 600 }}>🌐 Public Webhook Endpoint:</span>
+            <code style={{ backgroundColor: '#0f172a', padding: '2px 8px', borderRadius: '4px', color: '#38bdf8', fontFamily: 'var(--font-mono, monospace)' }}>
+              {activeServer.publicUrl}
+            </code>
+          </div>
+          <button 
+            onClick={() => {
+              navigator.clipboard.writeText(activeServer.publicUrl || '');
+              toast.success('Public Webhook URL copied to clipboard!');
+            }}
+            style={{ backgroundColor: '#22c55e', border: 'none', color: '#ffffff', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 500, cursor: 'pointer' }}
+          >
+            Copy URL
+          </button>
+        </div>
+      )}
 
       {/* Main Workspace Area (Columns) */}
       <div className="mock-editor-workspace">
@@ -298,6 +352,17 @@ export default function MockServerEditor() {
                       value={selectedRoute.statusCode} 
                       onChange={(e) => handleUpdateRoute(selectedRoute.id, { statusCode: parseInt(e.target.value) || 200 })}
                       placeholder="200"
+                      className="mock-text-input"
+                    />
+                  </div>
+
+                  <div className="form-group delay-group">
+                    <label>Delay (ms)</label>
+                    <input 
+                      type="number" 
+                      value={selectedRoute.delayMs || 0} 
+                      onChange={(e) => handleUpdateRoute(selectedRoute.id, { delayMs: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
                       className="mock-text-input"
                     />
                   </div>

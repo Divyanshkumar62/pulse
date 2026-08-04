@@ -23,26 +23,24 @@ export default function UrlBar({ onSend, onCode, onSave, isLoading }: UrlBarProp
 
   if (!request) return null;
 
-  const isWebSocket = request.method === 'WS' || request.url?.startsWith('ws://') || request.url?.startsWith('wss://');
+  const isStreaming = 
+    request.method === 'WS' || 
+    request.url?.startsWith('ws://') || 
+    request.url?.startsWith('wss://') || 
+    request.url?.startsWith('sse://') ||
+    request.headers?.some(h => h.key.toLowerCase() === 'accept' && h.value.includes('text/event-stream'));
+
+  const streamStatus = activeTab?.streamStatus || 'disconnected';
 
   return (
     <div className="url-bar-container">
       <div className="url-bar-glass">
-        {!isWebSocket && (
-          <MethodSelector
-            method={request.method}
-            methods={METHODS}
-            onChange={(m) => updateActiveTabRequest({ method: m })}
-            disabled={isLoading}
-          />
-        )}
-        
-        {isWebSocket && request.method !== 'WS' && (
-          <div className="ws-indicator">
-            <span className="ws-dot"></span>
-            WS
-          </div>
-        )}
+        <MethodSelector
+          method={request.method}
+          methods={METHODS}
+          onChange={(m) => updateActiveTabRequest({ method: m })}
+          disabled={isLoading}
+        />
 
         <div className="url-input-wrapper">
           <input
@@ -52,13 +50,13 @@ export default function UrlBar({ onSend, onCode, onSave, isLoading }: UrlBarProp
             value={request.url}
             onChange={(e) => updateActiveTabRequest({ url: e.target.value })}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isWebSocket) onSend();
+              if (e.key === 'Enter' && !isStreaming) onSend();
             }}
           />
         </div>
         
         <div className="url-bar-actions">
-          {!isWebSocket && (
+          {!isStreaming ? (
             <>
               <button 
                 className={`icon-action-btn ${request.showDocs ? 'active' : ''}`}
@@ -121,14 +119,50 @@ export default function UrlBar({ onSend, onCode, onSave, isLoading }: UrlBarProp
                 )}
               </button>
             </>
-          )}
-          {isWebSocket && (
-             <button 
-                className="send-btn-premium" 
-                onClick={onSend}
-              >
-                Connect
-              </button>
+          ) : (
+            <button 
+              className="send-btn-premium" 
+              onClick={async () => {
+                if (streamStatus === 'connected' || streamStatus === 'connecting') {
+                  try {
+                    const { disconnectStream } = await import('../../hooks/useTauri');
+                    await disconnectStream(activeTab.id);
+                    useTabStore.getState().setStreamStatus(activeTab.id, 'disconnected');
+                    toast.info('Disconnected from stream');
+                  } catch (e: any) {
+                    toast.error('Failed to disconnect: ' + (e.message || e));
+                  }
+                } else {
+                  try {
+                    const { connectStream } = await import('../../hooks/useTauri');
+                    const protocol = request.protocol === 'ws' || request.url.startsWith('ws') ? 'WS' : 'SSE';
+                    const headersMap: Record<string, string> = {};
+                    request.headers?.forEach(h => {
+                      if (h.key && h.value) headersMap[h.key] = h.value;
+                    });
+                    useTabStore.getState().setStreamStatus(activeTab.id, 'connecting');
+                    await connectStream(activeTab.id, protocol, request.url, headersMap);
+                    toast.success(`Connecting to ${protocol} stream...`);
+                  } catch (e: any) {
+                    useTabStore.getState().setStreamStatus(activeTab.id, 'error');
+                    toast.error('Failed to connect: ' + (e.message || e));
+                  }
+                }
+              }}
+              style={{
+                backgroundColor: (streamStatus === 'connected' || streamStatus === 'connecting') 
+                  ? 'rgba(239, 68, 68, 0.2)' 
+                  : 'rgba(34, 197, 94, 0.2)',
+                color: (streamStatus === 'connected' || streamStatus === 'connecting')
+                  ? '#ef4444'
+                  : '#22c55e',
+                border: (streamStatus === 'connected' || streamStatus === 'connecting')
+                  ? '1px solid rgba(239, 68, 68, 0.4)'
+                  : '1px solid rgba(34, 197, 94, 0.4)'
+              }}
+            >
+              {(streamStatus === 'connected' || streamStatus === 'connecting') ? 'Disconnect' : 'Connect'}
+            </button>
           )}
         </div>
       </div>

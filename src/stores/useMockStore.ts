@@ -17,6 +17,8 @@ interface MockStore {
   stopMockServer: (id: string) => Promise<void>;
   saveMockServersToDisk: () => Promise<void>;
   createMockFromRequest: (request: any) => Promise<void>;
+  createMockFromResponse: (request: any, response: any) => Promise<void>;
+  toggleTunnel: (serverId: string) => Promise<void>;
 }
 
 const getWorkspacePath = () => {
@@ -112,7 +114,8 @@ export const useMockStore = create<MockStore>((set, get) => ({
             method: r.method,
             statusCode: Number(r.statusCode),
             responseBody: r.responseBody,
-            headers: r.headers
+            headers: r.headers,
+            delayMs: Number(r.delayMs || 0)
           }))
         });
       } catch (e) {
@@ -166,7 +169,8 @@ export const useMockStore = create<MockStore>((set, get) => ({
             method: r.method,
             statusCode: Number(r.statusCode),
             responseBody: r.responseBody,
-            headers: r.headers
+            headers: r.headers,
+            delayMs: Number(r.delayMs || 0)
           }))
         });
       } catch (e: any) {
@@ -284,6 +288,111 @@ export const useMockStore = create<MockStore>((set, get) => ({
     const serverAfterUpdate = updatedServers.find(s => s.id === targetServer.id);
     if (serverAfterUpdate && serverAfterUpdate.status === 'active') {
       await get().startMockServer(targetServer.id);
+    }
+  },
+
+  createMockFromResponse: async (request, response) => {
+    let servers = get().mockServers;
+    if (servers.length === 0) {
+      const defaultServer: MockServer = {
+        id: crypto.randomUUID(),
+        name: 'Team Mock Server',
+        port: 4000,
+        routes: [],
+        status: 'inactive'
+      };
+      servers = [defaultServer];
+    }
+    const targetServer = servers[0];
+
+    let path = '/';
+    if (request.url) {
+      try {
+        if (request.url.startsWith('http')) {
+          const url = new URL(request.url);
+          path = url.pathname;
+        } else {
+          path = request.url.startsWith('/') ? request.url : `/${request.url}`;
+          path = path.split('?')[0];
+        }
+      } catch (e) {
+        path = request.url;
+      }
+    }
+
+    const newRoute: MockRoute = {
+      id: crypto.randomUUID(),
+      name: request.name || `Mock: ${request.method} ${path}`,
+      path: path || '/',
+      method: request.method || 'GET',
+      statusCode: response.status || 200,
+      responseBody: response.body || '{}',
+      headers: response.headers ? response.headers.map((h: any) => ({ key: h.key, value: h.value })) : [],
+      delayMs: 0
+    };
+
+    const updatedServers = servers.map(s => 
+      s.id === targetServer.id 
+        ? { ...s, routes: [...s.routes, newRoute] } 
+        : s
+    );
+
+    set({ 
+      mockServers: updatedServers, 
+      activeMockServerId: targetServer.id 
+    });
+
+    await get().saveMockServersToDisk();
+
+    if (targetServer.status === 'active') {
+      await get().startMockServer(targetServer.id);
+    }
+  },
+
+  toggleTunnel: async (serverId: string) => {
+    const server = get().mockServers.find(s => s.id === serverId);
+    if (!server) return;
+
+    if (server.isTunneling) {
+      if (isTauri()) {
+        const { stopPulseTunnel } = await import('../hooks/useTauri');
+        await stopPulseTunnel(serverId);
+      }
+      set(state => ({
+        mockServers: state.mockServers.map(s =>
+          s.id === serverId ? { ...s, isTunneling: false, publicUrl: undefined, tunnelStatus: 'inactive' } : s
+        )
+      }));
+    } else {
+      if (isTauri()) {
+        const { startPulseTunnel } = await import('../hooks/useTauri');
+        set(state => ({
+          mockServers: state.mockServers.map(s =>
+            s.id === serverId ? { ...s, isTunneling: true, tunnelStatus: 'connecting' } : s
+          )
+        }));
+        try {
+          const url = await startPulseTunnel(serverId, Number(server.port));
+          set(state => ({
+            mockServers: state.mockServers.map(s =>
+              s.id === serverId ? { ...s, publicUrl: url, isTunneling: true, tunnelStatus: 'active' } : s
+            )
+          }));
+        } catch (e: any) {
+          set(state => ({
+            mockServers: state.mockServers.map(s =>
+              s.id === serverId ? { ...s, isTunneling: false, tunnelStatus: 'error' } : s
+            )
+          }));
+        }
+      } else {
+        const fakeUrl = `https://pulse-mock-${server.port}.trycloudflare.com`;
+        set(state => ({
+          mockServers: state.mockServers.map(s =>
+            s.id === serverId ? { ...s, publicUrl: fakeUrl, isTunneling: true, tunnelStatus: 'active' } : s
+          )
+        }));
+      }
     }
   }
 }));

@@ -64,16 +64,22 @@ export default function RequestBuilder() {
   }
 
   const request = activeTab.request;
-  const isWebSocket = request.url?.startsWith('ws://') || request.url?.startsWith('wss://');
+  const isStreaming = 
+    request.method === 'WS' || 
+    request.url?.startsWith('ws://') || 
+    request.url?.startsWith('wss://') || 
+    request.url?.startsWith('sse://') ||
+    request.headers?.some(h => h.key.toLowerCase() === 'accept' && h.value.includes('text/event-stream'));
 
   // Sync protocol based on URL
   useEffect(() => {
-    if (isWebSocket && request.protocol !== 'ws') {
+    const isWS = request.method === 'WS' || request.url?.startsWith('ws://') || request.url?.startsWith('wss://');
+    if (isWS && request.protocol !== 'ws') {
       updateActiveTabRequest({ protocol: 'ws' });
-    } else if (!isWebSocket && request.protocol === 'ws') {
+    } else if (!isWS && request.protocol === 'ws') {
       updateActiveTabRequest({ protocol: 'http' });
     }
-  }, [isWebSocket, request.protocol, activeTabId, updateActiveTabRequest]);
+  }, [request.method, request.url, request.protocol, activeTabId, updateActiveTabRequest]);
 
   const handleSend = useCallback(async () => {
     if (!request.url) {
@@ -81,8 +87,7 @@ export default function RequestBuilder() {
       return;
     }
 
-    if (isWebSocket) {
-        // WebSocket connect is handled inside WebSocketPanel
+    if (isStreaming) {
         return;
     }
 
@@ -344,7 +349,15 @@ export default function RequestBuilder() {
       
       if (!settings) throw new Error('Settings not loaded');
       
-      const response = await sendRequest(method, finalUrl, resolvedHeaders, resolvedBody, settings);
+      const response = await sendRequest(
+        method, 
+        finalUrl, 
+        resolvedHeaders, 
+        resolvedBody, 
+        settings,
+        request.responseSchema,
+        request.id
+      );
       setTabResponse(activeTab.id, response);
 
       // Save to history
@@ -447,7 +460,7 @@ export default function RequestBuilder() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab, isWebSocket, environments, activeEnvId, updateEnvironment, setTabResponse, settings, globalVariables, request, clearTabSandboxResults, setTabTestResults, setTabConsoleLogs, addEntry, collections, updateCollectionVariables, updateGlobalVariables]);
+  }, [activeTab, isStreaming, environments, activeEnvId, updateEnvironment, setTabResponse, settings, globalVariables, request, clearTabSandboxResults, setTabTestResults, setTabConsoleLogs, addEntry, collections, updateCollectionVariables, updateGlobalVariables]);
 
   useEffect(() => {
     const onSendRequest = () => handleSend();
@@ -474,11 +487,7 @@ export default function RequestBuilder() {
     <div className="request-builder">
       <UrlBar onSend={handleSend} onCode={() => setIsCodeModalOpen(true)} onSave={() => setIsSaveModalOpen(true)} isLoading={isLoading} />
       
-      {isWebSocket ? (
-        <div className="websocket-container-glass">
-          <WebSocketPanel />
-        </div>
-      ) : (
+      {!isStreaming && (
         <>
           <div className="request-config-tabs">
             {configTabs.map(tab => (

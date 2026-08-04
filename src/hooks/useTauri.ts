@@ -22,9 +22,11 @@ export async function sendRequest(
   url: string,
   headers: Record<string, string>,
   body: RequestBody,
-  settings: UserSettings
+  settings: UserSettings,
+  responseSchema?: string,
+  requestId?: string
 ): Promise<HttpResponse> {
-  return invoke('send_http_request', { method, url, headers, body, settings });
+  return invoke('send_http_request', { method, url, headers, body, settings, responseSchema, requestId });
 }
 
 export async function loadCollection(path: string): Promise<Collection> {
@@ -254,4 +256,75 @@ export async function startLoadTest(config: LoadTestConfig): Promise<string> {
 
 export async function stopLoadTest(): Promise<boolean> {
   return invoke('stop_load_test');
+}
+
+export async function connectStream(
+  connectionId: string,
+  protocol: string,
+  url: string,
+  headers: Record<string, string>
+): Promise<void> {
+  return invoke('connect_stream', { connectionId, protocol, url, headers });
+}
+
+export async function sendStreamFrame(
+  connectionId: string,
+  payload: string
+): Promise<void> {
+  return invoke('send_stream_frame', { connectionId, payload });
+}
+
+export async function disconnectStream(connectionId: string): Promise<void> {
+  return invoke('disconnect_stream', { connectionId });
+}
+
+export async function startPulseTunnel(serverId: string, port: number): Promise<string> {
+  return invoke('start_pulse_tunnel', { serverId, port });
+}
+
+export async function stopPulseTunnel(serverId: string): Promise<void> {
+  return invoke('stop_pulse_tunnel', { serverId });
+}
+
+export interface RegressionRequestConfig {
+  method: string;
+  path: string;
+  headers: Record<string, string>;
+  body?: string;
+}
+
+export interface EnvironmentResponse {
+  envName: string;
+  baseUrl: string;
+  status: number;
+  statusText: string;
+  timeMs: number;
+  headers: Record<string, string>;
+  body: string;
+  sizeBytes: number;
+}
+
+export interface RegressionResult {
+  responseA: EnvironmentResponse;
+  responseB: EnvironmentResponse;
+  latencyDiffMs: number;
+  fasterEnv: string;
+  isStatusMatch: boolean;
+  isBodyMatch: boolean;
+}
+
+export async function runRegressionTest(
+  config: RegressionRequestConfig,
+  envAName: string,
+  baseUrlA: string,
+  envBName: string,
+  baseUrlB: string
+): Promise<RegressionResult> {
+  return invoke('run_regression_test', {
+    config,
+    envAName,
+    baseUrlA,
+    envBName,
+    baseUrlB,
+  });
 }
