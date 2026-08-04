@@ -231,3 +231,26 @@
   color: #3b82f6 !important;
   transform: scale(1.25);
 }
+
+/* High-specificity CodeMirror search match highlights override matching Postman */
+.cm-editor .cm-searchMatch,
+.cm-editor.cm-theme-one-dark .cm-searchMatch,
+.cm-theme-one-dark .cm-searchMatch,
+.cm-searchMatch {
+  background-color: rgba(56, 189, 248, 0.35) !important;
+  outline: 1px solid rgba(56, 189, 248, 0.7) !important;
+  border-radius: 2px !important;
+}
+
+.cm-editor .cm-searchMatch-selected,
+.cm-editor.cm-theme-one-dark .cm-searchMatch-selected,
+.cm-theme-one-dark .cm-searchMatch-selected,
+.cm-searchMatch-selected,
+.cm-searchMatch.cm-searchMatch-selected {
+  background-color: #38bdf8 !important;
+  color: #0b0f16 !important;
+  font-weight: 700 !important;
+  border-radius: 2px !important;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.95), 0 0 4px #0284c7 !important;
+  outline: 2px solid #0284c7 !important;
+}

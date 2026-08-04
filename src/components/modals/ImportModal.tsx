@@ -78,6 +78,7 @@ export default function ImportModal({ isOpen, onClose, initialMode = 'curl' }: I
 
       if (activeWorkspaceId) {
         await addCollection(newCollection, activeWorkspaceId);
+        window.dispatchEvent(new CustomEvent('pulse:expand-item', { detail: { id: newCollection.id } }));
       }
       toast.success(`Successfully imported ${newCollection.name}`);
       onClose();
@@ -121,6 +122,10 @@ export default function ImportModal({ isOpen, onClose, initialMode = 'curl' }: I
 
     const folderId = selectedFolder || null;
     addRequest(selectedCollection, folderId, finalRequest);
+    window.dispatchEvent(new CustomEvent('pulse:expand-item', { detail: { id: selectedCollection } }));
+    if (folderId) {
+      window.dispatchEvent(new CustomEvent('pulse:expand-item', { detail: { id: folderId } }));
+    }
     toast.success(`Request "${editName}" saved successfully`);
     onClose();
   };

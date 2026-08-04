@@ -114,6 +114,17 @@ export default function ResponseBody({ content, contentType }: { content: string
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const scrollToCurrentMatch = (view: EditorView) => {
+    const sel = view.state.selection.main;
+    if (sel) {
+      view.dispatch({
+        selection: { anchor: sel.from, head: sel.to },
+        effects: EditorView.scrollIntoView(sel.from, { y: 'center' }),
+        scrollIntoView: true
+      });
+    }
+  };
+
   useEffect(() => {
     if (viewRef.current) {
       viewRef.current.dispatch({
@@ -121,6 +132,7 @@ export default function ResponseBody({ content, contentType }: { content: string
       });
       if (searchQueryText.trim()) {
         findNext(viewRef.current);
+        scrollToCurrentMatch(viewRef.current);
       }
     }
   }, [searchQueryText]);
@@ -151,8 +163,8 @@ export default function ResponseBody({ content, contentType }: { content: string
         ".cm-foldGutter": { width: "16px !important" },
         ".cm-foldGutter .cm-gutterElement": { cursor: "pointer", color: "#94a3b8 !important", fontSize: "14px !important", fontWeight: "700 !important", width: "16px !important", transition: "transform 0.15s, color 0.15s" },
         ".cm-foldGutter .cm-gutterElement:hover": { color: "#3b82f6 !important" },
-        ".cm-searchMatch": { backgroundColor: "rgba(59, 130, 246, 0.3) !important", outline: "1px solid rgba(59, 130, 246, 0.6)", borderRadius: "2px" },
-        ".cm-searchMatch-selected": { backgroundColor: "#2563eb !important", color: "#ffffff !important", borderRadius: "2px", boxShadow: "0 0 8px rgba(37, 99, 235, 0.6)" }
+        "& .cm-searchMatch": { backgroundColor: "rgba(56, 189, 248, 0.35) !important", outline: "1px solid rgba(56, 189, 248, 0.7) !important", borderRadius: "2px !important" },
+        "& .cm-searchMatch-selected": { backgroundColor: "#38bdf8 !important", color: "#0b0f16 !important", fontWeight: "700 !important", borderRadius: "2px !important", boxShadow: "0 0 14px rgba(56, 189, 248, 0.95), 0 0 4px #0284c7 !important", outline: "2px solid #0284c7 !important" }
       })
     ];
 
@@ -177,6 +189,7 @@ export default function ResponseBody({ content, contentType }: { content: string
         effects: setSearchQuery.of(new SearchQuery({ search: searchQueryText, caseSensitive: false }))
       });
       findNext(view);
+      scrollToCurrentMatch(view);
     }
 
     return () => {
@@ -188,12 +201,14 @@ export default function ResponseBody({ content, contentType }: { content: string
   const handleNextMatch = () => {
     if (viewRef.current) {
       findNext(viewRef.current);
+      scrollToCurrentMatch(viewRef.current);
     }
   };
 
   const handlePrevMatch = () => {
     if (viewRef.current) {
       findPrevious(viewRef.current);
+      scrollToCurrentMatch(viewRef.current);
     }
   };
 
@@ -240,6 +255,13 @@ export default function ResponseBody({ content, contentType }: { content: string
 
   const isJson = contentType.includes('json');
 
+  const handleCopyJsonPath = () => {
+    const activePath = filterQueryText.trim() ? filterQueryText.trim() : (searchQueryText.trim() ? searchQueryText.trim() : '$');
+    const formatted = activePath.startsWith('$') ? activePath : `$.${activePath}`;
+    navigator.clipboard.writeText(formatted);
+    toast.success(`Copied JSON Path: ${formatted}`);
+  };
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div 
@@ -248,29 +270,29 @@ export default function ResponseBody({ content, contentType }: { content: string
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '6px 10px',
-          background: 'rgba(0,0,0,0.25)',
+          padding: '6px 12px',
+          backgroundColor: '#0d121d',
           borderBottom: '1px solid var(--border-subtle)',
-          gap: '8px',
-          flexWrap: 'wrap'
+          fontSize: '12px',
+          gap: '8px'
         }}
       >
-        {/* Left Section: Format Mode Switcher & Filter input */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
+        {/* Left Section: Format Mode Switcher & Live JSON Filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {isJson && (
-            <div style={{ display: 'flex', background: 'var(--bg-elevated)', borderRadius: '4px', border: '1px solid var(--border-subtle)', padding: '2px' }}>
+            <div style={{ display: 'flex', background: 'var(--bg-elevated)', borderRadius: '4px', padding: '2px' }}>
               {(['pretty', 'raw', 'minify'] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setFormatMode(mode)}
                   style={{
                     background: formatMode === mode ? 'var(--accent-primary)' : 'transparent',
-                    color: formatMode === mode ? '#FFFFFF' : 'var(--text-tertiary)',
+                    color: formatMode === mode ? '#ffffff' : 'var(--text-tertiary)',
                     border: 'none',
                     borderRadius: '3px',
                     padding: '2px 8px',
-                    fontSize: '10.5px',
-                    fontWeight: 600,
+                    fontSize: '11px',
+                    fontWeight: formatMode === mode ? 600 : 400,
                     cursor: 'pointer',
                     textTransform: 'capitalize',
                     transition: 'all 0.15s'
@@ -283,28 +305,50 @@ export default function ResponseBody({ content, contentType }: { content: string
           )}
 
           {isJson && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', borderRadius: '4px', padding: '2px 6px', width: '180px' }}>
-              <Filter size={12} color="var(--text-tertiary)" />
-              <input
-                type="text"
-                value={filterQueryText}
-                onChange={(e) => setFilterQueryText(e.target.value)}
-                placeholder="Filter JSON keys..."
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', borderRadius: '4px', padding: '2px 6px', width: '160px' }}>
+                <Filter size={12} color="var(--text-tertiary)" />
+                <input
+                  type="text"
+                  value={filterQueryText}
+                  onChange={(e) => setFilterQueryText(e.target.value)}
+                  placeholder="Filter JSON keys..."
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: 'var(--text-primary)',
+                    fontSize: '11px',
+                    width: '100%'
+                  }}
+                />
+                {filterQueryText && (
+                  <button onClick={() => setFilterQueryText('')} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '0', display: 'flex' }}>
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={handleCopyJsonPath}
+                title="Copy active JSON path to clipboard"
                 style={{
                   background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-tertiary)',
+                  borderRadius: '4px',
+                  padding: '3px 6px',
                   fontSize: '11px',
-                  width: '100%'
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
-              />
-              {filterQueryText && (
-                <button onClick={() => setFilterQueryText('')} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '0', display: 'flex' }}>
-                  <X size={12} />
-                </button>
-              )}
-            </div>
+              >
+                <span>Copy Path</span>
+              </button>
+            </>
           )}
         </div>
 

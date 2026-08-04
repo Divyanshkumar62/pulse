@@ -103,7 +103,38 @@ export default function CollectionTree() {
   const { settings } = useSettingsStore();
 
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, items: ContextMenuItem[]} | null>(null);
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('pulse_expanded_collection_items');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch (e) {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pulse_expanded_collection_items', JSON.stringify(Array.from(expandedItems)));
+    } catch (e) {
+      console.error('Failed to save expanded sidebar items:', e);
+    }
+  }, [expandedItems]);
+
+  useEffect(() => {
+    const handleExpandEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ id: string }>;
+      if (customEvent.detail && customEvent.detail.id) {
+        setExpandedItems(prev => {
+          const next = new Set(prev);
+          next.add(customEvent.detail.id);
+          return next;
+        });
+      }
+    };
+    window.addEventListener('pulse:expand-item', handleExpandEvent);
+    return () => window.removeEventListener('pulse:expand-item', handleExpandEvent);
+  }, []);
+
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
