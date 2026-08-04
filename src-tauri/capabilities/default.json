@@ -20,6 +20,20 @@
     "notification:default",
     "core:window:allow-start-dragging",
     "updater:default",
-    "process:default"
+    "process:default",
+    "shell:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "sidecar": "cloudflared",
+          "args": ["tunnel", "--url", { "validator": ".*" }]
+        },
+        {
+          "sidecar": "binaries/cloudflared",
+          "args": ["tunnel", "--url", { "validator": ".*" }]
+        }
+      ]
+    }
   ]
 }

@@ -6,6 +6,11 @@ mod mock_server;
 pub mod script_runner;
 mod search;
 pub mod secrets;
+pub mod streaming;
+pub mod tunnel;
+pub mod regression;
+
+use tauri::Emitter;
 
 #[tauri::command]
 async fn start_oauth_flow(
@@ -128,15 +133,51 @@ impl Default for UserSettings {
     }
 }
 
+fn validate_json_schema(payload: &str, schema_str: &str) -> Vec<String> {
+    let mut errors = Vec::new();
+    
+    let schema_json = match serde_json::from_str::<serde_json::Value>(schema_str) {
+        Ok(v) => v,
+        Err(e) => {
+            return vec![format!("Invalid OpenAPI schema JSON: {}", e)];
+        }
+    };
+
+    let instance_json = match serde_json::from_str::<serde_json::Value>(payload) {
+        Ok(v) => v,
+        Err(e) => {
+            return vec![format!("Invalid response payload JSON: {}", e)];
+        }
+    };
+
+    match jsonschema::JSONSchema::compile(&schema_json) {
+        Ok(compiled) => {
+            if let Err(validation_errors) = compiled.validate(&instance_json) {
+                for err in validation_errors {
+                    errors.push(err.to_string());
+                }
+            }
+        }
+        Err(e) => {
+            errors.push(format!("JSON Schema compilation failed: {}", e));
+        }
+    }
+
+    errors
+}
+
 #[tauri::command]
 async fn send_http_request(
+    app: tauri::AppHandle,
     method: String,
     url: String,
     headers: std::collections::HashMap<String, String>,
     body: RequestBody,
     settings: UserSettings,
+    response_schema: Option<String>,
+    request_id: String,
 ) -> Result<HttpResponse, String> {
-    send_request(
+    let res = send_request(
         method, 
         url, 
         headers, 
@@ -148,7 +189,24 @@ async fn send_http_request(
         settings.proxy_url
     )
     .await
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+
+    if let Some(schema_str) = response_schema {
+        if !schema_str.is_empty() {
+            let body_clone = res.body.clone();
+            let app_clone = app.clone();
+            let req_id_clone = request_id.clone();
+            tokio::spawn(async move {
+                let drift_errors = validate_json_schema(&body_clone, &schema_str);
+                let _ = app_clone.emit("spec-drift-result", serde_json::json!({
+                    "requestId": req_id_clone,
+                    "driftErrors": drift_errors,
+                }));
+            });
+        }
+    }
+
+    Ok(res)
 }
 
 #[tauri::command]
@@ -912,6 +970,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_shell::init())
         .manage(http::load_testing::LoadTestManager::default())
         .invoke_handler(tauri::generate_handler![
 
@@ -981,6 +1040,12 @@ pub fn run() {
             get_github_collaborators,
             get_github_invitations,
             invite_github_collaborator,
+            streaming::connect_stream,
+            streaming::send_stream_frame,
+            streaming::disconnect_stream,
+            tunnel::start_pulse_tunnel,
+            tunnel::stop_pulse_tunnel,
+            regression::run_regression_test,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

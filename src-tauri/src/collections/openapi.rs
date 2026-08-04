@@ -35,6 +35,19 @@ fn add_operation(requests: &mut Vec<Request>, path: &str, method: &str, operatio
     if let Some(op) = operation {
         let name = op.summary.clone().unwrap_or_else(|| format!("{} {}", method, path));
         
+        let mut response_schema = None;
+        if let Some(ReferenceOr::Item(resp)) = op.responses.responses.get(&openapiv3::StatusCode::Code(200))
+            .or_else(|| op.responses.responses.get(&openapiv3::StatusCode::Code(201)))
+        {
+            if let Some(media_type) = resp.content.get("application/json") {
+                if let Some(schema_ref) = &media_type.schema {
+                    if let Ok(schema_str) = serde_json::to_string(schema_ref) {
+                        response_schema = Some(schema_str);
+                    }
+                }
+            }
+        }
+
         requests.push(Request {
             id: Uuid::new_v4().to_string(),
             name,
@@ -50,6 +63,7 @@ fn add_operation(requests: &mut Vec<Request>, path: &str, method: &str, operatio
             pre_request_script: None,
             test_script: None,
             protocol: Some("http".to_string()),
+            response_schema,
         });
     }
 }

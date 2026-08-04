@@ -28,6 +28,7 @@ pub struct MockRoute {
     pub status_code: u16,
     pub response_body: String,
     pub headers: Vec<Header>,
+    pub delay_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -42,6 +43,41 @@ pub struct MockServerConfig {
 
 // Global registry of running mock servers: mapping server_id -> (port, name)
 static RUNNING_SERVERS: Lazy<Mutex<HashMap<String, (u16, String)>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+
+fn match_path_pattern(route_path: &str, req_path: &str) -> bool {
+    let r_path = route_path.trim_start_matches('/').trim_end_matches('/');
+    let q_path = req_path.trim_start_matches('/').trim_end_matches('/');
+
+    let r_segments: Vec<&str> = r_path.split('/').collect();
+    let q_segments: Vec<&str> = q_path.split('/').collect();
+
+    if r_segments.len() != q_segments.len() {
+        return false;
+    }
+
+    for (r_seg, q_seg) in r_segments.iter().zip(q_segments.iter()) {
+        if r_seg.starts_with(':') {
+            // Express-style parameters match any non-empty segment
+            if q_seg.is_empty() {
+                return false;
+            }
+        } else if r_seg.starts_with('{') && r_seg.ends_with('}') {
+            // OpenAPI style parameters match any non-empty segment
+            if q_seg.is_empty() {
+                return false;
+            }
+        } else if *r_seg == "*" {
+            // Wildcard matches any single segment
+            if q_seg.is_empty() {
+                return false;
+            }
+        } else if r_seg != q_seg {
+            return false;
+        }
+    }
+
+    true
+}
 
 fn resolve_faker_placeholders(body: &str) -> String {
     let mut resolved = body.to_string();
@@ -122,10 +158,17 @@ pub fn start_mock_server(id: String, name: String, port: u16, routes: Vec<MockRo
                 let req_method_upper = req_method.to_uppercase();
                 let r_path = if r.path.starts_with('/') { r.path.clone() } else { format!("/{}", r.path) };
                 let req_path_std = if req_path.starts_with('/') { req_path.to_string() } else { format!("/{}", req_path) };
-                r_method == req_method_upper && r_path == req_path_std
+                r_method == req_method_upper && match_path_pattern(&r_path, &req_path_std)
             });
 
             if let Some(route) = matched_route {
+                // Apply simulated delay if specified
+                if let Some(delay) = route.delay_ms {
+                    if delay > 0 {
+                        thread::sleep(std::time::Duration::from_millis(delay));
+                    }
+                }
+
                 // Resolve placeholders before responding
                 let final_body = resolve_faker_placeholders(&route.response_body);
                 

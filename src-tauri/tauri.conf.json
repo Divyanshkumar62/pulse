@@ -40,6 +40,9 @@
     "targets": ["nsis", "dmg", "deb", "appimage"],
     "createUpdaterArtifacts": true,
     "icon": ["icons/icon.ico", "icons/128x128.png"],
+    "externalBin": [
+      "binaries/cloudflared"
+    ],
     "category": "DeveloperTool",
     "shortDescription": "A fast, lightweight API client",
     "longDescription": "Pulse is a fast, lightweight Postman alternative built with Tauri, Rust, and React.",

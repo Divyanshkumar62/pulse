@@ -25,11 +25,12 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+tauri-plugin-shell = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
 reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "stream", "rustls-tls"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "process"] }
 thiserror = "1"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
@@ -55,6 +56,12 @@ tauri-plugin-notification = "2"
 async-recursion = "1.1.1"
 keyring = "2"
 hdrhistogram = "7.5"
+jsonschema = "0.18"
+tokio-tungstenite = { version = "0.21", features = ["connect", "handshake"] }
+eventsource-stream = "0.2"
+futures-util = "0.3"
+tonic = { version = "0.11", default-features = false, features = ["transport", "codegen", "prost"] }
+prost = "0.12"
 
 [profile.release]
 panic = "abort"

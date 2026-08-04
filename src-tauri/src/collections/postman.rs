@@ -117,6 +117,7 @@ fn request_from_postman(req: PostmanRequest) -> Request {
         pre_request_script: None,
         test_script: None,
         protocol: None,
+        response_schema: None,
     }
 }
 

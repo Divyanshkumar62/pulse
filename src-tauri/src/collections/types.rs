@@ -48,6 +48,7 @@ pub struct Request {
     pub auth: Option<AuthConfig>,
     pub pre_request_script: Option<String>,
     pub test_script: Option<String>,
+    pub response_schema: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
