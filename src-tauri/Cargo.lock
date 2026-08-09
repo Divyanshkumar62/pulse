@@ -4168,7 +4168,7 @@ dependencies = [
 
 [[package]]
 name = "pulse"
-version = "1.1.2"
+version = "1.2.0"
 dependencies = [
  "async-recursion",
  "base64 0.22.1",
