@@ -355,13 +355,13 @@ export function UpdateModal({ update, onClose }: UpdateModalProps) {
           
           <div style={notesBoxStyle}>
             <h4 style={notesTitleStyle}>What's New</h4>
-            <div style={{ whiteSpace: 'pre-wrap' }}>
+            <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
               {update?.body || update?.notes || "No release notes provided for this version."}
             </div>
           </div>
-
+ 
           <p style={descStyle}>
-            A new version of Pulse is available. Would you like to install it now? The application will restart automatically after the installation completes.
+            The application will restart automatically after the installation completes.
           </p>
 
           {error && (

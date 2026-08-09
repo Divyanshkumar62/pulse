@@ -45,15 +45,34 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Extract version and release notes
+        id: release_notes
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          FILE_PATH="RELEASE_${VERSION}.md"
+          echo "Looking for release notes file: $FILE_PATH"
+          if [ -f "$FILE_PATH" ]; then
+            echo "Found release notes. Reading contents..."
+            {
+              echo "body<<EOF"
+              cat "$FILE_PATH"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "Release notes file not found. Using default body."
+            echo "body=Download the installers for your OS below. Pulse is self-contained and ready to run." >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Pulse v__VERSION__'
-          releaseBody: 'Download the installers for your OS below. Pulse is self-contained and ready to run.'
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

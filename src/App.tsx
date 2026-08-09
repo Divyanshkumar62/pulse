@@ -34,7 +34,11 @@ export default function App() {
   const initMockStore = useMockStore(state => state.initialize);
   const initTabStore = useTabStore(state => state.initialize);
   
-  const { updateAvailable, showUpdateModal, setShowUpdateModal } = useUpdater();
+  const { updateAvailable, showUpdateModal, setShowUpdateModal, checkForUpdates } = useUpdater();
+  
+  useEffect(() => {
+    checkForUpdates();
+  }, []);
   
   usePresence();
 
