@@ -1,6 +1,12 @@
 import { KeyValuePair } from '../../types';
 import '../../styles/components/key-value-table.css';
 import { Shield, ShieldOff } from 'lucide-react';
+import SuggestiveInput from '../ui/SuggestiveInput';
+import {
+  getHeaderKeySuggestions,
+  getHeaderValueSuggestions,
+  getParamKeySuggestions
+} from '../../data/headerSuggestions';
 
 interface KeyValueTableProps {
   items: KeyValuePair[];
@@ -8,9 +14,19 @@ interface KeyValueTableProps {
   keyPlaceholder?: string;
   valuePlaceholder?: string;
   usages?: Record<string, number>;
+  isHeaderTable?: boolean;
+  isParamTable?: boolean;
 }
 
-export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key', valuePlaceholder = 'Value', usages }: KeyValueTableProps) {
+export default function KeyValueTable({
+  items,
+  onChange,
+  keyPlaceholder = 'Key',
+  valuePlaceholder = 'Value',
+  usages,
+  isHeaderTable = false,
+  isParamTable = false
+}: KeyValueTableProps) {
   // Always ensure there is at least one empty row at the end if the last row is filled
   const displayItems = [...items];
   const lastItem = displayItems[displayItems.length - 1];
@@ -32,8 +48,6 @@ export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key',
       return false;
     });
     
-    // We only send items with data or the very last empty row to the parent
-    // but the parent might want to filter the final empty row before saving.
     onChange(cleanItems);
   };
 
@@ -57,21 +71,52 @@ export default function KeyValueTable({ items, onChange, keyPlaceholder = 'Key',
             />
           </div>
           <div className="kv-input-group">
-            <input
-              className="kv-input mono"
-              placeholder={keyPlaceholder}
-              value={item.key || ''}
-              onChange={(e) => handleChange(index, 'key', e.target.value)}
-            />
-            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
-                <input
+            {isHeaderTable ? (
+              <SuggestiveInput
                 className="kv-input mono"
-                placeholder={valuePlaceholder}
-                type={item.secret ? 'password' : 'text'}
-                value={item.value || ''}
-                onChange={(e) => handleChange(index, 'value', e.target.value)}
-                style={{ width: '100%', paddingRight: '24px' }}
+                placeholder={keyPlaceholder}
+                value={item.key || ''}
+                onChange={(val) => handleChange(index, 'key', val)}
+                getSuggestions={getHeaderKeySuggestions}
+              />
+            ) : isParamTable ? (
+              <SuggestiveInput
+                className="kv-input mono"
+                placeholder={keyPlaceholder}
+                value={item.key || ''}
+                onChange={(val) => handleChange(index, 'key', val)}
+                getSuggestions={getParamKeySuggestions}
+              />
+            ) : (
+              <input
+                className="kv-input mono"
+                placeholder={keyPlaceholder}
+                value={item.key || ''}
+                onChange={(e) => handleChange(index, 'key', e.target.value)}
+              />
+            )}
+
+            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+              {isHeaderTable ? (
+                <SuggestiveInput
+                  className="kv-input mono"
+                  placeholder={valuePlaceholder}
+                  type={item.secret ? 'password' : 'text'}
+                  value={item.value || ''}
+                  onChange={(val) => handleChange(index, 'value', val)}
+                  getSuggestions={(val) => getHeaderValueSuggestions(item.key || '', val)}
+                  style={{ width: '100%', paddingRight: '24px' }}
                 />
+              ) : (
+                <input
+                  className="kv-input mono"
+                  placeholder={valuePlaceholder}
+                  type={item.secret ? 'password' : 'text'}
+                  value={item.value || ''}
+                  onChange={(e) => handleChange(index, 'value', e.target.value)}
+                  style={{ width: '100%', paddingRight: '24px' }}
+                />
+              )}
                 <button 
                     onClick={() => handleChange(index, 'secret', !item.secret)}
                     style={{ 

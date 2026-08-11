@@ -16,6 +16,7 @@ export default function ParamsEditor() {
         onChange={(data) => updateActiveTabRequest({ params: data })} 
         keyPlaceholder="Query Parameter"
         valuePlaceholder="Value"
+        isParamTable={true}
       />
     </div>
   );

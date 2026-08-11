@@ -16,6 +16,7 @@ export default function HeadersEditor() {
         onChange={(data) => updateActiveTabRequest({ headers: data })} 
         keyPlaceholder="Header Name"
         valuePlaceholder="Value"
+        isHeaderTable={true}
       />
     </div>
   );
