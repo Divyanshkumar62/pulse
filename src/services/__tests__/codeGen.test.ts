@@ -102,6 +102,44 @@ describe('Code Generation Service', () => {
     });
   });
 
+  describe('New auth types', () => {
+    it('should add header-mode API key to generated code', () => {
+      const req: Request = {
+        ...baseRequest,
+        auth: { type: 'apiKey', config: { key: 'X-API-Key', value: 'sk-test', addTo: 'header' } },
+      };
+      const curl = generateCurl(req);
+      expect(curl).toContain('-H "X-API-Key: sk-test"');
+      expect(generateFetch(req)).toContain('"X-API-Key": "sk-test"');
+    });
+
+    it('should NOT emit query-mode API key as a header', () => {
+      const req: Request = {
+        ...baseRequest,
+        auth: { type: 'apiKey', config: { key: 'api_key', value: 'abc', addTo: 'query' } },
+      };
+      expect(generateCurl(req)).not.toContain('api_key');
+    });
+
+    it('should emit JWT as Bearer token', () => {
+      const req: Request = {
+        ...baseRequest,
+        auth: { type: 'jwt', config: { token: 'eyJhbGciOiJIUzI1NiJ9.test' } },
+      };
+      const curl = generateCurl(req);
+      expect(curl).toContain('-H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.test"');
+    });
+
+    it('should generate curl --digest for digest auth', () => {
+      const req: Request = {
+        ...baseRequest,
+        auth: { type: 'digest', config: { username: 'user', password: 'pass' } },
+      };
+      const curl = generateCurl(req);
+      expect(curl).toContain('--digest -u "user:pass"');
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle missing URL', () => {
       const emptyReq = { ...baseRequest, url: '' };

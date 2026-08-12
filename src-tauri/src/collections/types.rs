@@ -1,20 +1,59 @@
 use serde::{Deserialize, Serialize};
 
+use crate::http::types::ProxyOverride;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Collection {
     pub id: String,
     pub name: String,
+    #[serde(default)]
     pub description: Option<String>,
     pub requests: Vec<Request>,
     pub folders: Vec<Folder>,
+    #[serde(default)]
+    pub variables: Option<Vec<CollectionVariable>>,
+    #[serde(default)]
+    pub pinned: Option<bool>,
+    #[serde(default)]
+    pub auth: Option<AuthConfig>,
+    #[serde(alias = "pre_request_script")]
+    pub pre_request_script: Option<String>,
+    #[serde(alias = "test_script")]
+    pub test_script: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Folder {
     pub id: String,
     pub name: String,
     pub requests: Vec<Request>,
+    #[serde(default)]
     pub folders: Option<Vec<Folder>>,
+    #[serde(default)]
+    pub pinned: Option<bool>,
+    #[serde(default)]
+    pub auth: Option<AuthConfig>,
+    #[serde(alias = "pre_request_script")]
+    pub pre_request_script: Option<String>,
+    #[serde(alias = "test_script")]
+    pub test_script: Option<String>,
+}
+
+/// A collection-scoped variable. `enabled` is optional so old files without
+/// the flag keep their variables enabled.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionVariable {
+    pub key: String,
+    pub value: String,
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub secret: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,18 +76,30 @@ pub struct AuthConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Request {
     pub id: String,
     pub name: String,
     pub method: String,
+    #[serde(default)]
     pub protocol: Option<String>,
     pub url: String,
+    #[serde(default)]
+    pub params: Option<Vec<Header>>,
     pub headers: Vec<Header>,
     pub body: RequestBody,
+    #[serde(default)]
     pub auth: Option<AuthConfig>,
+    #[serde(alias = "pre_request_script")]
     pub pre_request_script: Option<String>,
+    #[serde(alias = "test_script")]
     pub test_script: Option<String>,
+    #[serde(alias = "response_schema")]
     pub response_schema: Option<String>,
+    #[serde(default)]
+    pub use_cookies: Option<bool>,
+    #[serde(default)]
+    pub proxy_override: Option<ProxyOverride>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

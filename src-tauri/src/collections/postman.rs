@@ -83,6 +83,11 @@ pub fn import_collection(json: &str) -> Result<Collection, String> {
         description: postman.info.description,
         requests,
         folders,
+        variables: None,
+        pinned: None,
+        auth: None,
+        pre_request_script: None,
+        test_script: None,
     })
 }
 
@@ -118,6 +123,9 @@ fn request_from_postman(req: PostmanRequest) -> Request {
         test_script: None,
         protocol: None,
         response_schema: None,
+        params: None,
+        use_cookies: None,
+        proxy_override: None,
     }
 }
 
@@ -139,6 +147,10 @@ fn extract_items(items: Vec<PostmanItem>) -> (Vec<Request>, Vec<Folder>) {
                     name: folder.name,
                     requests: folder_requests,
                     folders: None,
+                    pinned: None,
+                    auth: None,
+                    pre_request_script: None,
+                    test_script: None,
                 });
                 folders.extend(subfolders);
             }

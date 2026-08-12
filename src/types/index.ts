@@ -22,9 +22,17 @@ export interface RequestBody {
   graphql?: GraphQLConfig;
 }
 
+export type AuthType = 'none' | 'bearer' | 'basic' | 'oauth2' | 'inherit' | 'apiKey' | 'digest' | 'awsSigV4' | 'jwt';
+
 export interface AuthConfig {
-  type: 'none' | 'bearer' | 'basic' | 'oauth2' | 'inherit';
+  type: AuthType;
   config?: any;
+}
+
+/** Per-request proxy override; when enabled, `url` beats the global settings proxy. */
+export interface ProxyOverride {
+  enabled: boolean;
+  url?: string;
 }
 
 export interface Request {
@@ -44,6 +52,10 @@ export interface Request {
   showDocs?: boolean;
   description?: string;
   collectionId?: string;
+  /** Enable the shared cookie jar for this request's session. */
+  useCookies?: boolean;
+  /** Override the global proxy for this request only. */
+  proxyOverride?: ProxyOverride;
 }
 
 export interface HttpRequest {
@@ -140,6 +152,15 @@ export interface HttpResponse {
   headers: KeyValuePair[];
   body: string;
   time_ms: number;
+  /** Set when an auth flow produced a fresh token during this request. */
+  auth_refresh?: string;
+}
+
+export interface SessionCookie {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
 }
 
 export interface WebSocketMessage {

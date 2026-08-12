@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use crate::collections::types::{Collection, Request, Environment, Header, RequestBody};
+use crate::http::auth;
 use crate::http::client::send_request;
+use crate::http::types::{RequestOptions, RequestSettings};
 use crate::script_runner::{execute_js, ScriptContext, RequestInfo, ResponseInfo};
 
 pub struct CollectionRunner {
@@ -30,10 +32,21 @@ impl CollectionRunner {
             }
         }
 
+        // Seed collection variables from the collection definition so scripts
+        // and variable resolution can use them.
+        let mut collection_variables = HashMap::new();
+        if let Some(vars) = &collection.variables {
+            for var in vars {
+                if var.enabled.unwrap_or(true) {
+                    collection_variables.insert(var.key.clone(), var.value.clone());
+                }
+            }
+        }
+
         Self {
             collection,
             environment: env_map,
-            collection_variables: HashMap::new(),
+            collection_variables,
             logs: Vec::new(),
         }
     }
@@ -87,18 +100,41 @@ impl CollectionRunner {
         let resolved_headers = self.resolve_headers(&req.headers);
         let resolved_body = self.resolve_body(&req.body);
 
+        // Resolve effective auth: request-level, falling back to the collection.
+        let effective_auth = req
+            .auth
+            .as_ref()
+            .or(self.collection.auth.as_ref())
+            .cloned();
+
         // 4. Send Request
         let start_time = std::time::Instant::now();
+        let settings = RequestSettings {
+            timeout_secs: 30,
+            follow_redirects: true,
+            verify_ssl: true,
+            proxy_enabled: false,
+            proxy_url: None,
+        };
+        let options = RequestOptions {
+            auth: effective_auth.and_then(|a| auth::from_collection_auth(&a)),
+            use_cookies: req.use_cookies,
+            // Key the jar by collection so every request in a run shares one
+            // session — a login request's cookie must reach the requests after
+            // it. This matches the frontend, which uses `collectionId || id`.
+            session_key: match req.use_cookies {
+                Some(true) => Some(self.collection.id.clone()),
+                _ => None,
+            },
+            proxy: req.proxy_override.clone(),
+        };
         let response_res = send_request(
             req.method.clone(),
             resolved_url.clone(),
             resolved_headers,
             resolved_body,
-            30,   // timeout
-            true, // follow redirects
-            true, // verify ssl
-            false, // proxy enabled
-            None,  // proxy url
+            settings,
+            options,
         ).await;
 
         let elapsed = start_time.elapsed().as_millis() as u64;

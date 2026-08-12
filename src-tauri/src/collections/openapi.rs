@@ -28,6 +28,11 @@ pub fn import_openapi(content: &str) -> Result<Collection, String> {
         description,
         requests,
         folders: Vec::new(),
+        variables: None,
+        pinned: None,
+        auth: None,
+        pre_request_script: None,
+        test_script: None,
     })
 }
 
@@ -64,6 +69,9 @@ fn add_operation(requests: &mut Vec<Request>, path: &str, method: &str, operatio
             test_script: None,
             protocol: Some("http".to_string()),
             response_schema,
+            params: None,
+            use_cookies: None,
+            proxy_override: None,
         });
     }
 }

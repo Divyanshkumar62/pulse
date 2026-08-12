@@ -59,5 +59,8 @@ Desktop.ini
 # Agent Skills
 .agent/skills/
 
+# Local scratch database
+.freebuff/
+
 *.md
 nul

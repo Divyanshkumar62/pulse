@@ -92,7 +92,7 @@ use collections::email;
 use collections::types::{Environment, HistoryEntry, RequestBody, Collection};
 use collections::export;
 use http::client::send_request;
-use http::types::HttpResponse;
+use http::types::{CookieInfo, HttpResponse, RequestOptions, RequestSettings};
 use mock_server::{start_mock_server, stop_mock_server, load_mock_servers, save_mock_servers, get_running_mock_servers, save_workspace_mock_servers, load_workspace_mock_servers};
 use url::Url;
 use serde::{Deserialize, Serialize};
@@ -176,17 +176,23 @@ async fn send_http_request(
     settings: UserSettings,
     response_schema: Option<String>,
     request_id: String,
+    options: Option<RequestOptions>,
 ) -> Result<HttpResponse, String> {
+    let req_settings = RequestSettings {
+        timeout_secs: settings.default_timeout_secs,
+        follow_redirects: settings.follow_redirects,
+        verify_ssl: settings.verify_ssl,
+        proxy_enabled: settings.proxy_enabled,
+        proxy_url: settings.proxy_url,
+    };
+
     let res = send_request(
-        method, 
-        url, 
-        headers, 
-        body, 
-        settings.default_timeout_secs,
-        settings.follow_redirects,
-        settings.verify_ssl,
-        settings.proxy_enabled,
-        settings.proxy_url
+        method,
+        url,
+        headers,
+        body,
+        req_settings,
+        options.unwrap_or_default(),
     )
     .await
     .map_err(|e| e.to_string())?;
@@ -207,6 +213,19 @@ async fn send_http_request(
     }
 
     Ok(res)
+}
+
+/// List the cookies a session would send to `url` (cookie jar UI).
+#[tauri::command]
+async fn get_session_cookies(session_key: String, url: String) -> Result<Vec<CookieInfo>, String> {
+    http::client::get_session_cookies(&session_key, &url)
+}
+
+/// Drop all cookies stored for a session (cookie jar UI).
+#[tauri::command]
+async fn clear_session_cookies(session_key: String) -> Result<(), String> {
+    http::client::clear_session_cookies(&session_key);
+    Ok(())
 }
 
 #[tauri::command]
@@ -975,6 +994,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
 
             send_http_request,
+            get_session_cookies,
+            clear_session_cookies,
             start_oauth_flow,
             exchange_oauth_token,
             load_collection,

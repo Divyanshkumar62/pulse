@@ -187,11 +187,11 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   onChange={(e) => updateLocal({ proxy_enabled: e.target.checked })}
                   style={{ width: '16px', height: '16px', accentColor: 'var(--accent-primary)' }}
                 />
-                Enable HTTP Proxy
+                Enable Proxy (HTTP / HTTPS / SOCKS5)
               </label>
               {localSettings.proxy_enabled && (
                 <div>
-                  <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>Proxy URL (e.g. http://proxy.com:8080)</label>
+                  <label className="text-label" style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>Proxy URL (e.g. http://proxy.com:8080 or socks5://proxy.com:1080)</label>
                   <input
                     type="text"
                     className="text-input"

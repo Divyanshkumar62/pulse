@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { HttpResponse, Collection, HistoryEntry, Environment, Team, Invitation, TeamRole, RequestBody } from '../types';
+import type { HttpResponse, Collection, HistoryEntry, Environment, Team, Invitation, TeamRole, RequestBody, AuthConfig, ProxyOverride, SessionCookie } from '../types';
 import type { LoadTestConfig } from '../types/loadTesting';
 
 export interface UserSettings {
@@ -17,6 +17,17 @@ export interface UserSettings {
   github_username?: string;
 }
 
+export interface RequestOptions {
+  /** Effective (inheritance-resolved) auth config applied by the backend. */
+  auth?: AuthConfig | null;
+  /** Enable the session cookie jar for this request. */
+  useCookies?: boolean;
+  /** Identifies the cookie jar session (usually the collection id). */
+  sessionKey?: string;
+  /** Per-request proxy override. */
+  proxy?: ProxyOverride | null;
+}
+
 export async function sendRequest(
   method: string,
   url: string,
@@ -24,9 +35,18 @@ export async function sendRequest(
   body: RequestBody,
   settings: UserSettings,
   responseSchema?: string,
-  requestId?: string
+  requestId?: string,
+  options?: RequestOptions
 ): Promise<HttpResponse> {
-  return invoke('send_http_request', { method, url, headers, body, settings, responseSchema, requestId });
+  return invoke('send_http_request', { method, url, headers, body, settings, responseSchema, requestId, options });
+}
+
+export async function getSessionCookies(sessionKey: string, url: string): Promise<SessionCookie[]> {
+  return invoke('get_session_cookies', { sessionKey, url });
+}
+
+export async function clearSessionCookies(sessionKey: string): Promise<void> {
+  return invoke('clear_session_cookies', { sessionKey });
 }
 
 export async function loadCollection(path: string): Promise<Collection> {

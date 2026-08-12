@@ -250,8 +250,23 @@ impl FlowRunner {
             graphql: None,
         };
 
-        let response = send_request(method.to_string(), resolved_url, headers, body, 30, true, true, false, None).await
-            .map_err(|e| format!("Request failed: {}", e))?;
+        let settings = crate::http::types::RequestSettings {
+            timeout_secs: 30,
+            follow_redirects: true,
+            verify_ssl: true,
+            proxy_enabled: false,
+            proxy_url: None,
+        };
+        let response = send_request(
+            method.to_string(),
+            resolved_url,
+            headers,
+            body,
+            settings,
+            crate::http::types::RequestOptions::default(),
+        )
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
 
         let history_resp = HistoryResponse {
             status: response.status,

@@ -76,6 +76,14 @@ export function getResolvedAuthHeaders(request: Request): Record<string, string>
   } else if (effectiveAuth.type === 'basic' && effectiveAuth.config?.username) {
     const credentials = btoa(`${resolveVal(effectiveAuth.config.username)}:${resolveVal(effectiveAuth.config.password || '')}`);
     headers['Authorization'] = `Basic ${credentials}`;
+  } else if (effectiveAuth.type === 'apiKey' && effectiveAuth.config?.key && effectiveAuth.config?.value) {
+    // Header-mode API keys are emitted here; query-mode keys are appended by the backend.
+    const addTo = effectiveAuth.config.addTo || 'header';
+    if (addTo !== 'query' && addTo !== 'queryParams') {
+      headers[effectiveAuth.config.key] = resolveVal(effectiveAuth.config.value);
+    }
+  } else if (effectiveAuth.type === 'jwt' && effectiveAuth.config?.token) {
+    headers['Authorization'] = `Bearer ${resolveVal(effectiveAuth.config.token)}`;
   }
 
   return headers;
@@ -93,6 +101,12 @@ export function generateCurl(request: Request): string {
     request.headers.filter(h => h.enabled !== false && h.key).forEach(h => {
       allHeaders[h.key] = h.value;
     });
+  }
+
+  // Digest auth has native curl support via --digest.
+  if (request.auth && request.auth.type === 'digest' && request.auth.config?.username) {
+    delete allHeaders['Authorization'];
+    cmd += ` \\\n  --digest -u "${request.auth.config.username}:${request.auth.config.password || ''}"`;
   }
 
   Object.entries(allHeaders).forEach(([key, value]) => {

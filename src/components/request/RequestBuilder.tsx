@@ -4,6 +4,7 @@ import BodyEditor from './BodyEditor';
 import HeadersEditor from './HeadersEditor';
 import ParamsEditor from './ParamsEditor';
 import AuthTab from './AuthTab';
+import ConnectionTab from './ConnectionTab';
 import WebSocketPanel from './WebSocketPanel';
 import ScriptsEditor from './ScriptsEditor';
 import CodeGenerator from '../modals/CodeGenerator';
@@ -22,7 +23,7 @@ import type { HttpRequest, KeyValuePair } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import '../../styles/components/request.css';
 
-type ConfigTab = 'params' | 'headers' | 'body' | 'auth' | 'scripts';
+type ConfigTab = 'params' | 'headers' | 'body' | 'auth' | 'conn' | 'scripts';
 
 export default function RequestBuilder() {
   const { 
@@ -151,7 +152,7 @@ export default function RequestBuilder() {
         };
       };
 
-      const getRawRequestHeaders = () => {
+      const resolveEffectiveAuth = () => {
         let effectiveAuth = auth;
         if (!auth || auth.type === 'inherit') {
           for (let i = inheritanceChain.length - 1; i >= 0; i--) {
@@ -161,7 +162,11 @@ export default function RequestBuilder() {
             }
           }
         }
+        return effectiveAuth;
+      };
 
+      const getRawRequestHeaders = () => {
+        const effectiveAuth = resolveEffectiveAuth();
         const fresh = getFreshVariables();
         const rawHeaders: Record<string, string> = {};
         
@@ -176,6 +181,16 @@ export default function RequestBuilder() {
           const resolvedPassword = VariableResolver.resolve(effectiveAuth.config.password || '', fresh.collectionVars, fresh.envVars, fresh.globalVars);
           const credentials = btoa(`${resolvedUsername}:${resolvedPassword}`);
           rawHeaders['Authorization'] = `Basic ${credentials}`;
+        } else if (effectiveAuth?.type === 'apiKey' && effectiveAuth.config?.key && effectiveAuth.config?.value) {
+          // Header-mode API keys are resolved here (codegen + pre-request scripts);
+          // query-mode keys are appended by the backend.
+          const addTo = effectiveAuth.config.addTo || 'header';
+          if (addTo !== 'query' && addTo !== 'queryParams') {
+            rawHeaders[effectiveAuth.config.key] = effectiveAuth.config.value;
+          }
+        } else if (effectiveAuth?.type === 'jwt' && effectiveAuth.config?.token) {
+          const resolvedToken = VariableResolver.resolve(effectiveAuth.config.token, fresh.collectionVars, fresh.envVars, fresh.globalVars);
+          rawHeaders['Authorization'] = `Bearer ${resolvedToken}`;
         }
 
         headers.forEach((h: KeyValuePair) => {
@@ -185,6 +200,25 @@ export default function RequestBuilder() {
         });
 
         return rawHeaders;
+      };
+
+      // Resolve variable placeholders inside the effective auth config so the
+      // backend receives concrete values (it applies digest / SigV4 / JWT / query keys).
+      const resolveAuthForBackend = () => {
+        const effectiveAuth = resolveEffectiveAuth();
+        if (!effectiveAuth || effectiveAuth.type === 'none' || effectiveAuth.type === 'inherit') return null;
+        const fresh = getFreshVariables();
+        const resolvedConfig: Record<string, string> = {};
+        if (effectiveAuth.config) {
+          Object.entries(effectiveAuth.config).forEach(([k, v]) => {
+            if (typeof v === 'string') {
+              resolvedConfig[k] = VariableResolver.resolve(v, fresh.collectionVars, fresh.envVars, fresh.globalVars);
+            } else {
+              resolvedConfig[k] = String(v);
+            }
+          });
+        }
+        return { ...effectiveAuth, config: resolvedConfig };
       };
 
       // 1. Execute Inherited Pre-request Scripts (Parent to Child)
@@ -356,9 +390,28 @@ export default function RequestBuilder() {
         resolvedBody, 
         settings,
         request.responseSchema,
-        request.id
+        request.id,
+        {
+          auth: resolveAuthForBackend(),
+          useCookies: request.useCookies === true,
+          sessionKey: request.collectionId || request.id,
+          proxy: request.proxyOverride || null,
+        }
       );
       setTabResponse(activeTab.id, response);
+
+      // Persist a freshly refreshed JWT back onto the request's auth config.
+      if (response.auth_refresh) {
+        const effectiveAuth = resolveEffectiveAuth();
+        if (effectiveAuth?.type === 'jwt') {
+          updateActiveTabRequest({
+            auth: {
+              ...effectiveAuth,
+              config: { ...(effectiveAuth.config || {}), token: response.auth_refresh },
+            },
+          });
+        }
+      }
 
       // Save to history
       const httpRequest: HttpRequest = {
@@ -480,6 +533,7 @@ export default function RequestBuilder() {
     { id: 'headers', label: 'Headers' },
     { id: 'body', label: 'Body' },
     { id: 'auth', label: 'Auth' },
+    { id: 'conn', label: 'Connection' },
     { id: 'scripts', label: 'Scripts' }
   ];
 
@@ -506,6 +560,7 @@ export default function RequestBuilder() {
             {activeConfigTab === 'headers' && <HeadersEditor />}
             {activeConfigTab === 'body' && <BodyEditor />}
             {activeConfigTab === 'auth' && <AuthTab />}
+            {activeConfigTab === 'conn' && <ConnectionTab />}
             {activeConfigTab === 'scripts' && <ScriptsEditor />}
           </div>
         </>
