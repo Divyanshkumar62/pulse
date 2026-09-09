@@ -34,7 +34,7 @@ describe('CurlParser', () => {
     const curl = "curl -d '{\"name\":\"John\"}' https://api.example.com/users";
     const request = CurlParser.parse(curl);
 
-    expect(request.method).toBe('POST'); // Should default to POST when data is provided
+    expect(request.method).toBe('POST');
     expect(request.body.type).toBe('json');
     expect(request.body.content).toBe(JSON.stringify({"name":"John"}, null, 2));
   });
@@ -61,5 +61,35 @@ describe('CurlParser', () => {
 
     expect(request.method).toBe('GET');
     expect(request.body.content).toBe('query=test');
+  });
+
+  it('should parse Postman exported cURL with leading method and --body flag', () => {
+    const postmanCurl = `POST 'https://stapubox.com/squad/recommend/events' \\
+  --header 'Content-Type: application/json' \\
+  --header 'Authorization: Bearer testtoken123' \\
+  --body '{
+    "sportsId": [],
+    "page": 1
+  }'`;
+
+    const request = CurlParser.parse(postmanCurl);
+
+    expect(request.method).toBe('POST');
+    expect(request.url).toBe('https://stapubox.com/squad/recommend/events');
+    expect(request.headers.length).toBe(2);
+    expect(request.headers[0]).toEqual({ key: 'Content-Type', value: 'application/json', enabled: true });
+    expect(request.headers[1]).toEqual({ key: 'Authorization', value: 'Bearer testtoken123', enabled: true });
+    expect(request.body.type).toBe('json');
+    expect(request.body.content).toBe(JSON.stringify({ sportsId: [], page: 1 }, null, 2));
+  });
+
+  it('should parse query parameters from URL and extract them', () => {
+    const curl = "curl 'https://api.example.com/events?page=1&limit=10'";
+    const request = CurlParser.parse(curl);
+
+    expect(request.url).toBe('https://api.example.com/events?page=1&limit=10');
+    expect(request.params?.length).toBe(2);
+    expect(request.params?.[0]).toEqual({ key: 'page', value: '1', enabled: true });
+    expect(request.params?.[1]).toEqual({ key: 'limit', value: '10', enabled: true });
   });
 });
