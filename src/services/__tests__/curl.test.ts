@@ -76,11 +76,31 @@ describe('CurlParser', () => {
 
     expect(request.method).toBe('POST');
     expect(request.url).toBe('https://stapubox.com/squad/recommend/events');
+    expect(request.name).toBe('Imported: events');
     expect(request.headers.length).toBe(2);
     expect(request.headers[0]).toEqual({ key: 'Content-Type', value: 'application/json', enabled: true });
     expect(request.headers[1]).toEqual({ key: 'Authorization', value: 'Bearer testtoken123', enabled: true });
     expect(request.body.type).toBe('json');
     expect(request.body.content).toBe(JSON.stringify({ sportsId: [], page: 1 }, null, 2));
+  });
+
+  it('should parse Postman call prefixed with "postman request" preamble', () => {
+    const inputWithPreamble = `postman request POST 'https://stapubox.com/squad/recommend/events' \\
+  --header 'Content-Type: application/json' \\
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9' \\
+  --body '{
+    "sportsId": [],
+    "page": 1
+  }'`;
+
+    const request = CurlParser.parse(inputWithPreamble);
+
+    expect(request.method).toBe('POST');
+    expect(request.url).toBe('https://stapubox.com/squad/recommend/events');
+    expect(request.name).toBe('Imported: events');
+    expect(request.headers.length).toBe(2);
+    expect(request.headers[0]).toEqual({ key: 'Content-Type', value: 'application/json', enabled: true });
+    expect(request.body.type).toBe('json');
   });
 
   it('should parse query parameters from URL and extract them', () => {

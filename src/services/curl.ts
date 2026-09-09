@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']);
 
+const PREAMBLE_WORDS = new Set(['curl', 'postman', 'request', 'req', 'call', 'api']);
+
 const FLAGS_WITHOUT_ARGS = new Set([
   '-L', '--location',
   '-k', '--insecure',
@@ -16,13 +18,51 @@ const FLAGS_WITHOUT_ARGS = new Set([
   '-g', '--globoff'
 ]);
 
-function extractQueryParams(urlStr: string): { cleanUrl: string; params: KeyValuePair[] } {
-  const queryIndex = urlStr.indexOf('?');
-  if (queryIndex === -1) {
-    return { cleanUrl: urlStr, params: [] };
+const FLAGS_WITH_ARGS = new Set([
+  '-X', '--request',
+  '-H', '--header',
+  '-d', '--data', '--data-raw', '--data-binary', '--data-urlencode', '--body', '--raw',
+  '-b', '--cookie',
+  '-A', '--user-agent',
+  '-e', '--referer',
+  '-u', '--user',
+  '--url'
+]);
+
+export function isLikelyUrl(token: string): boolean {
+  if (!token || token.startsWith('-')) return false;
+  const clean = token.replace(/^['"]|['"]$/g, '').trim();
+
+  // Explicit protocol
+  if (/^(https?|wss?|sse|grpc):\/\//i.test(clean)) return true;
+
+  // Postman/Pulse environment variable URL, e.g. {{baseUrl}}/api
+  if (/^\{\{[^}]+\}\}/.test(clean)) return true;
+
+  // Localhost, IP or host:port
+  if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?(\/.*)?$/i.test(clean)) return true;
+
+  // Typical domain name with dot and path/TLD (e.g. stapubox.com/..., api.co/foo)
+  if (/^[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z0-9][-a-zA-Z0-9.]*(:\d+)?(\/.*)?$/.test(clean)) {
+    if (clean.includes('/') || clean.includes(':') || /\.(com|org|net|io|dev|co|ai|app|in|edu|gov|xyz|biz|info)$/i.test(clean)) {
+      return true;
+    }
   }
 
-  const queryString = urlStr.substring(queryIndex + 1);
+  // Root-relative path with at least one slash
+  if (clean.startsWith('/') && clean.length > 1) return true;
+
+  return false;
+}
+
+function extractQueryParams(urlStr: string): { cleanUrl: string; params: KeyValuePair[] } {
+  const clean = urlStr.replace(/^['"]|['"]$/g, '').trim();
+  const queryIndex = clean.indexOf('?');
+  if (queryIndex === -1) {
+    return { cleanUrl: clean, params: [] };
+  }
+
+  const queryString = clean.substring(queryIndex + 1);
   const params: KeyValuePair[] = [];
   const pairs = queryString.split('&');
 
@@ -46,7 +86,7 @@ function extractQueryParams(urlStr: string): { cleanUrl: string; params: KeyValu
     }
   }
 
-  return { cleanUrl: urlStr, params };
+  return { cleanUrl: clean, params };
 }
 
 function toBase64(str: string): string {
@@ -58,12 +98,12 @@ function toBase64(str: string): string {
 
 /**
  * Enhanced cURL and Postman code snippet parser for Pulse.
- * Supports:
- * - Postman cURL exports starting with HTTP method (e.g. POST 'https://...')
- * - Standard cURL commands with -X, --request, -H, --header, -d, --data, --data-raw, --body, etc.
- * - Basic auth (-u / --user), Cookies (-b / --cookie), User Agent (-A), Referer (-e)
- * - Multiline payloads with line continuations and raw quotes
- * - Query parameter extraction
+ * Handles:
+ * - Postman request exports with or without preambles: `postman request POST 'https://...'`
+ * - Direct HTTP methods: `POST 'https://...'`
+ * - Standard cURL: `curl -X POST 'https://...'`
+ * - Flags: -H, --header, -d, --data, --data-raw, --body, -b, --cookie, -u, --user
+ * - Automatic URL detection and query param parsing
  */
 export class CurlParser {
   static tokenize(curlString: string): string[] {
@@ -79,7 +119,7 @@ export class CurlParser {
 
       if (escaped) {
         if (char === '\n' || char === '\r') {
-          // Line continuation outside quotes or inside double quotes
+          // Line continuation outside quotes
           if (char === '\r' && i + 1 < str.length && str[i + 1] === '\n') {
             i++;
           }
@@ -98,7 +138,6 @@ export class CurlParser {
           continue;
         }
         if (inQuote === "'") {
-          // In single quotes in bash, backslash is literal
           currentToken += char;
         } else {
           escaped = true;
@@ -155,20 +194,45 @@ export class CurlParser {
     let forceGet = false;
     let explicitMethod = false;
 
+    // First pass to find URL if it exists
+    let detectedUrl = '';
+    for (let t = 0; t < tokens.length; t++) {
+      const tok = tokens[t];
+      const prevTok = t > 0 ? tokens[t - 1] : '';
+
+      if (tok === '--url' && tokens[t + 1]) {
+        detectedUrl = tokens[t + 1];
+        break;
+      }
+
+      if (!tok.startsWith('-') && !FLAGS_WITH_ARGS.has(prevTok) && isLikelyUrl(tok)) {
+        detectedUrl = tok;
+        break;
+      }
+    }
+
+    if (detectedUrl) {
+      const { cleanUrl, params } = extractQueryParams(detectedUrl);
+      result.url = cleanUrl;
+      result.params = params;
+      const urlPath = cleanUrl.split('?')[0];
+      result.name = `Imported: ${urlPath.split('/').filter(Boolean).pop() || 'Request'}`;
+    }
+
     while (i < tokens.length) {
       const token = tokens[i];
+      const prevToken = i > 0 ? tokens[i - 1] : '';
 
-      // Ignore 'curl' prefix
-      if (token.toLowerCase() === 'curl') {
+      // Skip noise/preamble tokens like 'curl', 'postman', 'request', 'call'
+      const cleanTokenWord = token.toLowerCase().replace(/[:;,]$/, '');
+      if (PREAMBLE_WORDS.has(cleanTokenWord)) {
         i++;
         continue;
       }
 
-      // Check if token at index 0 or right after 'curl' is a raw HTTP Method (e.g., Postman export: POST 'https://...')
+      // Check for raw HTTP Method (e.g., 'POST' in `postman request POST 'https://...'` or `POST 'https://...'`)
       if (!explicitMethod && HTTP_METHODS.has(token.toUpperCase())) {
-        // Verify it's not an argument to a preceding flag
-        const prevToken = i > 0 ? tokens[i - 1] : '';
-        if (!prevToken || prevToken.toLowerCase() === 'curl' || FLAGS_WITHOUT_ARGS.has(prevToken)) {
+        if (!prevToken || !FLAGS_WITH_ARGS.has(prevToken)) {
           result.method = token.toUpperCase() as any;
           explicitMethod = true;
           i++;
@@ -176,7 +240,7 @@ export class CurlParser {
         }
       }
 
-      // HTTP Method Flags
+      // HTTP Method Flags: -X, --request
       if (token === '-X' || token === '--request') {
         const nextToken = tokens[i + 1];
         if (nextToken) {
@@ -187,7 +251,7 @@ export class CurlParser {
         continue;
       }
 
-      // Header Flags
+      // Header Flags: -H, --header
       if (token === '-H' || token === '--header') {
         const headerRaw = tokens[i + 1];
         if (headerRaw) {
@@ -234,7 +298,7 @@ export class CurlParser {
         continue;
       }
 
-      // Cookie Flag
+      // Cookie Flag: -b, --cookie
       if (token === '-b' || token === '--cookie') {
         const cookieVal = tokens[i + 1];
         if (cookieVal) {
@@ -244,7 +308,7 @@ export class CurlParser {
         continue;
       }
 
-      // User Agent Flag
+      // User Agent Flag: -A, --user-agent
       if (token === '-A' || token === '--user-agent') {
         const uaVal = tokens[i + 1];
         if (uaVal) {
@@ -254,7 +318,7 @@ export class CurlParser {
         continue;
       }
 
-      // Referer Flag
+      // Referer Flag: -e, --referer
       if (token === '-e' || token === '--referer') {
         const refVal = tokens[i + 1];
         if (refVal) {
@@ -264,7 +328,7 @@ export class CurlParser {
         continue;
       }
 
-      // Basic Auth Flag
+      // Basic Auth Flag: -u, --user
       if (token === '-u' || token === '--user') {
         const userVal = tokens[i + 1];
         if (userVal) {
@@ -274,10 +338,10 @@ export class CurlParser {
         continue;
       }
 
-      // Explicit URL Flag
+      // Explicit URL Flag: --url
       if (token === '--url') {
         const urlVal = tokens[i + 1];
-        if (urlVal) {
+        if (urlVal && !result.url) {
           const { cleanUrl, params } = extractQueryParams(urlVal);
           result.url = cleanUrl;
           result.params = params;
@@ -313,8 +377,8 @@ export class CurlParser {
         continue;
       }
 
-      // If token does not start with '-' and URL is not set yet, treat as target URL
-      if (!result.url) {
+      // Fallback for URL if not detected by first pass and token doesn't look like preamble
+      if (!result.url && !PREAMBLE_WORDS.has(cleanTokenWord)) {
         const { cleanUrl, params } = extractQueryParams(token);
         result.url = cleanUrl;
         result.params = params;

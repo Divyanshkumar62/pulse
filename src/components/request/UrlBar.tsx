@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { FileText, Server } from 'lucide-react';
 import { useMockStore } from '../../stores/useMockStore';
 import MethodSelector, { DEFAULT_METHOD_COLORS } from '../ui/MethodSelector';
+import { CurlParser } from '../../services/curl';
 
 interface UrlBarProps {
   onSend: () => void;
@@ -32,6 +33,39 @@ export default function UrlBar({ onSend, onCode, onSave, isLoading }: UrlBarProp
 
   const streamStatus = activeTab?.streamStatus || 'disconnected';
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text');
+    if (!text) return;
+
+    const trimmed = text.trim();
+    const isCurlOrCommand =
+      trimmed.toLowerCase().startsWith('curl') ||
+      trimmed.toLowerCase().startsWith('postman') ||
+      trimmed.includes('--header') ||
+      trimmed.includes('-H ') ||
+      trimmed.includes('--body') ||
+      trimmed.includes('--data') ||
+      trimmed.includes('-d ') ||
+      /^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+['"]?https?:\/\//i.test(trimmed);
+
+    if (isCurlOrCommand) {
+      e.preventDefault();
+      try {
+        const parsed = CurlParser.parse(trimmed);
+        updateActiveTabRequest({
+          method: parsed.method,
+          url: parsed.url,
+          headers: parsed.headers.length > 0 ? parsed.headers : request.headers,
+          body: parsed.body.content ? parsed.body : request.body,
+          params: parsed.params && parsed.params.length > 0 ? parsed.params : request.params
+        });
+        toast.success(`cURL imported: ${parsed.method} ${parsed.url}`);
+      } catch {
+        updateActiveTabRequest({ url: trimmed });
+      }
+    }
+  };
+
   return (
     <div className="url-bar-container">
       <div className="url-bar-glass">
@@ -49,6 +83,7 @@ export default function UrlBar({ onSend, onCode, onSave, isLoading }: UrlBarProp
             placeholder="Enter request URL or paste cURL"
             value={request.url}
             onChange={(e) => updateActiveTabRequest({ url: e.target.value })}
+            onPaste={handlePaste}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !isStreaming) onSend();
             }}
